@@ -1,0 +1,693 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>夜班：聲譜與紅外線</title>
+<link rel="stylesheet" href="shared.css">
+<script src="data.js"></script>
+<style>
+[hidden]{display:none!important}
+.wrap{max-width:74rem;margin:0 auto;padding:0 16px 80px}
+.intro{max-width:46rem;padding:36px 0 8px}
+.eyebrow{font-family:var(--f-mono);font-size:.76rem;letter-spacing:.08em;color:var(--muted);margin:0 0 .5rem}
+h1{font-size:clamp(1.9rem,6vw,2.7rem);font-weight:800;letter-spacing:.02em}
+.intro p{margin:.9rem 0 0}
+.intro .how{font-size:.9rem;color:var(--muted);border-left:3px solid var(--line);padding-left:12px}
+.intro .how b{color:var(--fg);font-weight:700}
+
+/* 模擬資料聲明：刻意放大 */
+.simnote{margin:22px 0 26px;border:1.5px dashed var(--unverified);color:var(--unverified);padding:12px 14px;border-radius:3px;
+  display:grid;grid-template-columns:auto 1fr;gap:4px 12px;align-items:baseline;max-width:46rem}
+.simnote .k{font-family:var(--f-mono);font-size:.74rem;letter-spacing:.08em;border:1px solid currentColor;padding:0 6px;border-radius:2px}
+.simnote p{margin:0;font-family:var(--f-display);font-weight:600;font-size:1.06rem;line-height:1.5;color:var(--fg)}
+.simnote small{grid-column:2;font-size:.82rem;color:var(--muted)}
+
+/* 儀器面板 */
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:14px 14px 18px}
+.log{display:flex;flex-wrap:wrap;gap:4px 18px;font-family:var(--f-mono);font-size:.76rem;color:var(--muted);
+  padding-bottom:10px;border-bottom:1px solid var(--line)}
+.log b{color:var(--fg);font-weight:500}
+
+.controls{display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px;padding:12px 0}
+.btn{appearance:none;border:1px solid var(--fg);background:transparent;border-radius:3px;padding:5px 14px;cursor:pointer;font-size:.92rem;line-height:1.5}
+.btn.primary{background:var(--fg);color:var(--bg)}
+.btn.primary[aria-pressed="true"]{background:var(--tide);border-color:var(--tide);color:var(--surface)}
+.btn:disabled{opacity:.4;cursor:default}
+.btn[aria-pressed="true"]:not(.primary){background:var(--tide-soft);border-color:var(--tide);color:var(--tide)}
+.mutes{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.mutes .lbl{font-size:.78rem;color:var(--muted);margin-right:2px}
+.mute{appearance:none;font-size:.8rem;border:1px solid var(--line);background:var(--bg);border-radius:3px;padding:2px 9px;cursor:pointer}
+.mute[aria-pressed="true"]{text-decoration:line-through;color:var(--muted);border-style:dashed}
+.ctlnote{flex-basis:100%;font-size:.8rem;color:var(--muted);margin:0}
+
+/* 讀數 */
+.readout{display:grid;grid-template-columns:1fr;gap:12px;padding:12px 0 16px;border-top:1px solid var(--line)}
+@media (min-width:860px){.readout{grid-template-columns:auto 1.1fr 1.3fr;gap:24px;align-items:start}}
+.clock{font-family:var(--f-mono);font-variant-numeric:tabular-nums;font-size:2.6rem;line-height:1;font-weight:500;letter-spacing:-.01em}
+.clock small{display:block;font-size:.72rem;color:var(--muted);letter-spacing:.04em;margin-top:6px;font-weight:400}
+.rk{font-family:var(--f-mono);font-size:.7rem;color:var(--muted);letter-spacing:.06em;margin:0 0 4px}
+.levels{list-style:none;margin:0;padding:0;display:grid;gap:3px}
+.levels li{display:grid;grid-template-columns:4.6em 1fr 4.6em;gap:8px;align-items:center;font-size:.86rem}
+.levels .bar{height:6px;background:var(--line);border-radius:1px;position:relative;overflow:hidden}
+.levels .bar i{position:absolute;inset:0 auto 0 0;background:var(--tide);width:0}
+.levels .w{font-size:.78rem;color:var(--muted)}
+.levels li.on .w{color:var(--fg);font-weight:500}
+.levels li.muted .bar i{background:var(--muted);opacity:.4}
+.sentence{font-size:.9rem;margin:6px 0 0}
+.camline{font-size:.9rem;margin:0}
+.camline .id{display:block;font-family:var(--f-display);font-weight:600;font-size:1.05rem;margin-top:4px}
+
+/* 聲譜與相機軌 */
+.scope{--specH:210px;--limH:0px;display:grid;grid-template-columns:34px minmax(0,1fr) 72px;
+  grid-template-rows:var(--limH) var(--specH) 26px 40px;user-select:none;-webkit-user-select:none}
+@media (min-width:900px){.scope{--specH:300px;grid-template-columns:44px minmax(0,1fr) 112px}}
+body.show-limits .scope{--limH:26px}
+.yaxis{grid-column:1;grid-row:2;position:relative;font-family:var(--f-mono);font-size:.66rem;color:var(--muted)}
+.yaxis span{position:absolute;right:6px;transform:translateY(-50%);white-space:nowrap}
+.yaxis span:first-child{transform:none}
+.yaxis span:last-child{transform:translateY(-100%)}
+.yunit{grid-column:1;grid-row:3;font-family:var(--f-mono);font-size:.62rem;color:var(--muted);text-align:right;padding-right:6px;line-height:1.2;padding-top:4px}
+.plot{grid-column:2;grid-row:1/5;position:relative;display:grid;grid-template-rows:var(--limH) var(--specH) 26px 40px;
+  cursor:ew-resize;touch-action:pan-y;outline:none;border-radius:2px}
+.plot:focus-visible{outline:2px solid var(--tide);outline-offset:3px}
+.limstrip{overflow:hidden;font-size:.72rem;color:var(--unverified);display:flex;align-items:center;padding-left:8px;
+  background:repeating-linear-gradient(135deg,transparent 0 5px,color-mix(in srgb,var(--unverified) 22%,transparent) 5px 6px);
+  border:1px dashed var(--unverified);border-bottom:0;white-space:nowrap}
+#spec{display:block;width:100%;height:var(--specH);border:1px solid var(--line);background:var(--surface)}
+.xaxis{position:relative;font-family:var(--f-mono);font-size:.66rem;color:var(--muted)}
+.xaxis span{position:absolute;top:0;transform:translateX(-50%);padding-top:6px}
+.xaxis span::before{content:"";position:absolute;left:50%;top:0;height:5px;border-left:1px solid var(--muted)}
+.xaxis span.first{transform:none}.xaxis span.first::before{left:0}
+.xaxis span.last{transform:translateX(-100%)}.xaxis span.last::before{left:auto;right:0}
+@media (max-width:560px){.xaxis span.odd{color:transparent}.mk{width:16px;margin-left:-8px}}
+.lane{position:relative;border:1px solid var(--line);border-radius:2px;background:var(--bg)}
+body.show-limits .lane{background:repeating-linear-gradient(135deg,var(--bg) 0 5px,color-mix(in srgb,var(--unverified) 18%,var(--bg)) 5px 6px)}
+.gapnote{display:none;color:var(--unverified);font-size:.6rem}
+body.show-limits .gapnote{display:block}
+.mk{position:absolute;top:50%;width:20px;height:24px;margin-left:-10px;transform:translateY(-50%);
+  display:grid;place-items:center;font-family:var(--f-mono);font-size:.66rem;border:1px solid var(--fg);background:var(--surface);border-radius:2px}
+.mk::after{content:"";position:absolute;left:50%;bottom:-8px;height:7px;border-left:1px solid var(--fg)}
+.mk.near{background:var(--fg);color:var(--bg)}
+.mk.low{border-style:dashed}
+.playhead{position:absolute;top:0;bottom:0;left:0;width:0;pointer-events:none;z-index:2}
+.playhead::before{content:"";position:absolute;top:0;bottom:0;left:-1px;border-left:2px solid var(--conflict)}
+.playhead b{position:absolute;top:calc(var(--limH) + 4px);left:5px;font-family:var(--f-mono);font-weight:500;font-size:.72rem;
+  background:var(--conflict);color:var(--surface);padding:0 5px;border-radius:2px;white-space:nowrap}
+.playhead.flip b{left:auto;right:5px}
+.blabels{grid-column:3;grid-row:2;position:relative;font-size:.8rem;line-height:1.15}
+.blabels .br{position:absolute;width:0;border-left:1.5px solid var(--muted)}
+.blabels .br::before,.blabels .br::after{content:"";position:absolute;left:-1.5px;width:4px;border-top:1.5px solid var(--muted)}
+.blabels .br::before{top:0}.blabels .br::after{bottom:0}
+.blabels .bl{position:absolute;left:24px;transform:translateY(-50%);white-space:nowrap}
+.blabels .bl::before{content:"";position:absolute;right:calc(100% + 3px);top:50%;width:var(--lead,10px);border-top:1px dotted var(--muted)}
+.blabels .bl small{display:block;font-family:var(--f-mono);font-size:.62rem;color:var(--muted)}
+.blabels .bl.muted{color:var(--muted);text-decoration:line-through}
+.lanelabel{grid-column:3;grid-row:4;font-size:.72rem;color:var(--muted);padding-left:10px;line-height:1.25;align-self:center}
+.limlabel{grid-column:3;grid-row:1;font-size:.66rem;color:var(--unverified);padding-left:10px;overflow:hidden;align-self:center}
+.hint{font-size:.78rem;color:var(--muted);margin:16px 0 0}
+.hint kbd{font-family:var(--f-mono);font-size:.72rem;border:1px solid var(--line);border-radius:2px;padding:0 4px}
+
+/* 相機接觸印樣 */
+.leaders{display:block;height:34px;width:100%;overflow:visible}
+.leaders line{stroke:var(--muted);stroke-width:1;stroke-dasharray:2 3}
+.leaders line.near{stroke:var(--fg);stroke-dasharray:none}
+.sheetwrap{margin:0}
+@media (min-width:900px){.sheetwrap{margin:0 112px 0 44px}}
+.sheet{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 10px}
+@media (min-width:600px){.sheet{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (min-width:1000px){.sheet{grid-template-columns:repeat(6,minmax(0,1fr))}}
+.frame{appearance:none;display:block;width:100%;text-align:left;background:none;border:0;padding:0;cursor:pointer;color:inherit}
+.frame canvas{display:block;width:100%;aspect-ratio:4/3;background:#0d0d0d;outline:1px solid var(--line);outline-offset:2px}
+.frame.near canvas{outline:2px solid var(--fg)}
+.frame .meta{display:flex;gap:6px;align-items:baseline;font-family:var(--f-mono);font-size:.7rem;color:var(--muted);margin-top:7px}
+.frame .meta .n{border:1px solid currentColor;border-radius:2px;padding:0 4px}
+.frame.near .meta .n{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.frame .cand{font-size:.84rem;line-height:1.45;margin-top:3px}
+.conf{display:inline-flex;gap:2px;vertical-align:middle;margin-left:3px}
+.conf i{width:7px;height:7px;border:1px solid var(--fg);display:block}
+.conf i.f{background:var(--fg)}
+.conf.lo i{border-style:dashed;border-color:var(--unverified)}.conf.lo i.f{background:var(--unverified)}
+
+/* 盲點 */
+.limits{margin-top:22px;border-top:1px solid var(--line);padding-top:14px}
+.limits .btn{border-style:dashed;border-color:var(--unverified);color:var(--unverified)}
+.limits .btn[aria-expanded="true"]{background:var(--conflict-soft);border-style:solid}
+.limlist{margin:14px 0 0;padding:0;list-style:none;display:grid;gap:8px;max-width:46rem;counter-reset:lim}
+.limlist li{counter-increment:lim;display:grid;grid-template-columns:5.2em 1fr;gap:10px;font-size:.92rem;border-bottom:1px dashed var(--line);padding-bottom:8px}
+.limlist li::before{content:"盲點 " counter(lim);font-family:var(--f-mono);font-size:.74rem;color:var(--unverified);padding-top:3px}
+.limlist + p{font-size:.82rem;color:var(--muted);margin:10px 0 0;max-width:46rem}
+
+/* 先例 */
+.after{display:grid;gap:28px;margin-top:44px}
+@media (min-width:900px){.after{grid-template-columns:1.2fr 1fr;gap:48px}}
+.after h2{font-size:1.25rem;font-weight:800;padding-top:12px;border-top:3px solid var(--fg);margin-bottom:.6rem}
+.after p{margin:.6rem 0 0;font-size:.95rem}
+.after .diff{display:grid;grid-template-columns:1fr 1fr;gap:0;margin-top:14px;font-size:.86rem;border:1px solid var(--line)}
+.after .diff div{padding:8px 10px}
+.after .diff div:nth-child(odd){border-right:1px solid var(--line)}
+.after .diff div:nth-child(-n+2){font-family:var(--f-mono);font-size:.72rem;color:var(--muted);border-bottom:1px solid var(--line)}
+.refs{font-size:.88rem;color:var(--muted)}
+.refs li{margin-bottom:6px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+</style>
+</head>
+<body>
+<header class="sample-bar"><a href="../index.html">← 回到參考頁</a><span class="tag">方案 05 · 示意 sample</span><span class="sp"></span>
+<nav aria-label="其他方案"><a href="c1.html">01</a><a href="c2.html">02</a><a href="c3.html">03</a><a href="c4.html">04</a><a href="c5.html" aria-current="page">05</a><a href="c6.html">06</a><a href="c7.html">07</a><a href="c8.html">08</a></nav></header>
+
+<main class="wrap">
+  <section class="intro">
+    <p class="eyebrow">05 裝置 · 敘述者是儀器</p>
+    <h1>夜班：聲譜與紅外線</h1>
+    <p>一條 21:00 至 04:00 的時間軸，由兩部儀器敘述：上方是 AudioMoth 的長時段聲譜，頻率由低至高排成空間；下方是紅外線相機觸發時留下的單格畫面。拖動時間軸，可以聽到該時刻各頻段的合成聲音。真實版本會換上整夜錄音與相機原片，每個候選辨認都經本地專家核實。</p>
+    <p class="how"><b>Webflow 做法：</b>聲譜、聆聽與時間軸需要 Code Embed（腳本外部託管，Embed 內只放載入碼）。相機事件可以是 CMS Collection（時間、檢查點、候選辨認、信心、畫面），匯出成 graph.json 讓腳本讀取。</p>
+  </section>
+
+  <div class="simnote" role="note">
+    <span class="k">SIMULATED</span>
+    <p>模擬資料，示範介面；真實版本使用 AudioMoth 錄音與紅外線相機畫面</p>
+    <small>聲譜紋理、聲音與相機畫面全部由瀏覽器即時生成，不是錄音，也不是照片。活動曲線與相機事件取自共用示意資料（data.night）。</small>
+  </div>
+
+  <section class="panel" aria-labelledby="scope-h">
+    <h2 id="scope-h" class="sr">儀器記錄</h2>
+    <div class="log" id="log"></div>
+
+    <div class="controls">
+      <button class="btn primary" id="listen" type="button" aria-pressed="false">聆聽</button>
+      <button class="btn" id="stop" type="button" disabled>停止</button>
+      <button class="btn" id="advance" type="button" aria-pressed="false">自動推進</button>
+      <div class="mutes" role="group" aria-label="頻段靜音"><span class="lbl">靜音：</span><span id="mutes"></span></div>
+      <p class="ctlnote">聆聽者可以關掉某一層，細聽其餘各層；各層強弱跟隨記錄，不能調節。自動推進把七小時壓縮為約 84 秒。</p>
+    </div>
+
+    <div class="readout">
+      <div class="clock"><span id="clock">02:14</span><small id="clockdate"></small></div>
+      <div>
+        <p class="rk">AudioMoth · 聲譜讀數</p>
+        <ul class="levels" id="levels"></ul>
+        <p class="sentence" id="sentence"></p>
+      </div>
+      <div>
+        <p class="rk">紅外線相機 · 最近觸發</p>
+        <p class="camline" id="camline" aria-live="polite"></p>
+      </div>
+    </div>
+
+    <div class="scope" id="scope">
+      <div class="limlabel" aria-hidden="true"></div>
+      <div class="yaxis" id="yaxis" aria-hidden="true"></div>
+      <div class="yunit" aria-hidden="true">kHz</div>
+      <div class="plot" id="plot" role="slider" tabindex="0" aria-label="夜班時間軸" aria-valuemin="0" aria-valuemax="420" aria-valuenow="0">
+        <div class="limstrip" aria-hidden="true">12 kHz 以上：部分蝙蝠聲未錄（視設定）</div>
+        <canvas id="spec" aria-hidden="true"></canvas>
+        <div class="xaxis" id="xaxis" aria-hidden="true"></div>
+        <div class="lane" id="lane" aria-hidden="true"></div>
+        <div class="playhead" id="playhead" aria-hidden="true"><b id="phlabel"></b></div>
+      </div>
+      <div class="blabels" id="blabels" aria-hidden="true"></div>
+      <div class="lanelabel" aria-hidden="true">相機觸發<span class="gapnote">之間沒有畫面</span></div>
+    </div>
+    <div class="sheetwrap">
+      <svg class="leaders" id="leaders" aria-hidden="true"></svg>
+      <ol class="sheet" id="sheet" aria-label="紅外線相機單格畫面（示意）"></ol>
+    </div>
+    <p class="hint">在聲譜或相機軌上拖動或點擊；鍵盤聚焦時間軸後用 <kbd>←</kbd> <kbd>→</kbd> 每次一分鐘，<kbd>Shift</kbd> 加方向鍵十分鐘，<kbd>PageUp</kbd> <kbd>PageDown</kbd> 半小時，<kbd>Home</kbd> <kbd>End</kbd> 到頭尾。</p>
+
+
+    <div class="limits">
+      <button class="btn" id="limbtn" type="button" aria-expanded="false" aria-controls="limpanel">儀器聽不到、拍不到甚麼</button>
+      <div id="limpanel" hidden>
+        <ul class="limlist" id="limlist"></ul>
+        <p>打開此項時，聲譜上方標出錄音範圍以外的頻段，相機軌在兩次觸發之間加上斜線：那些時間不是「沒有動物」，而是「沒有畫面」。</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="after">
+    <div>
+      <h2>本地先例：Hong Kong Wildtracks</h2>
+      <p>香港浸會大學圖書館與香港觀鳥會的 Hong Kong Wildtracks（2019）以 1 公里方格與鳥聲認識香港的生物多樣性，是最接近的本地先例。正式版應在頁面上引用，並說明兩者的分別。<span class="st check">網址待人手確認</span></p>
+      <div class="diff">
+        <div>Hong Kong Wildtracks</div><div>水口夜班</div>
+        <div>全港 1 公里方格</div><div>一個地點的兩個檢查點（2.3、3.4）</div>
+        <div>以物種的聲音為單位</div><div>以一個晚上、兩部儀器為單位</div>
+        <div>呈現牠們在哪裡</div><div>同時呈現儀器在哪裡、看不到甚麼</div>
+      </div>
+    </div>
+    <div>
+      <h2>設計參考</h2>
+      <ul class="refs">
+        <li>The Great Animal Orchestra：頻率即空間，不同生命各佔一層。</li>
+        <li>Dawn Chorus：同一段聲音以「聆聽」與「聲譜」兩種視圖呈現。</li>
+        <li>Snapshot Serengeti：夜間事件只顯示單格，辨認交由多人核對。</li>
+        <li>Bear 71：揭示監察者本身。</li>
+      </ul>
+    </div>
+  </section>
+</main>
+
+<script>
+(function(){
+"use strict";
+var D = window.SHUIHAU, N = D.night;
+var T0 = 21, SPAN = 7, MIN = SPAN * 60; // 21:00 → 04:00，共 420 分鐘
+
+/* ---------- 小工具 ---------- */
+function $(id){ return document.getElementById(id); }
+function wrapH(h){ return h < 12 ? h + 24 : h; } // 午夜後的鐘點接續
+function parseT(s){ var p = s.split(":"); return wrapH(+p[0] + (+p[1]) / 60); }
+function fmt(t){ var m = Math.round(t * 60), h = Math.floor(m / 60) % 24, mm = m % 60; return (h < 10 ? "0" : "") + h + ":" + (mm < 10 ? "0" : "") + mm; }
+function placeOf(cp){ var c = D.checkpoints.find(function(x){ return x.id === cp; }); if(!c) return ""; var p = D.places.find(function(x){ return x.id === c.place; }); return p ? p.zh : ""; }
+function mulberry(a){ return function(){ a |= 0; a = a + 0x6D2B79F5 | 0; var t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function hash(x, y, s){ var h = Math.imul(x | 0, 374761393) + Math.imul(y | 0, 668265263) + Math.imul(s | 0, 2147483647); h = Math.imul(h ^ h >>> 13, 1274126177); return ((h ^ h >>> 16) >>> 0) / 4294967296; }
+function vnoise(x, y, s){ var xi = Math.floor(x), yi = Math.floor(y), xf = x - xi, yf = y - yi;
+  var u = xf * xf * (3 - 2 * xf), v = yf * yf * (3 - 2 * yf);
+  var a = hash(xi, yi, s), b = hash(xi + 1, yi, s), c = hash(xi, yi + 1, s), d = hash(xi + 1, yi + 1, s);
+  return a + (b - a) * u + (c - a) * v + (a - b - c + d) * u * v; }
+function smooth(e0, e1, x){ var t = Math.min(1, Math.max(0, (x - e0) / (e1 - e0))); return t * t * (3 - 2 * t); }
+function bandEnv(f, lo, hi, soft){ return smooth(lo - soft, lo + soft, f) * (1 - smooth(hi - soft, hi + soft, f)); }
+function token(name){ return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+function rgb(hex){ hex = hex.replace("#", ""); if(hex.length === 3) hex = hex.replace(/./g, "$&$&"); var n = parseInt(hex, 16); return [n >> 16 & 255, n >> 8 & 255, n & 255]; }
+
+/* ---------- 資料準備 ---------- */
+var bands = N.bands.map(function(b){
+  var pts = b.activity.map(function(p){ return [wrapH(p[0]), p[1]]; }).sort(function(a, c){ return a[0] - c[0]; });
+  return { id: b.id, zh: b.zh, short: b.zh.replace(/（.*$/, ""), khz: b.khz, pts: pts, muted: false };
+});
+function levelAt(b, t){ var p = b.pts; if(t <= p[0][0]) return p[0][1]; if(t >= p[p.length - 1][0]) return p[p.length - 1][1];
+  for(var i = 1; i < p.length; i++){ if(t <= p[i][0]){ var k = (t - p[i - 1][0]) / (p[i][0] - p[i - 1][0]); return p[i - 1][1] + (p[i][1] - p[i - 1][1]) * k; } } return 0; }
+var events = N.cameraEvents.map(function(e, i){ return { i: i, t: parseT(e.t), label: e.t, what: e.what, conf: e.conf, cp: e.cp, place: placeOf(e.cp) }; });
+var confN = { "高": 3, "中": 2, "低": 1 };
+function candText(e){ return "候選辨認：" + e.what.replace(/（(.+?)）/, "，$1") + "（信心：" + e.conf + "）"; }
+
+/* 示範夜日期與節氣：取自 data.tide.lowTideRef 與 solarTermDates2026 */
+var demoDate = (D.tide && D.tide.lowTideRef || "2026-10-12").slice(0, 10);
+function addDay(iso){ var d = new Date(iso + "T12:00:00Z"); d.setUTCDate(d.getUTCDate() + 1); return d.toISOString().slice(0, 10); }
+var nextDate = addDay(demoDate);
+var term = (function(){ var md = demoDate.slice(5), best = -1, bestMd = "";
+  D.solarTermDates2026.forEach(function(s, i){ if(s <= md && s > bestMd){ best = i; bestMd = s; } });
+  return best >= 0 ? D.solarTerms[best] : ""; })();
+function dateAt(t){ return t >= 24 ? nextDate : demoDate; }
+
+var mothCp = (D.relations.find(function(r){ return r.from === "audiomoth"; }) || {}).cp || "3.4";
+var camCps = events.map(function(e){ return e.cp; }).filter(function(c, i, a){ return a.indexOf(c) === i; });
+
+$("log").innerHTML =
+  "<span>示範夜 <b>" + demoDate + "</b> → " + nextDate.slice(5) + (term ? " · 節氣 <b>" + term + "</b>" : "") + "</span>" +
+  "<span>AudioMoth 錄音器 · <b>" + mothCp + "</b> " + placeOf(mothCp) + "</span>" +
+  "<span>紅外線相機 ×" + camCps.length + " · " + camCps.map(function(c){ return "<b>" + c + "</b> " + placeOf(c); }).join("、") + "</span>" +
+  "<span>定時 " + N.window[0] + "–" + N.window[1] + "</span>" +
+  "<span class=\"simulated\">模擬資料</span>";
+
+/* ---------- 靜態刻度與標籤 ---------- */
+(function(){
+  var y = "", k;
+  for(k = 12; k >= 0; k -= 2) y += "<span style=\"top:" + ((12 - k) / 12 * 100) + "%\">" + k + "</span>";
+  $("yaxis").innerHTML = y;
+  var x = "";
+  for(var h = 0; h <= SPAN; h++){
+    var cls = h === 0 ? "first" : h === SPAN ? "last" : (h % 2 || h === SPAN - 1 ? "odd" : "");
+    x += "<span class=\"" + cls + "\" style=\"left:" + (h / SPAN * 100) + "%\">" + fmt(T0 + h) + "</span>";
+  }
+  $("xaxis").innerHTML = x;
+  var lane = $("lane");
+  events.forEach(function(e){
+    var m = document.createElement("span");
+    m.className = "mk" + (e.conf === "低" ? " low" : "");
+    m.style.left = ((e.t - T0) / SPAN * 100) + "%";
+    m.textContent = e.i + 1;
+    lane.appendChild(m); e.mk = m;
+  });
+  // 頻段標籤：每段一條括號線，標籤放在頻段中心
+  var order = ["insect", "bird", "frog", "low"];
+  var bl = $("blabels");
+  order.forEach(function(id, i){
+    var b = bands.find(function(x){ return x.id === id; }); if(!b) return;
+    var top = (12 - b.khz[1]) / 12 * 100, bot = (12 - b.khz[0]) / 12 * 100;
+    var br = document.createElement("span"); br.className = "br";
+    br.style.left = (3 + i * 5) + "px"; br.style.top = top + "%"; br.style.height = (bot - top) + "%";
+    bl.appendChild(br);
+    var lab = document.createElement("span"); lab.className = "bl"; lab.title = b.zh;
+    lab.dataset.c = (12 - (b.khz[0] + b.khz[1]) / 2) / 12;
+    lab.style.setProperty("--lead", (24 - 3 - i * 5 - 3) + "px");
+    lab.innerHTML = b.short + "<small>" + b.khz[0] + "–" + b.khz[1] + " kHz</small>";
+    bl.appendChild(lab); b.label = lab;
+  });
+})();
+function placeBandLabels(){
+  var H = $("blabels").clientHeight;
+  bands.forEach(function(b){ if(!b.label) return; var hh = b.label.offsetHeight / 2 + 1;
+    b.label.style.top = Math.min(H - hh, Math.max(hh, b.label.dataset.c * H)) + "px"; });
+}
+
+/* ---------- 聲譜：每個頻段一層紋理噪音 ---------- */
+var spec = $("spec"), layers = [];
+function buildLayer(b, W, H, ink){
+  var buf = new Float32Array(W * H), seed = { insect: 11, frog: 23, bird: 37, low: 51 }[b.id] || 5;
+  var rnd = mulberry(seed * 977), x, y, i;
+  var lv = new Float32Array(W);
+  for(x = 0; x < W; x++) lv[x] = levelAt(b, T0 + SPAN * x / (W - 1));
+  var fy = new Float32Array(H);
+  for(y = 0; y < H; y++) fy[y] = 12 * (1 - (y + .5) / H);
+  var sx = W / 1000; // 讓紋理大小與畫布寬度大致無關
+
+  if(b.id === "insect"){
+    var lines = [4.6, 5.3, 6.2, 7.5, 9.1, 10.6].map(function(f){ return [f, .45 + rnd() * .55, .06 + rnd() * .06]; });
+    for(y = 0; y < H; y++){ var f = fy[y], env = bandEnv(f, 4, 12, .28) * (1 - (f - 4) / 8 * .45); if(env <= 0) continue;
+      var ln = 0; for(i = 0; i < lines.length; i++){ var d = (f - lines[i][0]) / lines[i][2]; ln += lines[i][1] * Math.exp(-d * d); }
+      for(x = 0; x < W; x++){
+        var hiss = vnoise(x / (38 * sx), y / 1.3, seed) * .55 + vnoise(x / (9 * sx), y / .7, seed + 1) * .25;
+        var drift = .35 + .65 * vnoise(x / (45 * sx), y / 25, seed + 2);
+        buf[y * W + x] = lv[x] * env * (.5 * hiss + .5 * ln * drift * drift + .18 * hash(x, y, seed + 3));
+      }
+    }
+  } else if(b.id === "frog"){
+    for(y = 0; y < H; y++){ var f2 = fy[y], env2 = bandEnv(f2, 1, 4, .22); if(env2 <= 0) continue;
+      var harm = Math.pow(.5 + .5 * Math.cos(2 * Math.PI * (f2 - 1.15) / .42), 3);
+      for(x = 0; x < W; x++){
+        var bout = smooth(.25, .75, vnoise(x / (22 * sx), 3.3, seed));
+        var blot = vnoise(x / (4 * sx), y / 3, seed + 1);
+        buf[y * W + x] = lv[x] * env2 * (.25 + .75 * bout) * (.35 * blot + .75 * harm * blot + .15 * hash(x, y, seed + 2));
+      }
+    }
+  } else if(b.id === "bird"){
+    for(y = 0; y < H; y++){ var env3 = bandEnv(fy[y], 2, 8, .3); for(x = 0; x < W; x++) buf[y * W + x] = .06 * lv[x] * env3 * hash(x, y, seed); }
+    // 每一聲以一道短豎線表示（長時段聲譜上的單次鳴叫）
+    for(x = 0; x < W; x++){
+      for(var j = 0; j < 3; j++){
+        if(rnd() < Math.pow(lv[x], 1.7) * .28 / Math.max(1, sx)){
+          var fc = 2.6 + rnd() * 4.6, span = .5 + rnd() * 1.8, amp = .5 + rnd() * .6, slope = (rnd() - .5) * 3;
+          var y0 = Math.round((1 - (fc + span / 2) / 12) * H), y1 = Math.round((1 - (fc - span / 2) / 12) * H);
+          for(y = Math.max(0, y0); y < Math.min(H, y1); y++){
+            var xx = Math.round(x + slope * (y - y0) / Math.max(1, y1 - y0)); if(xx < 0 || xx >= W) continue;
+            var e3 = bandEnv(fy[y], 2, 8, .3), tip = Math.sin(Math.PI * (y - y0) / Math.max(1, y1 - y0));
+            buf[y * W + xx] += amp * e3 * (.4 + .6 * tip);
+            if(xx + 1 < W) buf[y * W + xx + 1] += amp * e3 * .35 * tip;
+          }
+        }
+      }
+    }
+  } else if(b.id === "low"){
+    for(y = 0; y < H; y++){ var f4 = fy[y], env4 = bandEnv(f4, 0, 1, .18) * (1 - f4 / 1.25); if(env4 <= 0) continue;
+      for(x = 0; x < W; x++){
+        var swell = .55 + .45 * vnoise(x / (30 * sx), 1.7, seed);
+        buf[y * W + x] = lv[x] * env4 * swell * (.55 + .35 * vnoise(x / (3 * sx), y / 2, seed + 1) + .2 * hash(x, y, seed + 2)) * 1.25;
+      }
+    }
+    for(x = 0; x < W; x++) if(rnd() < .012 * lv[x] / Math.max(1, sx)){ // 偶發的寬頻短促聲
+      var top = Math.round((1 - (.6 + rnd() * .9) / 12) * H);
+      for(y = top; y < H; y++) buf[y * W + x] += .45;
+    }
+  }
+  var cv = document.createElement("canvas"); cv.width = W; cv.height = H;
+  var cx = cv.getContext("2d"), img = cx.createImageData(W, H), px = img.data;
+  for(i = 0; i < W * H; i++){ var v = buf[i]; if(v <= 0) continue; v = 1 - Math.exp(-v * 1.7);
+    px[i * 4] = ink[0]; px[i * 4 + 1] = ink[1]; px[i * 4 + 2] = ink[2]; px[i * 4 + 3] = Math.min(255, v * 255); }
+  cx.putImageData(img, 0, 0);
+  return cv;
+}
+function renderSpec(){
+  var cssW = spec.clientWidth, cssH = spec.clientHeight; if(!cssW || !cssH) return;
+  var s = Math.min(window.devicePixelRatio || 1, 1.5);
+  var W = Math.round(cssW * s), H = Math.round(cssH * s);
+  spec.width = W; spec.height = H;
+  var ink = rgb(token("--tide") || "#1F6B66");
+  layers = bands.map(function(b){ return buildLayer(b, W, H, ink); });
+  composite();
+}
+function composite(){
+  var cx = spec.getContext("2d"), W = spec.width, H = spec.height; if(!W) return;
+  cx.globalAlpha = 1; cx.fillStyle = token("--surface"); cx.fillRect(0, 0, W, H);
+  cx.strokeStyle = token("--line"); cx.lineWidth = 1;
+  for(var k = 2; k < 12; k += 2){ var y = Math.round(H * (1 - k / 12)) + .5; cx.beginPath(); cx.moveTo(0, y); cx.lineTo(W, y); cx.stroke(); }
+  for(var h = 1; h < SPAN; h++){ var x = Math.round(W * h / SPAN) + .5; cx.setLineDash(h === 3 ? [] : [2, 4]); cx.beginPath(); cx.moveTo(x, 0); cx.lineTo(x, H); cx.stroke(); }
+  cx.setLineDash([]);
+  layers.forEach(function(l, i){ cx.globalAlpha = bands[i].muted ? .12 : 1; cx.drawImage(l, 0, 0); });
+  cx.globalAlpha = 1;
+}
+
+/* ---------- 相機單格畫面（示意） ---------- */
+var sheet = $("sheet");
+events.forEach(function(e){
+  var li = document.createElement("li");
+  var b = document.createElement("button"); b.type = "button"; b.className = "frame";
+  b.setAttribute("aria-label", "第 " + (e.i + 1) + " 格，" + e.label + "，檢查點 " + e.cp + " " + e.place + "。" + candText(e) + "。示意畫面。按下把時間軸移到此刻。");
+  var n = confN[e.conf] || 1, conf = "";
+  for(var k = 0; k < 3; k++) conf += "<i" + (k < n ? " class=\"f\"" : "") + "></i>";
+  b.innerHTML = "<canvas width=\"320\" height=\"240\"></canvas>" +
+    "<span class=\"meta\"><span class=\"n\">" + String(e.i + 1).padStart(2, "0") + "</span><span>" + e.label + "</span><span>" + e.cp + " " + e.place + "</span></span>" +
+    "<span class=\"cand\">" + candText(e) + "<span class=\"conf" + (n === 1 ? " lo" : "") + "\" aria-hidden=\"true\">" + conf + "</span></span>";
+  b.addEventListener("click", function(){ stopAdvance(); setMinute(Math.round((e.t - T0) * 60)); });
+  li.appendChild(b); sheet.appendChild(li); e.card = b; e.cv = b.querySelector("canvas");
+});
+function drawFrame(e){
+  var c = e.cv, cx = c.getContext("2d"), W = 320, H = 240;
+  var img = cx.createImageData(W, H), px = img.data;
+  var sceneSeed = Math.round(parseFloat(e.cp) * 100), grain = mulberry(1000 + e.i * 31);
+  var marsh = /濕地|沼澤/.test(e.place) && e.cp === "3.4";
+  var hz = marsh ? 92 : 104;
+  for(var y = 0; y < H; y++) for(var x = 0; x < W; x++){
+    var l;
+    var ridge = hz - 26 * vnoise(x / 26, .5, sceneSeed) - 10 * vnoise(x / 7, 2.5, sceneSeed);
+    if(y < ridge){ l = 18 + 10 * (y / H) + 6 * vnoise(x / 40, y / 30, sceneSeed + 1); }
+    else if(y < hz){ l = 9 + 7 * vnoise(x / 4, y / 6, sceneSeed + 2); }
+    else {
+      var dx = (x - W / 2) / W, dy = (y - H * 1.02) / H, ir = Math.exp(-(dx * dx * 2 + dy * dy * 2.2) * 1.6);
+      var tex;
+      if(marsh && y < 150){ tex = .35 + .65 * vnoise(x / 34, y / 2.2, sceneSeed + 3); tex *= .8 + .4 * hash(x >> 2, y, sceneSeed); }
+      else { tex = .45 + .55 * vnoise(x / 2.6, y / 11, sceneSeed + 4) * (.6 + .4 * vnoise(x / 18, y / 18, sceneSeed + 5)); }
+      l = 22 + 230 * ir * tex;
+    }
+    var vx = (x / W - .5) * 1.6, vy = (y / H - .5) * 1.6, vig = 1 - .55 * (vx * vx + vy * vy);
+    l = l * vig + (grain() - .5) * 34;
+    l = Math.max(0, Math.min(255, l));
+    var o = (y * W + x) * 4; px[o] = px[o + 1] = px[o + 2] = l; px[o + 3] = 255;
+  }
+  cx.putImageData(img, 0, 0);
+  var mono = "\"IBM Plex Mono\", ui-monospace, Menlo, monospace", sans = "\"Noto Sans TC\", \"PingFang TC\", sans-serif";
+  cx.fillStyle = "rgba(0,0,0,.75)"; cx.fillRect(0, H - 32, W, 32);
+  cx.fillStyle = "#f2f2f2"; cx.font = "500 17px " + mono; cx.textBaseline = "middle";
+  cx.textAlign = "left"; cx.fillText("CAM " + e.cp, 10, H - 16);
+  cx.textAlign = "right"; cx.fillText(dateAt(e.t) + " " + e.label, W - 10, H - 16);
+  cx.fillStyle = "rgba(0,0,0,.62)"; cx.fillRect(10, 10, 92, 30);
+  cx.fillStyle = "#f2f2f2"; cx.textAlign = "left"; cx.font = "500 18px " + sans; cx.fillText("示意畫面", 18, 26);
+  cx.textAlign = "right"; cx.font = "500 16px " + mono; cx.fillStyle = "rgba(242,242,242,.85)";
+  cx.fillText("IR " + String(e.i + 1).padStart(2, "0") + "/" + String(events.length).padStart(2, "0"), W - 12, 25);
+}
+function drawFrames(){ events.forEach(drawFrame); }
+
+/* 引線：只在畫面排成一行時畫，連接相機軌上的觸發點與對應畫面 */
+function drawLeaders(){
+  var svg = $("leaders"), lane = $("lane");
+  var tops = events.map(function(e){ return e.card.getBoundingClientRect().top; });
+  var oneRow = Math.max.apply(null, tops) - Math.min.apply(null, tops) < 2;
+  if(!oneRow){ svg.style.height = "14px"; svg.innerHTML = ""; return; }
+  svg.style.height = "";
+  var sr = svg.getBoundingClientRect(), lr = lane.getBoundingClientRect(), out = "";
+  events.forEach(function(e){
+    var x1 = lr.left + lr.width * (e.t - T0) / SPAN - sr.left;
+    var cr = e.cv.getBoundingClientRect(), x2 = cr.left + cr.width / 2 - sr.left;
+    out += "<line data-i=\"" + e.i + "\" x1=\"" + x1.toFixed(1) + "\" y1=\"0\" x2=\"" + x2.toFixed(1) + "\" y2=\"" + sr.height + "\"/>";
+  });
+  svg.innerHTML = out; markNear();
+}
+
+/* ---------- 狀態與讀數 ---------- */
+var state = { m: 314, near: -1 }; // 預設 02:14
+var levelsEl = $("levels");
+bands.forEach(function(b){
+  var li = document.createElement("li");
+  li.innerHTML = "<span>" + b.short + "</span><span class=\"bar\"><i></i></span><span class=\"w\"></span>";
+  li.title = b.zh + "，" + b.khz[0] + "–" + b.khz[1] + " kHz";
+  levelsEl.appendChild(li); b.row = li;
+});
+function word(v){ return v >= .66 ? "強" : v >= .33 ? "中" : v >= .1 ? "弱" : "近乎無聲"; }
+function nearestEvent(t){ var best = events[0]; events.forEach(function(e){ if(Math.abs(e.t - t) < Math.abs(best.t - t)) best = e; }); return best; }
+function markNear(){
+  events.forEach(function(e){ var on = e.i === state.near; e.card.classList.toggle("near", on); e.mk.classList.toggle("near", on); });
+  var ls = $("leaders").querySelectorAll("line");
+  for(var i = 0; i < ls.length; i++) ls[i].classList.toggle("near", +ls[i].dataset.i === state.near);
+}
+function setMinute(m){
+  m = Math.max(0, Math.min(MIN, m)); state.m = m;
+  var t = T0 + m / 60, time = fmt(t), pct = m / MIN * 100;
+  $("clock").textContent = time;
+  $("clockdate").textContent = dateAt(t) + (term ? " · " + term : "") + " · 第 " + (Math.floor(m / 60) + 1) + " 小時／共 7 小時";
+  var ph = $("playhead"); ph.style.left = pct + "%"; ph.classList.toggle("flip", pct > 82);
+  $("phlabel").textContent = time;
+  var active = [];
+  bands.forEach(function(b){
+    var v = levelAt(b, t); b.level = v;
+    b.row.querySelector("i").style.width = (v * 100).toFixed(1) + "%";
+    b.row.querySelector(".w").textContent = b.muted ? "已靜音" : word(v);
+    b.row.classList.toggle("on", v >= .33 && !b.muted); b.row.classList.toggle("muted", b.muted);
+    if(v >= .33) active.push(b.short + "（" + word(v) + "）");
+  });
+  $("sentence").textContent = "AudioMoth（" + mothCp + "）在 " + time + " 的聲譜：" + (active.length ? "較活躍的頻段是" + active.join("、") + "。" : "沒有頻段高於「中」。");
+  var e = nearestEvent(t), diff = Math.round((e.t - t) * 60);
+  var rel = diff === 0 ? "正是此刻" : diff > 0 ? "此刻之後 " + diff + " 分鐘" : "此刻之前 " + (-diff) + " 分鐘";
+  if(e.i !== state.near || $("camline").dataset.d !== String(diff)){
+    $("camline").innerHTML = "紅外線相機在 <b class=\"mono\">" + e.label + "</b> 於 " + e.cp + " " + e.place + " 觸發（" + rel + "）。<span class=\"id\">" + candText(e) + "</span>";
+    $("camline").dataset.d = String(diff);
+  }
+  if(e.i !== state.near){ state.near = e.i; markNear(); }
+  var plot = $("plot");
+  plot.setAttribute("aria-valuenow", String(m));
+  plot.setAttribute("aria-valuetext", time + "，" + (active.length ? "活躍頻段：" + active.join("、") : "各頻段偏弱") + "；最近相機觸發 " + e.label);
+  updateAudio();
+}
+
+/* ---------- 拖動、點擊、鍵盤 ---------- */
+(function(){
+  var plot = $("plot"), dragging = false;
+  function fromX(cx){ var r = spec.getBoundingClientRect(); setMinute(Math.round((cx - r.left) / r.width * MIN)); }
+  plot.addEventListener("pointerdown", function(ev){ if(ev.button !== 0) return; stopAdvance(); dragging = true;
+    try{ plot.setPointerCapture(ev.pointerId); }catch(_){} fromX(ev.clientX); plot.focus({ preventScroll: true }); });
+  plot.addEventListener("pointermove", function(ev){ if(dragging) fromX(ev.clientX); });
+  ["pointerup", "pointercancel", "lostpointercapture"].forEach(function(n){ plot.addEventListener(n, function(){ dragging = false; }); });
+  plot.addEventListener("keydown", function(ev){
+    var d = 0, big = ev.shiftKey ? 10 : 1;
+    switch(ev.key){
+      case "ArrowLeft": case "ArrowDown": d = -big; break;
+      case "ArrowRight": case "ArrowUp": d = big; break;
+      case "PageUp": d = 30; break; case "PageDown": d = -30; break;
+      case "Home": stopAdvance(); setMinute(0); ev.preventDefault(); return;
+      case "End": stopAdvance(); setMinute(MIN); ev.preventDefault(); return;
+      default: return;
+    }
+    ev.preventDefault(); stopAdvance(); setMinute(state.m + d);
+  });
+})();
+
+/* ---------- 自動推進 ---------- */
+var adv = { on: false, raf: 0, last: 0, m: 0 };
+function stepAdvance(ts){
+  if(!adv.on) return;
+  if(adv.last){ adv.m += (ts - adv.last) / 1000 * 5; } adv.last = ts; // 每秒 5 分鐘
+  if(adv.m >= MIN){ setMinute(MIN); stopAdvance(); return; }
+  if(Math.round(adv.m) !== state.m) setMinute(Math.round(adv.m));
+  adv.raf = requestAnimationFrame(stepAdvance);
+}
+function stopAdvance(){ if(!adv.on) return; adv.on = false; cancelAnimationFrame(adv.raf); $("advance").setAttribute("aria-pressed", "false"); $("advance").textContent = "自動推進"; }
+$("advance").addEventListener("click", function(){
+  if(adv.on){ stopAdvance(); return; }
+  adv.on = true; adv.last = 0; adv.m = state.m >= MIN ? 0 : state.m;
+  this.setAttribute("aria-pressed", "true"); this.textContent = "暫停推進";
+  adv.raf = requestAnimationFrame(stepAdvance);
+});
+
+/* ---------- 聲音：每個頻段一路濾波噪音 ---------- */
+var AC = window.AudioContext || window.webkitAudioContext, audio = null;
+var weight = { insect: .22, frog: 1.1, bird: 1.6, low: 1.3 };
+if(!AC){ $("listen").disabled = true; $("listen").title = "此瀏覽器不支援 Web Audio"; }
+function noiseBuffer(ac, sec, seed){ var r = mulberry(seed), n = Math.round(ac.sampleRate * sec), b = ac.createBuffer(1, n, ac.sampleRate), d = b.getChannelData(0);
+  for(var i = 0; i < n; i++) d[i] = r() * 2 - 1; return b; }
+function lfo(ac, freq, depth, target, type){ var o = ac.createOscillator(); o.type = type || "sine"; o.frequency.value = freq;
+  var g = ac.createGain(); g.gain.value = depth; o.connect(g); g.connect(target); o.start(); return o; }
+function startAudio(){
+  var ac = new AC(), now = ac.currentTime;
+  var master = ac.createGain(); master.gain.value = 0; master.connect(ac.destination);
+  master.gain.setTargetAtTime(.55, now, .25);
+  var A = { ac: ac, master: master, band: {}, timers: [] };
+  bands.forEach(function(b, i){
+    var src = ac.createBufferSource(); src.buffer = noiseBuffer(ac, 2.5 + i * .37, 101 + i); src.loop = true;
+    var out = ac.createGain(); out.gain.value = 0; out.connect(master);
+    var chain;
+    if(b.id === "insect"){
+      var hp = ac.createBiquadFilter(); hp.type = "highpass"; hp.frequency.value = b.khz[0] * 1000;
+      var lp = ac.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = Math.min(b.khz[1] * 1000, ac.sampleRate / 2 - 100);
+      var trem = ac.createGain(); trem.gain.value = .55; lfo(ac, 27, .45, trem.gain);
+      src.connect(hp); hp.connect(lp); lp.connect(trem); trem.connect(out);
+    } else if(b.id === "frog"){
+      var sum = ac.createGain();
+      [1300, 2500].forEach(function(f){ var bp = ac.createBiquadFilter(); bp.type = "bandpass"; bp.frequency.value = f; bp.Q.value = 6; src.connect(bp); bp.connect(sum); });
+      var pulse = ac.createGain(); pulse.gain.value = .5; lfo(ac, 3.1, .5, pulse.gain);
+      var bout = ac.createGain(); bout.gain.value = .7; lfo(ac, .11, .3, bout.gain);
+      sum.connect(pulse); pulse.connect(bout); bout.connect(out);
+    } else if(b.id === "bird"){
+      var bf = ac.createBiquadFilter(); bf.type = "bandpass"; bf.frequency.value = 4000; bf.Q.value = 14;
+      var env = ac.createGain(); env.gain.value = 0;
+      src.connect(bf); bf.connect(env); env.connect(out);
+      A.birdFilter = bf; A.birdEnv = env;
+      A.timers.push(setInterval(function(){
+        var L = b.muted ? 0 : (b.level || 0); if(Math.random() > L * .55) return;
+        var t = ac.currentTime + .02, f0 = 2600 + Math.random() * 3800, dur = .06 + Math.random() * .1;
+        bf.frequency.cancelScheduledValues(t); bf.frequency.setValueAtTime(f0, t);
+        bf.frequency.linearRampToValueAtTime(f0 * (Math.random() < .5 ? 1.35 : .75), t + dur);
+        env.gain.cancelScheduledValues(t); env.gain.setValueAtTime(0, t);
+        env.gain.linearRampToValueAtTime(1, t + .012); env.gain.linearRampToValueAtTime(0, t + dur);
+      }, 110));
+    } else {
+      var lpl = ac.createBiquadFilter(); lpl.type = "lowpass"; lpl.frequency.value = Math.min(b.khz[1] * 1000, 600); lpl.Q.value = .6;
+      var swell = ac.createGain(); swell.gain.value = .65; lfo(ac, .09, .35, swell.gain);
+      src.connect(lpl); lpl.connect(swell); swell.connect(out);
+    }
+    src.start(now, Math.random() * 2);
+    A.band[b.id] = { out: out, src: src };
+  });
+  return A;
+}
+function updateAudio(){
+  if(!audio) return; var now = audio.ac.currentTime;
+  bands.forEach(function(b){ var n = audio.band[b.id]; if(!n) return;
+    var g = b.muted ? 0 : (b.level || 0) * (weight[b.id] || 1);
+    n.out.gain.setTargetAtTime(g, now, .08); });
+}
+function stopAudio(){
+  if(!audio) return; var A = audio; audio = null;
+  A.timers.forEach(clearInterval);
+  A.master.gain.setTargetAtTime(0, A.ac.currentTime, .08);
+  setTimeout(function(){ A.ac.close(); }, 400);
+  $("listen").setAttribute("aria-pressed", "false"); $("listen").textContent = "聆聽"; $("stop").disabled = true;
+}
+$("listen").addEventListener("click", function(){
+  if(audio){ stopAudio(); return; }
+  audio = startAudio(); if(audio.ac.state === "suspended") audio.ac.resume();
+  this.setAttribute("aria-pressed", "true"); this.textContent = "聆聽中"; $("stop").disabled = false;
+  updateAudio();
+});
+$("stop").addEventListener("click", function(){ stopAudio(); stopAdvance(); $("listen").focus(); });
+
+/* 靜音按鈕 */
+var mutes = $("mutes");
+bands.forEach(function(b){
+  var btn = document.createElement("button"); btn.type = "button"; btn.className = "mute";
+  btn.setAttribute("aria-pressed", "false"); btn.textContent = b.short; btn.title = "靜音：" + b.zh;
+  btn.addEventListener("click", function(){
+    b.muted = !b.muted; btn.setAttribute("aria-pressed", String(b.muted));
+    if(b.label) b.label.classList.toggle("muted", b.muted);
+    composite(); setMinute(state.m);
+  });
+  mutes.appendChild(btn);
+});
+
+/* 盲點 */
+$("limlist").innerHTML = N.limits.map(function(s){ return "<li><span>" + s + "</span></li>"; }).join("");
+$("limbtn").addEventListener("click", function(){
+  var open = this.getAttribute("aria-expanded") !== "true";
+  this.setAttribute("aria-expanded", String(open)); $("limpanel").hidden = !open;
+  document.body.classList.toggle("show-limits", open);
+  requestAnimationFrame(drawLeaders);
+});
+
+/* ---------- 版面變化時重繪 ---------- */
+var rt = 0, lastW = 0;
+function relayout(force){
+  var w = spec.clientWidth;
+  if(force || Math.abs(w - lastW) > 1){ lastW = w; renderSpec(); }
+  placeBandLabels(); drawLeaders();
+}
+if(window.ResizeObserver) new ResizeObserver(function(){ clearTimeout(rt); rt = setTimeout(function(){ relayout(false); }, 120); }).observe($("scope"));
+else addEventListener("resize", function(){ clearTimeout(rt); rt = setTimeout(function(){ relayout(false); }, 120); });
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", function(){ relayout(true); });
+
+renderSpec(); lastW = spec.clientWidth; placeBandLabels(); drawFrames(); drawLeaders(); setMinute(state.m);
+if(document.fonts && document.fonts.ready) document.fonts.ready.then(function(){ drawFrames(); placeBandLabels(); drawLeaders(); });
+document.addEventListener("visibilitychange", function(){ if(document.hidden) stopAdvance(); });
+})();
+</script>
+</body>
+</html>

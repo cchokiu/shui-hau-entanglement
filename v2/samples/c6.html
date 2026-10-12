@@ -1,0 +1,548 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>因果鏈與多聲道</title>
+<link rel="stylesheet" href="shared.css">
+<script src="data.js"></script>
+<style>
+/* 方案 06：固定剖面圖（sticky）＋逐段文字。剖面由山到海排開，一段一個場景。 */
+:root{
+  --bar-h:44px;
+  --soil:color-mix(in srgb,var(--c-cattle) 13%,var(--bg));
+  --water:color-mix(in srgb,var(--tide) 24%,var(--bg));
+  --sea:color-mix(in srgb,var(--tide) 16%,var(--bg));
+}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+body{overflow-x:hidden}
+p{margin:.7rem 0}
+.eyebrow{font-family:var(--f-mono);font-size:.76rem;letter-spacing:.08em;color:var(--muted)}
+.vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* 引言 */
+.intro{max-width:46rem;margin:0 auto;padding:36px 16px 12px}
+.intro h1{font-size:clamp(1.9rem,6.5vw,2.7rem);font-weight:800;letter-spacing:.02em;margin:.35rem 0 .6rem}
+.intro .lede{font-size:1.06rem}
+.intro .how{font-size:.9rem;color:var(--muted);border-left:3px solid var(--tide);padding:.1rem 0 .1rem 12px;margin-top:1rem}
+.intro .how b{color:var(--fg);font-weight:700}
+.legend-st{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;font-size:.8rem;color:var(--muted);margin-top:1rem}
+.cue{display:flex;align-items:center;gap:10px;margin-top:1.4rem;font-family:var(--f-mono);font-size:.76rem;color:var(--muted)}
+.cue::after{content:"";flex:1;height:1px;background:var(--line)}
+
+/* 捲動敘事 */
+.scrolly{position:relative;max-width:80rem;margin:0 auto;padding:0 16px}
+.graphic{position:sticky;top:var(--bar-h);z-index:10;background:var(--bg);margin:0 -16px;padding:10px 16px 8px;
+  min-height:45vh;min-height:45svh;display:flex;flex-direction:column;justify-content:center;border-bottom:1px solid var(--line)}
+.g-head{display:flex;align-items:baseline;gap:4px 12px;flex-wrap:wrap;min-height:1.9rem}
+.g-num{font-family:var(--f-mono);font-size:.74rem;color:var(--bg);background:var(--fg);padding:0 7px;border-radius:2px}
+.g-period{font-family:var(--f-mono);font-size:.8rem;color:var(--tide)}
+.g-title{font-family:var(--f-display);font-weight:800;font-size:1.08rem}
+.g-head .fade{transition:opacity .4s}
+.stage{position:relative;margin-top:6px}
+.xsec{display:block;width:100%;height:auto;overflow:visible}
+.ov{position:absolute;inset:0;pointer-events:none}
+.g-foot{display:flex;align-items:center;justify-content:space-between;gap:8px 14px;flex-wrap:wrap;margin-top:6px}
+.g-nav ol{list-style:none;margin:0;padding:0;display:flex;gap:10px;position:relative}
+.g-nav ol::before{content:"";position:absolute;left:12px;right:12px;top:50%;height:1px;background:var(--line)}
+.g-nav button{position:relative;width:26px;height:26px;border-radius:50%;border:1px solid var(--muted);background:var(--bg);
+  font-family:var(--f-mono);font-size:.72rem;line-height:1;cursor:pointer;padding:0;transition:background .3s,color .3s}
+.g-nav button[aria-current="step"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.g-nav button:hover{border-color:var(--tide)}
+.g-chips{list-style:none;margin:6px 0 0;padding:0;display:flex;flex-wrap:wrap;gap:4px 12px;font-size:.8rem}
+.g-chips li{display:flex;align-items:center;gap:5px}
+
+/* SVG 剖面 */
+.xsec .ground{fill:var(--soil)}
+.xsec .hatch line{stroke:var(--line);stroke-width:1}
+.xsec .strata{fill:none;stroke:var(--line);stroke-width:1;stroke-dasharray:3 5}
+.xsec .ridge{fill:none;stroke:var(--line);stroke-width:1.4}
+.xsec .surface{fill:none;stroke:var(--fg);stroke-width:1.6;stroke-linejoin:round;stroke-linecap:round}
+.xsec .surface.ghost{stroke-opacity:.3;stroke-width:1.1}
+.xsec .sand circle{fill:var(--c-clam);opacity:.55}
+.xsec .seafill{fill:var(--sea)}
+.xsec .wave{fill:none;stroke:var(--tide);stroke-width:1.2;stroke-linecap:round}
+.xsec .water{fill:var(--water);stroke:var(--tide);stroke-width:.8}
+.xsec .dam{fill:var(--fg);opacity:.8}
+.xsec .ghostline{fill:none;stroke:var(--muted);stroke-width:1.2;stroke-dasharray:4 5}
+.xsec .stream{fill:none;stroke:var(--tide);stroke-width:2.3;stroke-linecap:round;stroke-linejoin:round}
+.xsec .flow{stroke-dasharray:7 9;animation:flow 1.5s linear infinite}
+.xsec .dry{fill:none;stroke:var(--muted);stroke-width:1.4;stroke-dasharray:2 6;stroke-linecap:round}
+@keyframes flow{to{stroke-dashoffset:-16}}
+.xsec .cutmark{fill:none;stroke:var(--fg);stroke-width:3;stroke-linecap:round}
+.xsec .rice{fill:none;stroke:var(--c-rice);stroke-width:1.5;stroke-linecap:round}
+.xsec .rice.dying{stroke:var(--muted);opacity:.7}
+.xsec .crack{fill:none;stroke:var(--muted);stroke-width:1}
+.xsec .weed{fill:none;stroke:var(--muted);stroke-width:1.1;stroke-linecap:round}
+.xsec .reed{fill:none;stroke:var(--c-club);stroke-width:1.2;stroke-linecap:round}
+.xsec .reedhead{fill:none;stroke:var(--c-club);stroke-width:2.6;stroke-linecap:round;opacity:.8}
+.xsec .house{fill:var(--surface);stroke:var(--fg);stroke-width:1.2;stroke-linejoin:round}
+.xsec .door{fill:var(--fg);opacity:.7}
+.xsec .mangrove circle{fill:var(--c-club);opacity:.8}
+.xsec .mangrove path{fill:none;stroke:var(--c-cattle);stroke-width:1.2;stroke-linecap:round}
+.xsec .beast{stroke-linecap:round;stroke-linejoin:round}
+.xsec .cow{fill:var(--c-cattle)} .xsec .cowline{fill:none;stroke:var(--c-cattle);stroke-width:1.6;stroke-linecap:round}
+.xsec .buf{fill:var(--c-buffalo)} .xsec .bufline{fill:none;stroke:var(--c-buffalo);stroke-width:1.6;stroke-linecap:round}
+.xsec .person{fill:none;stroke:var(--fg);stroke-width:1.4;stroke-linecap:round}
+.xsec .person.hat{fill:var(--c-rice);stroke:var(--fg);stroke-width:1}
+.xsec .egret{fill:var(--surface);stroke:var(--fg);stroke-width:1}
+.xsec .egretline{fill:none;stroke:var(--fg);stroke-width:1;stroke-linecap:round}
+.xsec .bug{fill:none;stroke:var(--fg);stroke-width:1;stroke-linecap:round}
+.xsec .frog{fill:var(--c-club)}
+.xsec .channel{fill:none;stroke:var(--tide);stroke-width:1.8;stroke-dasharray:5 5;animation:flow 2.2s linear infinite}
+.xsec .hl{fill:none;stroke:var(--conflict);stroke-width:9;stroke-linecap:round;stroke-linejoin:round;opacity:.7;animation:pulse 2.4s ease-in-out infinite}
+@keyframes pulse{50%{opacity:.35}}
+.xsec .leader{fill:none;stroke-width:1;stroke-dasharray:2 3}
+.xsec [data-layer]{opacity:0;transition:opacity .9s ease}
+.xsec [data-layer].on{opacity:1}
+.xsec .grow{transform-box:fill-box;transform-origin:50% 100%;transform:scaleY(.2);transition:transform 1.1s ease}
+.xsec .on .grow,.xsec .on.grow{transform:none}
+
+/* 標記（HTML 疊層，字不隨 SVG 縮小） */
+.mk-dot{position:absolute;width:18px;height:18px;margin:-9px 0 0 -9px;border-radius:50%;background:var(--c);color:var(--bg);
+  font:500 10px/18px var(--f-mono);text-align:center;box-shadow:0 0 0 2px var(--bg);opacity:0;transform:scale(.4);transition:opacity .5s,transform .5s}
+.mk-label{position:absolute;transform:translate(-50%,-100%);font-size:.8rem;line-height:1.5;background:var(--surface);border:1px solid var(--line);
+  border-left:3px solid var(--c);padding:1px 7px;border-radius:2px;white-space:nowrap;opacity:0;transition:opacity .6s .15s}
+.mk-label i{font-style:normal;font-family:var(--f-mono);font-size:.7rem;color:var(--muted);margin-right:4px}
+.in .mk-dot,.mk-dot.in{opacity:1;transform:none}
+.mk-label.in{opacity:1}
+.dot{display:inline-block;width:16px;height:16px;border-radius:50%;background:var(--c);color:var(--bg);font:500 9px/16px var(--f-mono);text-align:center;flex:none}
+.note{position:absolute;transform:translate(-50%,-50%);font-size:.76rem;white-space:nowrap;font-weight:700;opacity:0;transition:opacity .6s}
+.note.on{opacity:1}
+.note.conflict{color:var(--conflict);background:var(--conflict-soft);padding:0 6px;border-radius:2px}
+.zone{position:absolute;top:94%;transform:translate(-50%,-50%);font-size:.7rem;letter-spacing:.12em;color:var(--muted);white-space:nowrap}
+.leaders-on{display:none}
+
+/* 步驟 */
+.steps{position:relative;z-index:1;padding-bottom:30vh}
+.step{background:var(--surface);border:1px solid var(--line);border-top:3px solid var(--line);padding:16px 16px 12px;margin:0 0 55vh;transition:border-color .4s,opacity .4s}
+.step:first-child{margin-top:8vh}
+.step:last-child{margin-bottom:0}
+.step.is-active{border-top-color:var(--tide)}
+.step[data-scene="conflict"].is-active{border-top-color:var(--conflict)}
+.step:focus{outline:none}
+.step:focus-visible{outline:2px solid var(--tide);outline-offset:2px}
+.s-meta{display:flex;gap:10px;align-items:baseline;margin:0;font-family:var(--f-mono);font-size:.76rem;color:var(--muted)}
+.s-meta .n{color:var(--fg)}
+.step h2{font-size:1.4rem;font-weight:800;margin:.25rem 0 .2rem}
+.step > p{margin:.5rem 0 .8rem}
+.rel-h{font-family:var(--f-body);font-size:.76rem;font-weight:700;letter-spacing:.08em;color:var(--muted);margin:1rem 0 .2rem}
+.rels{list-style:none;margin:0;padding:0}
+.rel{padding:9px 0;border-top:1px dashed var(--line)}
+.rel .ln{font-weight:500;line-height:1.55}
+.nm{border-bottom:2px solid var(--c);padding-bottom:1px}
+.vb{font-size:.8rem;color:var(--tide);margin:0 .35em;white-space:nowrap}
+.vb.c{color:var(--conflict);font-weight:700}
+.rel .nt{font-size:.88rem;margin:.15rem 0 .1rem;color:var(--fg)}
+.rel .mt{display:flex;flex-wrap:wrap;align-items:center;gap:2px 10px;font-size:.76rem;color:var(--muted)}
+.rel .mt .mono{font-size:.72rem}
+details.more{margin-top:.6rem;font-size:.92rem}
+details.more summary{cursor:pointer;color:var(--tide);font-size:.84rem;padding:4px 0}
+details.more summary:focus-visible{outline:2px solid var(--tide);outline-offset:2px}
+
+/* 多聲道 */
+.voices{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-auto-rows:1fr;gap:10px;margin:1rem 0 .6rem}
+.voice{display:flex;flex-direction:column;gap:4px;border:1px solid var(--line);border-top:3px solid var(--fg);background:var(--bg);padding:10px 10px 10px;min-width:0}
+.voice h3{font-size:1rem}
+.voice .role{font-family:var(--f-mono);font-size:.7rem;color:var(--muted)}
+.voice .body{font-size:.88rem;flex:1;margin:.2rem 0}
+.voice .st{align-self:flex-start}
+.voice.slot{border:1px dashed var(--unverified);border-top:3px dashed var(--unverified);background:transparent}
+.voice.slot .empty{flex:1;display:grid;place-items:center;min-height:4.2rem;margin:.3rem 0;font-family:var(--f-display);font-weight:600;font-size:1.05rem;color:var(--unverified);
+  background:repeating-linear-gradient(-45deg,transparent 0 7px,color-mix(in srgb,var(--unverified) 12%,transparent) 7px 8px)}
+.voice.slot .reserve{font-size:.76rem;color:var(--muted);margin:0}
+.order{font-size:.78rem;color:var(--muted)}
+.invite{border-top:1px solid var(--line);margin-top:1rem;padding-top:.8rem;font-size:.95rem}
+.invite button{margin-top:.4rem;border:1px solid var(--fg);background:var(--fg);color:var(--bg);padding:5px 14px;border-radius:2px;cursor:pointer;font-size:.88rem}
+.invite button:hover{background:transparent;color:var(--fg)}
+.invite .hint{font-size:.8rem;color:var(--unverified);margin:.4rem 0 0}
+
+/* 三階段 */
+.stages{max-width:80rem;margin:0 auto;padding:56px 16px 24px}
+.stages h2{font-size:1.5rem;font-weight:800;padding-top:1rem;border-top:1px solid var(--line)}
+.stages .why{max-width:44rem}
+.strip{list-style:none;margin:1.4rem 0 0;padding:0;display:grid;gap:26px}
+.strip > li{min-width:0;position:relative}
+.strip figure{margin:0}
+.strip .cap{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:6px}
+.strip .cap b{font-family:var(--f-display);font-size:1.15rem}
+.strip .cap .k{font-family:var(--f-mono);font-size:.72rem;color:var(--bg);background:var(--fg);padding:0 6px;border-radius:2px}
+.strip .cap .p{font-family:var(--f-mono);font-size:.76rem;color:var(--tide)}
+.strip .xsec{border-bottom:1px solid var(--line)}
+.who{list-style:none;margin:.5rem 0 0;padding:0;display:flex;flex-wrap:wrap;gap:3px 12px;font-size:.82rem}
+.who li{display:flex;align-items:center;gap:5px}
+.who li::before{content:"";width:9px;height:9px;border-radius:50%;background:var(--c)}
+.also{font-size:.78rem;color:var(--muted);margin:.35rem 0 0}
+.aerial{position:relative;margin-top:.7rem;aspect-ratio:960/250;border:1px dashed var(--muted);display:grid;place-items:center;text-align:center;padding:10px;
+  font-size:.8rem;color:var(--muted);background:repeating-linear-gradient(45deg,transparent 0 9px,color-mix(in srgb,var(--line) 70%,transparent) 9px 10px)}
+.aerial span{background:var(--bg);padding:2px 8px}
+.aerial i{position:absolute;width:12px;height:12px;border-color:var(--fg);border-style:solid;border-width:0}
+.aerial i:nth-child(1){top:-1px;left:-1px;border-top-width:2px;border-left-width:2px}
+.aerial i:nth-child(2){top:-1px;right:-1px;border-top-width:2px;border-right-width:2px}
+.aerial i:nth-child(3){bottom:-1px;left:-1px;border-bottom-width:2px;border-left-width:2px}
+.aerial i:nth-child(4){bottom:-1px;right:-1px;border-bottom-width:2px;border-right-width:2px}
+.arrow{display:none}
+footer.src{max-width:80rem;margin:0 auto;padding:12px 16px 60px;font-size:.8rem;color:var(--muted)}
+
+@media (min-width:900px){
+  .scrolly{display:grid;grid-template-columns:minmax(19rem,25rem) minmax(0,1fr);gap:0 52px;padding:0 24px}
+  .graphic{grid-column:2;grid-row:1;height:calc(100vh - var(--bar-h));margin:0;padding:12px 0;border-bottom:0}
+  .steps{grid-column:1;grid-row:1;padding-bottom:35vh}
+  .step{margin-bottom:60vh;opacity:.38}
+  .step:first-child{margin-top:28vh}
+  .step.is-active{opacity:1}
+  .g-chips{display:none}
+  .leaders-on{display:block}
+  .g-title{font-size:1.3rem}
+  .strip{grid-template-columns:repeat(3,minmax(0,1fr));gap:40px}
+  .arrow{display:block;position:absolute;right:-30px;top:3.2rem;font-family:var(--f-mono);color:var(--muted)}
+  .stages{padding-inline:24px}
+}
+@media (max-width:899px){
+  .mk-label{display:none}
+}
+@media (max-width:420px){
+  .zone.long{font-size:0}
+  .zone.long::after{content:attr(data-short);font-size:.68rem}
+}
+@media (prefers-reduced-motion:reduce){
+  .xsec .grow{transform:none}
+}
+</style>
+</head>
+<body>
+<header class="sample-bar"><a href="../index.html">← 回到參考頁</a><span class="tag">方案 06 · 示意 sample</span><span class="sp"></span>
+<nav aria-label="其他方案"><a href="c1.html">01</a><a href="c2.html">02</a><a href="c3.html">03</a><a href="c4.html">04</a><a href="c5.html">05</a><a href="c6.html" aria-current="page">06</a><a href="c7.html">07</a><a href="c8.html">08</a></nav></header>
+
+<main>
+<section class="intro">
+  <p class="eyebrow">方案 06 · SCROLLYTELLING</p>
+  <h1>因果鏈與多聲道</h1>
+  <p class="lede">一幅由山到海的水口剖面圖固定在畫面上，文字逐段捲過。每一段改變剖面上的水、田與濕地，並列出這一段涉及的關係、來源和核實狀態。鏈的最後一環不下結論，只把各方說法並排，並空出尚未訪問的位置。</p>
+  <p>正式版會加入對位的地政總署歷史航空照片、訪問錄音片段，以及觀鳥團體和科學資料的回應。</p>
+  <p class="how"><b>Webflow 做法：</b>步驟、關係與聲音卡由 CMS Collection 原生輸出（「因果步驟」「聲音」兩個集合，以 Multi-reference 連到節點和關係）；固定的剖面 SVG、場景切換和捲動觸發放在一個 Code Embed 內，以瀏覽器內建的 IntersectionObserver 驅動，不需外部套件。</p>
+  <div class="legend-st" id="legend"></div>
+  <p class="cue">向下捲動，沿因果鏈走六步</p>
+</section>
+
+<section class="scrolly" aria-label="因果鏈">
+  <div class="graphic" id="graphic">
+    <div class="g-head" aria-hidden="true"><span class="g-num" id="gNum">01／06</span><span class="g-period fade" id="gPeriod"></span><b class="g-title fade" id="gTitle"></b></div>
+    <div class="stage" id="stage"></div>
+    <ul class="g-chips" id="gChips" aria-label="這一段的節點"></ul>
+    <div class="g-foot">
+      <nav class="g-nav" aria-label="跳到因果鏈的某一段"><ol id="gNav"></ol></nav>
+      <span class="simulated">示意剖面・不按比例・田的位置為示意</span>
+    </div>
+  </div>
+  <div class="steps" id="steps"></div>
+</section>
+
+<section class="stages" aria-labelledby="stagesH">
+  <h2 id="stagesH">三個階段，而不是一條今昔滑桿</h2>
+  <div class="why">
+    <p>一條「以前／現在」滑桿只有兩端，讀者很容易把它讀成「以前好、現在差」，或者反過來。Helen 在團隊討論中提議改為三個階段。三個階段之間沒有哪一個是「原貌」：每一階段都有不同的生命和人在使用同一片地。</p>
+    <p>這裡暫以同一幅示意剖面代替。正式版會用地政總署的歷史航空照片，三張裁切至同一範圍、同一比例並互相對位，標明拍攝年份與版權；年份待團隊選定。</p>
+  </div>
+  <ol class="strip" id="strip"></ol>
+</section>
+</main>
+
+<footer class="src">資料：本頁所有內容取自項目示意資料（data.js），村民以代號標示，直接引述已改為轉述。剖面、田的位置和動物圖形均為示意，不代表實際比例或地段。</footer>
+
+<script>
+(function(){
+  "use strict";
+  var D = window.SHUIHAU;
+  var NODE = {}; D.nodes.forEach(function(n){ NODE[n.id] = n; });
+  var CHAIN = D.chain, NSTEP = CHAIN.length;
+  var ST = { observed:"觀察紀錄", oral:"口述・未核實", consensus:"多人口述一致", check:"待科學核實", conflict:"爭議", pending:"待訪問" };
+  var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var W = 960, H = 440;
+
+  function esc(s){ return String(s).replace(/[&<>"]/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]; }); }
+  function col(id){ var n = NODE[id]; return "var(" + (n && n.color ? n.color : "--fg") + ")"; }
+  function zh(id){ return NODE[id] ? NODE[id].zh : id; }
+  function pct(v, of){ return (v / of * 100).toFixed(3) + "%"; }
+
+  /* ---------- 剖面幾何（示意） ---------- */
+  var T = [[292,344,232],[348,398,246],[402,452,260],[456,506,274],[510,560,288]]; // 梯田：x0, x1, 地面 y
+  var G = "M0,96 C30,70 50,58 72,58 C92,58 102,92 112,112 C128,140 150,150 170,150 C195,150 215,140 226,128 L240,130 C262,150 276,200 292,232 L344,232 L348,246 L398,246 L402,260 L452,260 L456,274 L506,274 L510,288 L560,288 L566,300 L700,300 C712,300 716,290 730,290 L790,290 C800,290 806,300 820,302 L880,318 L960,350";
+  var HILL = "M0,96 C30,70 50,58 72,58 C92,58 102,92 112,112 C128,140 150,150 170,150 C195,150 215,140 226,128 L240,130 C262,150 276,200 292,232 L292,440 L0,440 Z";
+  var UP = "M86,62 C98,76 104,96 113,112 C128,138 150,146 170,146 C195,146 214,136 226,124";
+  var DOWN = "M226,124 L240,127 C262,146 276,196 290,228 L342,229 L349,243 L396,243 L403,257 L450,257 L457,271 L504,271 L511,285 L558,285 L566,297 L700,297 C712,297 716,287 730,287 L790,287 C800,287 806,297 820,299 L852,308";
+
+  function rows(x0, x1, step, fn){ var s = ""; for (var x = x0; x <= x1; x += step) s += fn(x); return s; }
+  function tufts(t){ var y = t[2]; return rows(t[0]+6, t[1]-6, 8, function(x){ return "M"+x+","+(y-1)+"q-1,-7 -4,-11M"+x+","+(y-1)+"l0,-13M"+x+","+(y-1)+"q1,-7 4,-11"; }); }
+  function weeds(t){ var y = t[2]; return rows(t[0]+4, t[1]-4, 6, function(x){ var h = 4 + (x*7) % 9; return "M"+x+","+y+"l-2,-"+h+"M"+x+","+y+"l1,-"+(h+3)+"M"+x+","+y+"l3,-"+Math.max(2,h-1); }); }
+  function cracks(t){ var y = t[2]; return rows(t[0]+8, t[1]-8, 14, function(x){ return "M"+x+","+(y+2)+"l3,4l-2,3l2,4"; }); }
+  function reedPath(x0, x1, y, step){ var a = "", b = ""; for (var x = x0; x <= x1; x += step){ var h = 13 + (x*13) % 10; a += "M"+x+","+y+"q-1,-"+(h/2)+" 1,-"+h; b += "M"+(x+1)+","+(y-h)+"l0,-4"; } return '<path class="reed" d="'+a+'"/><path class="reedhead" d="'+b+'"/>'; }
+  function waterRect(t){ return '<rect class="water" x="'+(t[0]+1)+'" y="'+(t[2]-4)+'" width="'+(t[1]-t[0]-2)+'" height="4"/>'; }
+  function cow(x, y){
+    return '<g class="beast"><path class="cow" d="M'+x+','+(y-8)+' C'+x+','+(y-15)+' '+(x+4)+','+(y-16)+' '+(x+12)+','+(y-16)+' C'+(x+20)+','+(y-16)+' '+(x+24)+','+(y-15)+' '+(x+25)+','+(y-12)+' L'+(x+31)+','+(y-14)+' L'+(x+32)+','+(y-9)+' L'+(x+26)+','+(y-8)+' Z"/>' +
+      '<path class="cowline" d="M'+(x+3)+','+(y-8)+'L'+(x+3)+','+y+'M'+(x+8)+','+(y-8)+'L'+(x+9)+','+y+'M'+(x+18)+','+(y-8)+'L'+(x+18)+','+y+'M'+(x+23)+','+(y-8)+'L'+(x+24)+','+y+'M'+x+','+(y-13)+'q-4,3 -3,9M'+(x+28)+','+(y-14)+'l1,-3"/></g>';
+  }
+  function farmer(x, y){
+    return '<path class="person hat" d="M'+(x-7)+','+(y-24)+' L'+x+','+(y-30)+' L'+(x+7)+','+(y-24)+' Z"/>' +
+      '<path class="person" d="M'+x+','+(y-24)+'L'+(x+1)+','+(y-12)+'M'+(x+1)+','+(y-12)+'L'+(x-3)+','+y+'M'+(x+1)+','+(y-12)+'L'+(x+5)+','+y+'M'+x+','+(y-20)+'L'+(x+8)+','+(y-15)+'M'+(x+8)+','+(y-15)+'L'+(x+16)+','+(y-12)+'"/>';
+  }
+  function egret(x, y){
+    return '<g transform="translate('+x+' '+y+') scale(1.45) translate('+(-x)+' '+(-y)+')"><path class="egretline" d="M'+(x-1)+','+(y-5)+'L'+(x-1)+','+y+'M'+(x+1)+','+(y-5)+'L'+(x+2)+','+y+'M'+(x+4)+','+(y-9)+'q4,-3 2,-7q-2,-3 2,-5l6,1"/>' +
+      '<ellipse class="egret" cx="'+x+'" cy="'+(y-8)+'" rx="6" ry="3.4"/></g>';
+  }
+  function mangrove(x, y){
+    return '<g class="mangrove grow"><path d="M'+x+','+(y-11)+'L'+x+','+(y-4)+'M'+x+','+(y-7)+'q-4,2 -6,7M'+x+','+(y-7)+'q4,2 6,7M'+x+','+(y-9)+'q-8,3 -10,9"/>' +
+      '<circle cx="'+(x-4)+'" cy="'+(y-15)+'" r="6"/><circle cx="'+(x+3)+'" cy="'+(y-18)+'" r="7"/><circle cx="'+(x+2)+'" cy="'+(y-11)+'" r="5"/></g>';
+  }
+  function house(x, w){ var y = 290; return '<path class="house" d="M'+x+','+y+'v-13l'+(w/2)+',-9l'+(w/2)+',9v13Z"/><rect class="door" x="'+(x+w/2-2)+'" y="'+(y-7)+'" width="4" height="7"/>'; }
+
+  function svgScene(p, label){
+    var L = function(name, inner){ return '<g data-layer="'+name+'">'+inner+'</g>'; };
+    var hatch = ""; for (var i = -440; i < 300; i += 7) hatch += '<line x1="'+i+'" y1="440" x2="'+(i+440)+'" y2="0"/>';
+    var sand = ""; for (var k = 0; k < 36; k++){ var sx = 796 + (k*29) % 82, sy = 296 + (k*17) % 24, lim = 302 + (sx-820)*16/60; if (sy > Math.max(lim, 292) + 1 && sy < Math.max(lim,292) + 9) sand += '<circle cx="'+sx+'" cy="'+sy+'" r="1"/>'; }
+    var back =
+      '<path class="ridge" d="M0,70 C30,40 60,28 92,40 C120,18 160,24 196,52 C220,68 238,92 252,122"/>' +
+      '<path class="ground" d="'+G+' L960,440 L0,440 Z"/>' +
+      '<clipPath id="'+p+'-hc"><path d="'+HILL+'"/></clipPath>' +
+      '<g class="hatch" clip-path="url(#'+p+'-hc)" opacity=".7">'+hatch+'</g>' +
+      '<path class="strata" d="M0,300 C200,318 400,330 560,345 S860,368 960,380"/><path class="strata" d="M0,382 C240,392 520,402 960,422"/>' +
+      '<g class="sand">'+sand+'</g>' +
+      '<path class="seafill" d="M850,310 L960,310 L960,350 L880,318 Z"/>' +
+      '<path class="wave" d="M866,306 q6,-4 12,0 t12,0 M902,304 q6,-4 12,0 t12,0 t12,0"/>' +
+      '<path class="surface" d="'+G+'"/><path class="surface ghost" transform="translate(1.4 1.1)" d="'+G+'"/>' +
+      L("res-ghost", '<path class="ghostline" d="M116,116 L224,116"/>') +
+      L("reservoir", '<path class="water" d="M114,116 L228,116 L226,128 C215,140 195,150 170,150 C150,150 128,140 112,112 Z"/><path class="dam" d="M222,131 L228,104 L240,104 L250,134 Z"/>') +
+      L("terr-water", T.map(waterRect).join("")) +
+      L("cracks", '<path class="crack" d="'+T.map(cracks).join("")+'"/>') +
+      L("wet-water", '<rect class="water" x="568" y="296" width="132" height="4"/><ellipse class="water" cx="600" cy="300" rx="17" ry="4"/><ellipse class="water" cx="648" cy="300" rx="14" ry="3.6"/><ellipse class="water" cx="684" cy="300" rx="9" ry="3"/>') +
+      L("club-field", waterRect(T[0]) + waterRect(T[1])) +
+      L("vill-field", waterRect(T[2]) + '<path class="crack" d="M404,264 l0,-6 M450,264 l0,-6"/>');
+    var streams =
+      '<path class="stream flow" d="'+UP+'"/>' +
+      L("flow-down", '<path class="stream flow" d="'+DOWN+'"/>') +
+      L("dry-down", '<path class="dry" d="'+DOWN.replace("M226,124 L240,127","M246,132")+'"/>') +
+      L("cut-mark", '<path class="cutmark" d="M252,114 l10,14 M262,114 l-10,14"/>') +
+      L("channel", '<path class="channel" d="M290,222 L342,222 L348,236 L396,236 L402,250 L446,250"/>') +
+      L("conflict-hl", '<path class="hl" d="M372,236 L396,236 L402,250 L426,250"/>');
+    var front =
+      L("rice", '<path class="rice grow" d="'+T.map(tufts).join("")+'"/>') +
+      L("rice-dry", '<path class="rice dying" d="'+T.map(tufts).join("")+'"/>') +
+      L("weeds", '<path class="weed grow" d="'+T.map(weeds).join("")+'"/>') +
+      L("reeds-a", '<g class="grow">'+reedPath(296,340,232,7)+reedPath(352,394,246,7)+reedPath(406,448,260,7)+'</g>') +
+      L("reeds-b", '<g class="grow">'+reedPath(460,502,274,7)+reedPath(514,556,288,7)+reedPath(570,582,300,6)+reedPath(620,632,300,6)+reedPath(664,674,300,5)+reedPath(694,704,300,5)+'</g>') +
+      L("club-field", '<path class="rice grow" d="'+tufts(T[0])+tufts(T[1])+'"/>') +
+      house(731,18) + house(752,20) + house(774,14) +
+      L("mangrove", mangrove(810,301) + mangrove(828,306) + mangrove(846,311)) +
+      L("buffalo", '<g class="beast"><path class="buf" d="M630,299 C632,289 640,285 650,285 C660,285 666,290 668,299 Z M666,293 c4,-2 9,-1 11,3 l-2,4 c-3,1 -7,0 -9,-1 Z"/><path class="bufline" d="M670,290 c-3,-6 3,-9 9,-8 M672,290 c4,-4 10,-4 12,-1"/></g>') +
+      L("cattle-free", cow(606,300)) +
+      L("farmers", farmer(462,274) + cow(478,274)) +
+      L("egrets", egret(306,232) + egret(330,232) + egret(372,246)) +
+      L("critters", '<path class="bug" d="M604,264 l16,-1 M611,263 q-3,-6 -8,-6 M611,263 q3,-6 8,-6 M613,263 q-2,5 -7,6 M613,263 q2,5 7,6"/><ellipse class="frog" cx="694" cy="297" rx="4.5" ry="2.6"/><circle class="frog" cx="697" cy="294.5" r="1.4"/>');
+    return '<svg class="xsec" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+esc(label)+'" focusable="false">' +
+      '<defs><filter id="'+p+'-rough" x="-2%" y="-5%" width="104%" height="110%"><feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="2" seed="7" result="n"/><feDisplacementMap in="SourceGraphic" in2="n" scale="3" xChannelSelector="R" yChannelSelector="G"/></filter></defs>' +
+      '<g filter="url(#'+p+'-rough)">'+back+'</g><g>'+streams+'</g><g filter="url(#'+p+'-rough)">'+front+'</g><g class="leaders leaders-on"></g></svg>';
+  }
+
+  /* 每個圖層出現在哪些場景 */
+  var AFTER = ["cut","abandon","wetland","restore","conflict"], WET = ["wetland","restore","conflict"], NOW = ["restore","conflict"];
+  var LAYERS = {
+    "res-ghost":["paddy"], "reservoir":AFTER, "flow-down":["paddy"], "dry-down":AFTER, "cut-mark":["cut"],
+    "terr-water":["paddy"], "rice":["paddy"], "rice-dry":["cut"], "farmers":["paddy"], "cracks":["cut"],
+    "weeds":["abandon"], "cattle-free":["abandon"], "reeds-a":["wetland"], "reeds-b":WET, "wet-water":WET,
+    "buffalo":WET, "critters":WET, "mangrove":WET, "club-field":NOW, "egrets":NOW, "vill-field":NOW,
+    "channel":NOW, "conflict-hl":["conflict"]
+  };
+  function setScene(root, scene){
+    root.querySelectorAll("[data-layer]").forEach(function(g){
+      g.classList.toggle("on", (LAYERS[g.getAttribute("data-layer")] || []).indexOf(scene) > -1);
+    });
+  }
+
+  /* 標記位置：a = 錨點，l = 標籤底部中點（SVG 座標） */
+  var POS = {
+    villager:{a:[745,282],l:[800,190]}, rice:{a:[372,240],l:[350,165]}, cattle:{a:[492,260],l:[560,195]},
+    reservoir:{a:[175,118],l:[175,80]}, buffalo:{a:[648,276],l:[690,160]}, pond:{a:[598,309],l:[515,200]},
+    frog:{a:[700,286],l:[805,215]}, dragonfly:{a:[612,250],l:[590,140]}, birdclub:{a:[298,218],l:[300,150]},
+    egret:{a:[372,232],l:[420,200]}
+  };
+  var POS_SCENE = {
+    paddy:{ villager:{a:[462,250],l:[450,165]}, cattle:{a:[492,262],l:[560,200]} },
+    abandon:{ cattle:{a:[620,288],l:[640,190]} },
+    restore:{ rice:{a:[340,224],l:[480,160]} },
+    conflict:{ rice:{a:[340,224],l:[480,150]}, villager:{a:[427,256],l:[560,205]} }
+  };
+  var ZONES = [
+    {x:60,t:"山"}, {x:172,t:"石壁水塘",s:"水塘",before:"（未有水塘）",bs:"未有"}, {x:426,t:"梯田"},
+    {x:633,t:"濕地",before:"低地",wet:true}, {x:760,t:"村"}, {x:838,t:"泥灘"}, {x:925,t:"海"}
+  ];
+  var NOTES = { cut:[{x:330,y:112,t:"截取山水",c:""}], conflict:[{x:404,y:330,t:"水道：說法不一",c:"conflict"}] };
+
+  /* ---------- 主圖 ---------- */
+  var stage = document.getElementById("stage");
+  stage.innerHTML = svgScene("m", "水口示意剖面") + '<div class="ov" id="ov"></div><div class="ov" id="zones" aria-hidden="true"></div><div class="ov" id="notes" aria-hidden="true"></div>';
+  var mainSvg = stage.querySelector("svg"), leaders = mainSvg.querySelector(".leaders");
+  var ov = document.getElementById("ov"), zonesEl = document.getElementById("zones"), notesEl = document.getElementById("notes");
+  var SVGNS = "http://www.w3.org/2000/svg";
+
+  function renderZones(scene){
+    var pre = scene === "paddy", wet = WET.indexOf(scene) > -1;
+    zonesEl.innerHTML = ZONES.map(function(z){
+      var t = z.t, s = z.s;
+      if (z.before && pre && !z.wet){ t = z.before; s = z.bs; }
+      if (z.wet && !wet){ t = z.before; s = null; }
+      return '<span class="zone'+(s ? " long" : "")+'"'+(s ? ' data-short="'+esc(s)+'"' : "")+' style="left:'+pct(z.x,W)+'">'+esc(t)+'</span>';
+    }).join("");
+    notesEl.innerHTML = (NOTES[scene] || []).map(function(n){
+      return '<span class="note '+n.c+'" style="left:'+pct(n.x,W)+';top:'+pct(n.y,H)+'">'+esc(n.t)+'</span>';
+    }).join("");
+    requestAnimationFrame(function(){ notesEl.querySelectorAll(".note").forEach(function(n){ n.classList.add("on"); }); });
+  }
+
+  function renderMarkers(step){
+    var scene = step.scene, html = "";
+    while (leaders.firstChild) leaders.removeChild(leaders.firstChild);
+    var list = step.active.filter(function(id){ return POS[id]; });
+    list.forEach(function(id, i){
+      var p = (POS_SCENE[scene] && POS_SCENE[scene][id]) || POS[id];
+      var c = col(id);
+      var line = document.createElementNS(SVGNS, "line");
+      line.setAttribute("class", "leader"); line.setAttribute("x1", p.a[0]); line.setAttribute("y1", p.a[1]);
+      line.setAttribute("x2", p.l[0]); line.setAttribute("y2", p.l[1]); line.style.stroke = c;
+      leaders.appendChild(line);
+      html += '<span class="mk-dot" style="--c:'+c+';left:'+pct(p.a[0],W)+';top:'+pct(p.a[1],H)+'">'+(i+1)+'</span>' +
+              '<span class="mk-label" style="--c:'+c+';left:'+pct(p.l[0],W)+';top:'+pct(p.l[1],H)+'"><i>'+(i+1)+'</i>'+esc(zh(id))+'</span>';
+    });
+    ov.innerHTML = html;
+    document.getElementById("gChips").innerHTML = list.map(function(id, i){
+      return '<li><span class="dot" style="--c:'+col(id)+'">'+(i+1)+'</span>'+esc(zh(id))+'</li>';
+    }).join("");
+    requestAnimationFrame(function(){ requestAnimationFrame(function(){
+      ov.querySelectorAll(".mk-dot,.mk-label").forEach(function(e){ e.classList.add("in"); });
+    }); });
+  }
+
+  /* ---------- 關係 ---------- */
+  function relItem(r){
+    var verbCls = r.verb === "衝突" ? "vb c" : "vb";
+    return '<li class="rel"><div class="ln"><span class="nm" style="--c:'+col(r.from)+'">'+esc(zh(r.from))+'</span>' +
+      '<span class="'+verbCls+'">—'+esc(r.verb)+'→</span><span class="nm" style="--c:'+col(r.to)+'">'+esc(zh(r.to))+'</span></div>' +
+      (r.note ? '<p class="nt">'+esc(r.note)+'</p>' : "") +
+      '<div class="mt"><span>'+esc(r.period)+'</span><span class="mono">檢查點 '+esc(r.cp)+'</span><span>來源：'+esc(r.source)+'</span>' +
+      '<span class="st '+r.status+'">'+esc(ST[r.status] || r.status)+'</span></div></li>';
+  }
+  function relsFor(active){
+    var both = [], one = [];
+    D.relations.forEach(function(r){
+      var a = active.indexOf(r.from) > -1, b = active.indexOf(r.to) > -1;
+      if (a && b) both.push(r); else if (a || b) one.push(r);
+    });
+    return { both: both, one: one };
+  }
+
+  function voicesHTML(){
+    var cards = D.voices.map(function(v){
+      if (v.status === "pending"){
+        var m = /^（(.+?)）(.*)$/.exec(v.text) || [null, "待訪問", v.text];
+        return '<article class="voice slot"><h3>'+esc(v.who)+'</h3><span class="role">'+esc(v.role)+'</span>' +
+          '<div class="empty" aria-label="'+esc(m[1])+'">'+esc(m[1])+'</div>' +
+          (m[2] ? '<p class="reserve">預留題目：'+esc(m[2])+'</p>' : "") +
+          '</article>';
+      }
+      return '<article class="voice"><h3>'+esc(v.who)+'</h3><span class="role">'+esc(v.role)+'</span>' +
+        '<p class="body">'+esc(v.text)+'</p><span class="st '+v.status+'">'+esc(ST[v.status] || v.status)+'</span></article>';
+    }).join("");
+    return '<h3 class="rel-h">各方說法（並列，不作裁決）</h3><div class="voices">'+cards+'</div>' +
+      '<p class="order">排列次序不代表比重。空位會在完成訪問後補上。</p>' +
+      '<div class="invite"><p>你在水口耕作、觀鳥、掘沙白，或只是路過？這裡還有位置放你的說法。團隊會標明來源和核實狀態，與其他說法並列。</p>' +
+      '<button type="button" id="inviteBtn" aria-controls="inviteHint" aria-expanded="false">補上你的說法</button>' +
+      '<p class="hint" id="inviteHint" hidden>示意：正式版會連接 Webflow 表單，提交後經團隊核對才公開。</p></div>';
+  }
+
+  /* ---------- 步驟 ---------- */
+  var stepsEl = document.getElementById("steps"), navEl = document.getElementById("gNav");
+  stepsEl.innerHTML = CHAIN.map(function(s, i){
+    var r = relsFor(s.active), num = String(i+1).padStart(2, "0");
+    return '<article class="step" data-i="'+i+'" data-scene="'+s.scene+'" id="step-'+(i+1)+'" tabindex="-1" aria-labelledby="sh-'+i+'">' +
+      '<p class="s-meta"><span class="n">'+num+'／'+String(NSTEP).padStart(2,"0")+'</span><span>'+esc(s.period)+'</span></p>' +
+      '<h2 id="sh-'+i+'">'+esc(s.title)+'</h2><p>'+esc(s.text)+'</p>' +
+      (r.both.length ? '<h3 class="rel-h">這一段的關係</h3><ul class="rels">'+r.both.map(relItem).join("")+'</ul>' : "") +
+      (r.one.length ? '<details class="more"><summary>再往下：涉及這些節點的其他關係（'+r.one.length+'）</summary><ul class="rels">'+r.one.map(relItem).join("")+'</ul></details>' : "") +
+      (s.voices ? voicesHTML() : "") + '</article>';
+  }).join("");
+  navEl.innerHTML = CHAIN.map(function(s, i){
+    return '<li><button type="button" data-go="'+i+'" aria-label="第 '+(i+1)+' 段：'+esc(s.title)+'">'+(i+1)+'</button></li>';
+  }).join("");
+  document.getElementById("legend").innerHTML = '<span>狀態標籤：</span>' + ["observed","consensus","oral","check","conflict","pending"].map(function(k){ return '<span class="st '+k+'">'+ST[k]+'</span>'; }).join("");
+
+  var steps = Array.prototype.slice.call(stepsEl.querySelectorAll(".step"));
+  var current = -1;
+  function activate(i){
+    if (i === current) return; current = i;
+    var s = CHAIN[i];
+    steps.forEach(function(el, k){ el.classList.toggle("is-active", k === i); });
+    navEl.querySelectorAll("button").forEach(function(b, k){ if (k === i) b.setAttribute("aria-current", "step"); else b.removeAttribute("aria-current"); });
+    document.getElementById("gNum").textContent = String(i+1).padStart(2,"0") + "／" + String(NSTEP).padStart(2,"0");
+    var gp = document.getElementById("gPeriod"), gt = document.getElementById("gTitle");
+    gp.textContent = s.period; gt.textContent = s.title;
+    mainSvg.setAttribute("aria-label", "水口示意剖面：" + s.title);
+    setScene(mainSvg, s.scene); renderZones(s.scene); renderMarkers(s);
+  }
+  navEl.addEventListener("click", function(e){
+    var b = e.target.closest("button[data-go]"); if (!b) return;
+    var el = steps[+b.getAttribute("data-go")];
+    var y = el.getBoundingClientRect().top + window.scrollY - trigger + 24;
+    window.scrollTo({ top: Math.max(0, y), behavior: reduce ? "auto" : "smooth" });
+    activate(+b.getAttribute("data-go"));
+    el.focus({ preventScroll: true });
+  });
+  stepsEl.addEventListener("click", function(e){
+    var b = e.target.closest("#inviteBtn"); if (!b) return;
+    var h = document.getElementById("inviteHint"), open = h.hidden;
+    h.hidden = !open; b.setAttribute("aria-expanded", String(open));
+  });
+
+  /* IntersectionObserver：在畫面上設一條 1px 觸發線 */
+  var io = null, trigger = 0, bar = document.querySelector(".sample-bar"), graphic = document.getElementById("graphic");
+  var desk = window.matchMedia("(min-width: 900px)");
+  function setup(){
+    var vh = window.innerHeight, bh = bar.offsetHeight;
+    document.documentElement.style.setProperty("--bar-h", bh + "px");
+    trigger = desk.matches ? Math.round(vh * 0.55) : Math.round(bh + graphic.offsetHeight + (vh - bh - graphic.offsetHeight) * 0.35);
+    if (io) io.disconnect();
+    if (!("IntersectionObserver" in window)){ activate(0); return; }
+    io = new IntersectionObserver(function(entries){
+      entries.forEach(function(en){ if (en.isIntersecting) activate(+en.target.getAttribute("data-i")); });
+    }, { rootMargin: "-" + trigger + "px 0px -" + Math.max(0, vh - trigger - 1) + "px 0px" });
+    steps.forEach(function(s){ io.observe(s); });
+  }
+  activate(0);
+  setup();
+  var rt; window.addEventListener("resize", function(){ clearTimeout(rt); rt = setTimeout(setup, 150); });
+
+  /* ---------- 三階段小圖 ---------- */
+  var STAGES = [
+    { scene:"paddy", name:"稻田" }, { scene:"wetland", name:"濕地" }, { scene:"restore", name:"復耕" }
+  ];
+  var nowHabitat = [];
+  D.relations.forEach(function(r){
+    if (r.period === "現在" && r.verb === "造棲地" && r.status === "observed"){
+      [r.from, r.to].forEach(function(id){ if (nowHabitat.indexOf(id) < 0) nowHabitat.push(id); });
+    }
+  });
+  document.getElementById("strip").innerHTML = STAGES.map(function(st, i){
+    var step = CHAIN.filter(function(c){ return c.scene === st.scene; })[0];
+    var who = step.active.map(function(id){ return '<li style="--c:'+col(id)+'">'+esc(zh(id))+'</li>'; }).join("");
+    var also = st.scene === "restore" ? '<p class="also">同期仍在（研究員觀察，現在）：' + nowHabitat.filter(function(id){ return step.active.indexOf(id) < 0; }).map(zh).join("、") + '</p>' : "";
+    return '<li><figure><figcaption class="cap"><span class="k">階段 '+(i+1)+'／3</span><b>'+st.name+'</b><span class="p">'+esc(step.period)+'</span></figcaption>' +
+      svgScene("s"+i, "示意剖面：" + st.name) +
+      '<div class="aerial"><i></i><i></i><i></i><i></i><span>航空照片位置｜地政總署・同一範圍、同一比例・年份待選</span></div>' +
+      '<ul class="who" aria-label="這一階段在場的生命、人與機構">'+who+'</ul>' + also + '</figure>' +
+      (i < 2 ? '<span class="arrow" aria-hidden="true">→</span>' : "") + '</li>';
+  }).join("");
+  document.querySelectorAll("#strip .xsec").forEach(function(svg, i){ setScene(svg, STAGES[i].scene); });
+})();
+</script>
+</body>
+</html>

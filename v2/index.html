@@ -1,0 +1,558 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<style>html{color-scheme:light}body{margin:0}img{max-width:100%}[hidden]{display:none!important}
+@media print{.figure,table{break-inside:avoid}.filters{display:none}}</style>
+<title>水口糾纏地圖參考 V2（存檔）</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@600;800&family=Noto+Sans+TC:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one reading column (~44rem) on a silt-coloured ground; diagrams break out to a wider band. Checkpoint codes and coordinates set in mono as the project's own vernacular. */
+:root{
+  --bg:#F2F3EE; --surface:#FAFBF7; --fg:#1D2420; --muted:#5B6660; --line:#CED4CB;
+  --tide:#1F6B66; --tide-soft:#DCEBE8; --conflict:#A3412C; --conflict-soft:#F3E2DC; --unverified:#8A6A12;
+  --c-rice:#B8891A; --c-cattle:#9A5B2C; --c-buffalo:#3E4A56; --c-human:#1D2420; --c-clam:#C07A86; --c-visitor:#7D6AA6; --c-club:#3D8A4C;
+  --f-display:"Noto Serif TC","Songti TC","PMingLiU",serif;
+  --f-body:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#111614; --surface:#18201D; --fg:#E2E7E1; --muted:#9AA79F; --line:#2E3934;
+  --tide:#62B8AE; --tide-soft:#1C3330; --conflict:#E08A73; --conflict-soft:#3A221C; --unverified:#D8B455;
+  --c-rice:#DDB04A; --c-cattle:#D08A55; --c-buffalo:#9FB0C0; --c-human:#E2E7E1; --c-clam:#E4A0AC; --c-visitor:#B3A2DA; --c-club:#79C488;
+  color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#111614; --surface:#18201D; --fg:#E2E7E1; --muted:#9AA79F; --line:#2E3934;
+  --tide:#62B8AE; --tide-soft:#1C3330; --conflict:#E08A73; --conflict-soft:#3A221C; --unverified:#D8B455;
+  --c-rice:#DDB04A; --c-cattle:#D08A55; --c-buffalo:#9FB0C0; --c-human:#E2E7E1; --c-clam:#E4A0AC; --c-visitor:#B3A2DA; --c-club:#79C488;
+  color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:16px;line-height:1.75;margin:0}
+.wrap{max-width:46rem;margin:0 auto;padding-inline:20px;padding-block:40px 80px}
+.wide{max-width:64rem;margin-inline:auto}
+h1,h2,h3{font-family:var(--f-display);text-wrap:balance;line-height:1.3;margin:0}
+h1{font-size:clamp(2rem,6vw,2.9rem);font-weight:800;letter-spacing:.02em}
+h2{font-size:1.6rem;font-weight:800;margin-top:4.5rem;padding-top:1.2rem;border-top:1px solid var(--line)}
+h3{font-size:1.18rem;font-weight:600}
+p{margin:.8rem 0}
+a{color:var(--tide);text-underline-offset:3px}
+a:focus-visible,button:focus-visible{outline:2px solid var(--tide);outline-offset:2px;border-radius:3px}
+.eyebrow{font-family:var(--f-mono);font-size:.78rem;letter-spacing:.08em;color:var(--muted);text-transform:uppercase}
+.lede{font-size:1.12rem;color:var(--fg);max-width:40rem}
+.muted{color:var(--muted)}
+.mono{font-family:var(--f-mono);font-size:.86em}
+.small{font-size:.88rem}
+.meta{display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:1.2rem;font-family:var(--f-mono);font-size:.8rem;color:var(--muted)}
+.thesis{margin-top:2rem;display:grid;grid-template-columns:repeat(auto-fit,minmax(15rem,1fr));gap:14px}
+.thesis div{border-top:3px solid var(--tide);padding-top:.6rem}
+.thesis b{display:block;font-family:var(--f-display);font-size:1.05rem}
+.principles{list-style:none;padding:0;margin:1.2rem 0;display:grid;gap:10px}
+.principles li{display:grid;grid-template-columns:7.5rem 1fr;gap:12px;align-items:baseline;padding-bottom:10px;border-bottom:1px dashed var(--line)}
+.principles li span:first-child{font-weight:700}
+@media (max-width:520px){.principles li{grid-template-columns:1fr;gap:2px}}
+.concept{margin-top:3rem}
+.concept-head{display:flex;gap:14px;align-items:baseline;flex-wrap:wrap}
+.rank{font-family:var(--f-mono);font-size:.82rem;color:var(--bg);background:var(--fg);padding:1px 8px;border-radius:2px}
+.fit{display:flex;flex-wrap:wrap;gap:6px;margin:.6rem 0}
+.chip{font-size:.78rem;padding:1px 9px;border:1px solid var(--line);border-radius:20px;color:var(--muted);white-space:nowrap}
+.chip.cms{border-color:var(--tide);color:var(--tide)}
+.chip.code{border-color:var(--c-visitor);color:var(--c-visitor)}
+.chip.ext{border-color:var(--conflict);color:var(--conflict)}
+.example{background:var(--surface);border-left:3px solid var(--tide);padding:.7rem 1rem;margin:.9rem 0;font-size:.95rem}
+.example b{color:var(--tide)}
+.refs{font-size:.88rem;color:var(--muted)}
+.figure{background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:16px;margin:1.4rem 0;overflow-x:auto}
+.figure svg{display:block;width:100%;height:auto;min-width:560px}
+.figcap{font-size:.84rem;color:var(--muted);margin-top:.6rem}
+.legend{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:.82rem;margin-top:.5rem}
+.legend i{display:inline-block;width:14px;height:3px;vertical-align:middle;margin-right:5px;border-radius:2px}
+.tbl{overflow-x:auto;margin:1rem 0}
+table{border-collapse:collapse;width:100%;font-size:.9rem;min-width:620px}
+th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-weight:700;font-size:.8rem;color:var(--muted);letter-spacing:.04em}
+td.rel{font-weight:700;color:var(--tide);white-space:nowrap}
+.st{font-size:.76rem;padding:0 7px;border-radius:3px;white-space:nowrap}
+.st.v{background:var(--tide-soft);color:var(--tide)}
+.st.u{background:transparent;border:1px dashed var(--unverified);color:var(--unverified)}
+.st.c{background:var(--conflict-soft);color:var(--conflict)}
+.verbs{display:flex;flex-wrap:wrap;gap:8px;margin:1rem 0}
+.verbs span{font-family:var(--f-display);font-size:.95rem;padding:3px 12px;border:1px solid var(--fg);border-radius:2px}
+.verbs span.past{border-style:dotted}
+.verbs span.conf{border-color:var(--conflict);color:var(--conflict)}
+.pipe{display:grid;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));gap:0;margin:1.2rem 0;border:1px solid var(--line)}
+.pipe div{padding:12px 14px;border-right:1px solid var(--line);background:var(--surface)}
+.pipe div:last-child{border-right:none}
+.pipe b{display:block;font-size:.95rem}
+.pipe .step{font-family:var(--f-mono);font-size:.74rem;color:var(--muted)}
+@media (max-width:700px){.pipe div{border-right:none;border-bottom:1px solid var(--line)}.pipe div:last-child{border-bottom:none}}
+.phases{list-style:none;padding:0;margin:1.2rem 0;counter-reset:ph}
+.phases li{position:relative;padding:0 0 1.4rem 2.6rem;border-left:2px solid var(--line);margin-left:.9rem}
+.phases li:last-child{border-left-color:transparent}
+.phases li::before{counter-increment:ph;content:counter(ph);position:absolute;left:-0.95rem;top:0;width:1.8rem;height:1.8rem;border-radius:50%;background:var(--bg);border:2px solid var(--tide);color:var(--tide);font-family:var(--f-mono);font-size:.85rem;display:grid;place-items:center}
+.phases li.done::before{background:var(--tide);color:var(--bg)}
+.phases h3{font-size:1.05rem}
+.who{display:flex;flex-wrap:wrap;gap:6px;margin:.4rem 0}
+.who span{font-size:.76rem;font-family:var(--f-mono);padding:0 7px;background:var(--surface);border:1px solid var(--line);border-radius:3px}
+.decisions{counter-reset:q;list-style:none;padding:0}
+.decisions li{padding:.7rem 0 .7rem 2.2rem;border-bottom:1px solid var(--line);position:relative}
+.decisions li::before{counter-increment:q;content:"Q" counter(q);position:absolute;left:0;top:.75rem;font-family:var(--f-mono);font-size:.8rem;color:var(--conflict)}
+.filters{display:flex;flex-wrap:wrap;gap:6px;margin:1rem 0}
+.filters button{font:inherit;font-size:.84rem;padding:3px 12px;border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:20px;cursor:pointer}
+.filters button[aria-pressed="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.lib{list-style:none;padding:0;margin:0}
+.lib li{display:grid;grid-template-columns:1fr auto;gap:2px 12px;padding:.75rem 0;border-bottom:1px solid var(--line)}
+.lib .nm{font-weight:700;min-width:0}
+.lib .nm a{overflow-wrap:anywhere}
+.lib .by{font-size:.8rem;color:var(--muted);grid-column:1/-1}
+.lib .use{font-size:.9rem;grid-column:1/-1}
+.lib .tag{font-size:.74rem;color:var(--muted);font-family:var(--f-mono);white-space:nowrap}
+.note{border:1px dashed var(--unverified);padding:.8rem 1rem;font-size:.9rem;margin:1rem 0}
+.note b{color:var(--unverified)}
+footer{margin-top:4rem;font-size:.8rem;color:var(--muted);font-family:var(--f-mono)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+<style>
+.sample-link{font-weight:700;text-decoration:none;border-bottom:2px solid var(--tide)}
+.cm-open{font:inherit;font-size:.78rem;margin-left:.6rem;padding:1px 10px;border:1px solid var(--tide);color:var(--tide);background:transparent;border-radius:20px;cursor:pointer;vertical-align:middle;font-family:var(--f-body)}
+.cm-open .n{font-family:var(--f-mono)}
+#cm-fab{position:fixed;right:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:20;font:inherit;font-weight:700;padding:10px 18px;border-radius:24px;border:none;background:var(--tide);color:var(--bg);cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.18)}
+#cm-panel{position:fixed;right:16px;bottom:calc(70px + env(safe-area-inset-bottom,0px));z-index:21;width:min(26rem,calc(100vw - 32px));max-height:min(36rem,calc(100vh - 110px));display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--line);border-radius:6px;box-shadow:0 6px 24px rgba(0,0,0,.2)}
+#cm-panel header{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-bottom:1px solid var(--line)}
+#cm-panel header b{font-family:var(--f-display)}
+#cm-panel .body{padding:12px 14px;overflow-y:auto;display:grid;gap:10px}
+#cm-panel label{font-size:.8rem;color:var(--muted);display:grid;gap:3px}
+#cm-panel select,#cm-panel input,#cm-panel textarea{font:inherit;font-size:.92rem;padding:6px 8px;border:1px solid var(--line);border-radius:4px;background:var(--bg);color:var(--fg);width:100%}
+#cm-panel textarea{min-height:5.5rem;resize:vertical}
+#cm-send{font:inherit;font-weight:700;padding:7px 14px;border:none;border-radius:4px;background:var(--fg);color:var(--bg);cursor:pointer;justify-self:start}
+#cm-send[disabled]{opacity:.5;cursor:default}
+#cm-status{font-size:.82rem;color:var(--muted);min-height:1.2em}
+#cm-list{list-style:none;padding:0;margin:0;display:grid;gap:8px;border-top:1px dashed var(--line);padding-top:10px}
+#cm-list li{font-size:.9rem}
+#cm-list .who{font-size:.76rem;color:var(--muted);font-family:var(--f-mono);display:block}
+#cm-list .rep{display:block;margin-top:3px;padding-left:8px;border-left:2px solid var(--tide);color:var(--tide);font-size:.85rem}
+#cm-close{font:inherit;background:none;border:none;color:var(--muted);cursor:pointer;font-size:1.2rem;line-height:1}
+@media print{#cm-fab,#cm-panel,.cm-open{display:none!important}}
+</style>
+
+</head>
+<body>
+
+
+<div class="wrap">
+<header>
+  <div class="eyebrow">水口生物多樣性數碼地圖 · 網站前期研究</div>
+  <h1>線在哪裡相遇</h1>
+  <p class="lede">這頁整理了網上可參考的多物種地圖、關係視覺化與「多於人類」視角的案例，並由此提出六個呈現糾纏（entanglement）的方案，供團隊留言及取捨。</p>
+  <div class="meta"><span>2026-10-12</span><span>4 條研究線 · 約 60 個參考</span><span>網站平台：Webflow（MC）</span><span>草稿，待團隊意見</span></div>
+  <div class="thesis">
+    <div><b>結構照用 Obsidian 式</b>節點加關係的資料結構沒有問題，物種、人、地點、節氣、物件全部是節點，彼此以有類型的關係相連。</div>
+    <div><b>呈現不用網絡圖</b>一團發光節點的網絡圖很少能讓公眾看出誰影響誰。參考案例顯示，把物種畫成「線」、把地點和時間畫成線相遇的「結」，更容易讀懂。</div>
+    <div><b>角度交給儀器與時間</b>不代物種發聲。改由潮汐、節氣、聲譜、紅外線相機去改變觀眾的時間感和尺度感。</div>
+  </div>
+</header>
+
+<h2 id="problem">我們要解決的問題</h2>
+<p>10月9日會議議程寫著「Presentation of Entanglement: the point of overlapping」，9月6日會議亦承認如何把複雜資訊視覺化「仍未有具體結論」。以下是團隊已有共識、任何方案都要守住的原則，全部來自 Drive 內的會議紀錄。</p>
+<ul class="principles">
+  <li><span>多於人類</span><span>用 more-than-human，不用 non-human；人類路徑「降格」為眾多物種路線之一。</span></li>
+  <li><span>呈現衝突</span><span>不淡化、不裁決。同時陳列「好味」與「被過度捕撈」。</span></li>
+  <li><span>軌跡與檢查點</span><span>水牛、黃牛有路線；沙白在灘上幾乎不移動，適合用檢查點。</span></li>
+  <li><span>尺度分層</span><span>每個地點按村民敘事、科學資料、物種導向（聲音、季節）三種尺度展開。</span></li>
+  <li><span>兔子洞</span><span>逐步揭示，使用者自行決定深入多少；導賞員亦可即場使用。</span></li>
+  <li><span>節氣與潮汐</span><span>年長村民以農曆節氣理解環境，例如立秋前要落田。</span></li>
+  <li><span>避免二元今昔</span><span>單純「以前／現在」滑桿容易變成「舊好新壞」，Helen 建議三階段。</span></li>
+  <li><span>標示未驗證</span><span>村民口述保留原話，標明未經驗證，不強行判斷真偽。</span></li>
+</ul>
+
+<h2 id="concepts">六個呈現方案</h2>
+<p>排序代表我作為研究統籌的建議：前三個是骨幹，後三個是讓網站有記憶點的「裝置」。每個方案都附上用水口真實資料舉的例子，以及在 Webflow 的可行性。</p>
+<div class="fit small"><span class="chip cms">Webflow CMS 原生可做</span><span class="chip code">需要 Code Embed（我可寫原型）</span><span class="chip ext">需外部託管再嵌入</span></div>
+
+<section class="concept" id="c1">
+  <div class="concept-head"><span class="rank">01 骨幹</span><h3>物種頁加關係標籤</h3></div><p style="margin:.4rem 0 0"><a class="sample-link" href="samples/c1.html">打開方案 01 的互動 sample →</a></p>
+  <div class="fit"><span class="chip cms">CMS 原生</span><span class="chip">兔子洞</span><span class="chip">尺度分層</span></div>
+  <p>每個物種、地點、人、節氣都是一頁。頁面不畫整個網絡，只列出「我的鄰居」：每條關係是一個可按的標籤，例如「打滾造池 → 蛙類」「被絕育（村民口述）」「曾經：耕作夥伴」。按下去就跳到對方的頁面，一路追下去就是兔子洞。</p>
+  <div class="example"><b>水口例子：</b>水牛頁列出 <span class="mono">3.1–3.5</span> 五個檢查點，以及標籤「打滾 → 蜻蜓、蛙類、小魚小蟹」「佔路 → 一對母子避牛」「腳步聲 → AudioMoth」。按「蛙類」便去到蛙的頁面，再見到黃牛也連到同一個水氹。</div>
+  <p class="refs">參考：Who Eats Whom（由單一物種出發只看一步關係）、Feral Atlas 的「Tippers」動詞標籤、GloBI 的關係詞彙。</p>
+</section>
+
+<section class="concept" id="c2">
+  <div class="concept-head"><span class="rank">02 標誌圖像</span><h3>線的相遇：物種故事線圖</h3></div><p style="margin:.4rem 0 0"><a class="sample-link" href="samples/c2.html">打開方案 02 的互動 sample →</a></p>
+  <div class="fit"><span class="chip code">Code Embed（D3）</span><span class="chip">靜態版可由 MC 手繪</span></div>
+  <p>借用 xkcd〈Movie Narrative Charts〉的做法：橫軸是時間，每個物種是一條線，在同一地點出現時線就靠攏，分開時就散開。糾纏不再是抽象的連線，而是看得見的「同行」與「分離」。人類只是其中一條線。衝突在線交會處標紅。</p>
+</section>
+</div>
+
+<div class="wide" style="padding-inline:20px">
+  <div class="figure" role="img" aria-label="水口物種故事線圖示意：五個年代中，水稻、黃牛、水牛、村民、沙白、觀鳥會、遊客的線在山林、田與濕地、村、泥灘四個地帶之間移動與相遇">
+    <svg id="storyline" viewBox="0 0 920 330"></svg>
+    <div class="legend" id="storyLegend"></div>
+    <div class="figcap">示意圖，按現有訪談及物種編碼文件粗略整理，年代未經核實。實際版本可讓使用者按節氣或某一聲音（村民、科學家）篩選線條。</div>
+  </div>
+</div>
+
+<div class="wrap" style="padding-block:0">
+  <p class="refs">參考：xkcd 657、iStoryline.js（故事線排版演算法）、MIT Loom（把線織成布的隱喻）。</p>
+
+<section class="concept" id="c3">
+  <div class="concept-head"><span class="rank">03 骨幹</span><h3>路徑，或者自由漫遊</h3></div><p style="margin:.4rem 0 0"><a class="sample-link" href="samples/c3.html">打開方案 03 的互動 sample →</a></p>
+  <div class="fit"><span class="chip cms">CMS 原生</span><span class="chip">軌跡與檢查點</span><span class="chip">導賞團</span></div>
+  <p>Fiona 提過的山區鹿地圖，最可能是 University of Idaho 的 <a href="https://cdil.lib.uidaho.edu/storying-extinction/map.html" target="_blank" rel="noopener">Storying Extinction</a>（山地馴鹿）。它有一份「Trails」清單：每條路徑按次序展示紅外線相機片段和訪談影片，用左右箭咀逐頁揭示；另有一個按鈕讓人跳過路徑，直接進入自由地圖。這正好回應「軌跡 vs 檢查點」：物種路徑是導覽，地圖上的點是自由探索。</p>
+  <div class="example"><b>水口例子：</b>「瀨鑊邊」人類路徑：泥灘採沙白 <span class="mono">4.4</span> → 田摘蔥摘菜 <span class="mono">4.2</span> → 林斬柴 <span class="mono">4.3</span> → 村內舂米、煮成瀨鑊邊 <span class="mono">4.1</span>。沿途順帶遇見未列為重點的物種（蔥、柴草、山林草藥）。同一套頁面亦可直接用於生態導賞。</div>
+  <p class="refs">參考：Storying Extinction（CollectionBuilder＋Leaflet，開源）、USGS「Deer 255」單一動物遷徙故事、Bear 71。</p>
+</section>
+
+<section class="concept" id="c4">
+  <div class="concept-head"><span class="rank">04 裝置</span><h3>節氣潮汐輪</h3></div><p style="margin:.4rem 0 0"><a class="sample-link" href="samples/c4.html">打開方案 04 的互動 sample →</a></p>
+  <div class="fit"><span class="chip cms">靜態可按版：CMS</span><span class="chip code">按真實日期轉動：Code Embed</span><span class="chip">節氣與潮汐</span></div>
+  <p>首頁或導航用一個圓形曆：外圈二十四節氣，內圈是農曆月份，再往內是各物種與勞動的時段。指針停在今天，按某一段就看到「這兩星期水口在發生甚麼」。進一步可做「低潮閘門」：沙白內容只在退潮時段完整顯示，其他時間只顯示水面，但保留「仍然想看」的入口。</p>
+  <div class="note"><b>空白值得一提：</b>研究線搜尋了中英文資料，找不到任何在線的中文節氣物候輪。日本有 72 Seasons 應用程式（只顯示當下的微季節），澳洲氣象局有原住民以物種現象定義季節的曆。水口做這件事是新的。</div>
+</section>
+</div>
+
+<div class="wide" style="padding-inline:20px">
+  <div class="figure" role="img" aria-label="水口節氣潮汐輪示意：外圈二十四節氣，內圈農曆月份，再內為水稻、蔥與番薯、墨魚、沙白的時段，指針指向寒露">
+    <svg id="wheel" viewBox="0 0 640 640" style="max-width:560px;margin:auto;min-width:300px"></svg>
+    <div class="legend" id="wheelLegend" style="justify-content:center"></div>
+    <div class="figcap">示意圖。水稻耕作年曆取自村民 B（第二次訪問）；墨魚二至五月取自村民 A（未確認是農曆抑或西曆）；沙白「夏季易、冬季低潮在凌晨」取自會議紀錄。農曆月份與節氣的對應為約數。</div>
+  </div>
+</div>
+
+<div class="wrap" style="padding-block:0">
+  <p class="refs">參考：72 Seasons、Ed Hawkins 氣候螺旋（一圈一年，看出長期變化）、Australian BoM Indigenous seasonal calendars、Fruiting Bodies（網頁隨月相與時辰改變）。</p>
+
+<section class="concept" id="c5">
+  <div class="concept-head"><span class="rank">05 裝置</span><h3>夜班：聲譜與紅外線</h3></div><p style="margin:.4rem 0 0"><a class="sample-link" href="samples/c5.html">打開方案 05 的互動 sample →</a></p>
+  <div class="fit"><span class="chip code">Code Embed</span><span class="chip">物種導向尺度</span><span class="chip">不代物種發聲</span></div>
+  <p>一條 21:00 至 04:00 的時間軸（正是紅外線相機的定時拍攝時段）。上方是 AudioMoth 聲譜，按頻率分層，昆蟲、蛙、鳥各佔一段；下方是相機在觸發時間拍到的單格畫面。拖動時間軸即播放該時刻的聲音。敘述者是儀器，不是動物：「這部相機在 02:14 拍到」，而不是「水牛在想」。另設一個按鈕列出儀器聽不到、拍不到甚麼。</p>
+  <div class="example"><b>水口例子：</b>Data Catalogue 已有濕地 <span class="mono">3.4</span> 的聲景試錄，備註正好寫著「Show 光譜圖 (Spectrogram) instead of waveform?」。Mapping draft 亦列出想錄的牛叫聲、踏步聲、赤麂叫聲。</div>
+  <p class="refs">參考：The Great Animal Orchestra（頻率即空間）、Dawn Chorus（同一段聲音以聆聽、聲譜、樂譜三種方式呈現）、Snapshot Serengeti（夜間事件只顯示單格）、Bear 71（揭示監察者本身）。本地先例：浸大與觀鳥會的 Hong Kong Wildtracks，水口應引用並說明差異。</p>
+</section>
+
+<section class="concept" id="c6">
+  <div class="concept-head"><span class="rank">06 裝置</span><h3>因果鏈與多聲道</h3></div><p style="margin:.4rem 0 0"><a class="sample-link" href="samples/c6.html">打開方案 06 的互動 sample →</a></p>
+  <div class="fit"><span class="chip cms">基本版：CMS＋捲動動畫</span><span class="chip code">精細版：Scrollama</span><span class="chip">呈現衝突</span><span class="chip">避免二元今昔</span></div>
+  <p>Scrollytelling：一幅插圖固定在畫面上，文字逐段捲過，每一段點亮多一條關係。適合講一條因果鏈，並在鏈的分岔處放入多張「聲音卡」，讓村民、觀鳥會、科學家、遊客的說法並列，不作平均。今昔對比可以作為鏈中的一步，採用 Helen 提議的三階段，而不是單一滑桿。</p>
+  <div class="example"><b>水口例子：</b>1960 年代石壁水塘截山水 → 稻田灌溉失效、棄耕 → 紅樹林與濕地形成（約 30 至 40 年）→ 水牛進駐、打滾造池 → 觀鳥會復耕種稻吸引白鶴 → 村民指觀鳥會截走農田用水的爭議。鏈的最後一格是並列的聲音卡，而不是結論。</div>
+  <p class="refs">參考：The Pudding 的 sticky scrollytelling 寫法、Scrollama、Sciences Po 的爭議製圖（controversy mapping）、夏威夷大學 Haleakalā 口述歷史 StoryMap（把圍捕野化有蹄類的爭議交由當事人說，不作裁決）、JuxtaposeJS、地政總署歷史航空照片。</p>
+</section>
+
+<section class="concept" id="c78"><div class="concept-head"><span class="rank">07–08 對照</span><h3>Obsidian 式關係圖</h3></div>
+<p>同一份資料用 Obsidian 的 Graph view 方式呈現，方便團隊比較。V1 照足 Obsidian 原樣；V2 加入時間軸與地點，可看到關係如何出現、消失與持續。</p>
+<p><a class="sample-link" href="samples/c7.html">打開 07 · V1 簡單版 →</a>　<a class="sample-link" href="samples/c8.html">打開 08 · V2 多維度版 →</a></p></section>
+<h3 style="margin-top:2.4rem">其他可作小品的角度裝置</h3>
+<ul class="small">
+  <li><b>小朋友高度的水牛小路：</b>鏡頭放在約 1.1 米高仰望，水牛佔路時捲動暫停，直至牠離開或使用者改路。說明這是人的尺度感，不是水牛的視角。來自 9 月 6 日會議中小朋友遇見水牛的例子。參考 B-EYE（蜜蜂視覺模擬，並清楚註明只模擬光學）、The Deep Sea。</li>
+  <li><b>讀殼紋：</b>放大沙白殼紋，由日周紋、潮汐紋到年輪，再疊上節氣。Helen 的物種書寫已有此材料。<span class="st u">發表前需請貝類硬組織專家核實該物種的紋路週期</span></li>
+  <li><b>夜間辨認小任務：</b>讓訪客或村民辨認紅外線相機拍到的是甚麼，屬日後開放參與的入口。參考 Snapshot Serengeti、台灣路殺社。</li>
+</ul>
+
+<h2 id="data">資料結構：保留 Obsidian 的骨，換掉它的皮</h2>
+<p>這部分是 Chris 提議先做、讓團隊逐項留言的部分。建議只用兩張表：<b>節點</b>（物種、人、地點／檢查點、節氣、物件、機構）和<b>關係</b>。每條關係都帶來源、時期和驗證狀態，這樣同一份資料可以同時餵給物種頁、故事線圖、節氣輪和因果鏈。</p>
+<h3>建議的關係動詞（受控詞彙）</h3>
+<p class="small muted">參考 Feral Atlas 的動詞標籤和 GloBI 的生態關係分類。數量刻意保持少，方便在所有視覺化中用同一種線型表示。</p>
+<div class="verbs">
+  <span>食／被食</span><span>造棲地</span><span>踩出／開路</span><span>採集</span><span>耕作／飼養</span><span>傳粉</span><span>截水／改變水源</span><span>取代／佔據</span><span>買賣</span><span>記錄（儀器）</span><span class="conf">衝突</span><span class="past">曾經（已不再）</span>
+</div>
+<h3>樣本：由現有資料抽出的十條關係</h3>
+<div class="tbl">
+<table>
+  <thead><tr><th>主體</th><th>關係</th><th>對象</th><th>時期</th><th>地點</th><th>來源</th><th>狀態</th></tr></thead>
+  <tbody>
+    <tr><td>水牛</td><td class="rel">造棲地</td><td>蜻蜓、蛙類、小魚小蟹（打滾形成水氹）</td><td>現在</td><td class="mono">3.3–3.4</td><td>Mapping draft（研究員觀察）</td><td><span class="st v">觀察</span></td></tr>
+    <tr><td>黃牛</td><td class="rel">造棲地</td><td>盧氏小樹蛙（打滾吃草清疏水道）</td><td>現在</td><td class="mono">2.3</td><td>Emilie 地圖簡介</td><td><span class="st u">待科學核實</span></td></tr>
+    <tr><td>石壁水塘</td><td class="rel">截水</td><td>水稻田</td><td>1960 年代</td><td class="mono">5.1</td><td>村民 A（第一、二次訪問）</td><td><span class="st u">口述，未核實年份</span></td></tr>
+    <tr><td>觀鳥會</td><td class="rel">耕作</td><td>水稻（復耕吸引白鶴）</td><td>近年</td><td class="mono">5.1</td><td>村民 A</td><td><span class="st u">口述</span></td></tr>
+    <tr><td>觀鳥會</td><td class="rel">衝突</td><td>村民農田用水</td><td>近年</td><td class="mono">4.2</td><td>村民 A（第二次訪問）</td><td><span class="st c">爭議，保留原話</span></td></tr>
+    <tr><td>村民</td><td class="rel">採集</td><td>沙白（刺口鉗，認沙面「眼」）</td><td>過去至今</td><td class="mono">1.2 / 4.4</td><td>村民 B（第三次）、村民 C 家庭</td><td><span class="st v">影片紀錄</span></td></tr>
+    <tr><td>遊客</td><td class="rel">買賣</td><td>沙白（曾一次賣 400 元）</td><td>近年</td><td class="mono">4.4</td><td>村民 B（第三次訪問）</td><td><span class="st u">口述</span></td></tr>
+    <tr><td>政府部門</td><td class="rel">衝突</td><td>本地黃牛（村民口述：絕育後本地牛隻減少）</td><td>近數十年</td><td class="mono">2.1</td><td>村民 A（第一次訪問）</td><td><span class="st u">口述，需查證</span></td></tr>
+    <tr><td>牛</td><td class="rel">踩出／開路</td><td>籮箕灣至水口的牛徑，後成行山徑</td><td>過去</td><td class="mono">2.2</td><td>村民 B（第二次訪問）</td><td><span class="st u">口述</span></td></tr>
+    <tr><td>村民</td><td class="rel">曾經</td><td>以黃牛耕田、不食牛肉</td><td>耕作期</td><td class="mono">4.2</td><td>村民 A、村民 C 家庭</td><td><span class="st v">多人口述一致</span></td></tr>
+  </tbody>
+</table>
+</div>
+<p class="small muted">欄位全部可以直接成為 Google Sheets 的欄目，再匯入 Webflow CMS。「狀態」一欄回應 9 月 6 日議題一：保留村民原話，同時讓觀眾知道哪些未經驗證。</p>
+
+<h2 id="pipeline">由資料到 Webflow</h2>
+<div class="pipe">
+  <div><span class="step">1 · 編輯</span><b>Google Sheets</b>兩個分頁：nodes、relations。隊友以「可留言」身份逐行留言，不需要學新工具。</div>
+  <div><span class="step">2 · 匯入</span><b>Webflow CMS</b>匯入 CSV。Nodes 和 Relations 兩個 Collection，以 Reference 欄位連接（按 slug 配對）。</div>
+  <div><span class="step">3 · 頁面</span><b>MC 設計</b>物種頁、地點頁、路徑頁用 Collection List 生成，雙語用 Webflow Localize。</div>
+  <div><span class="step">4 · 視覺化</span><b>Code Embed</b>故事線圖、節氣輪、夜班時間軸讀取一個由 CSV 生成的 graph.json。</div>
+</div>
+<p>這是較便宜的方案。較進取的方案是改用 Airtable 編輯，並把視覺化放在 Netlify 獨立託管後嵌入；只有在關係數量很多、或需要即時同步時才值得。</p>
+<div class="note"><b>未能核實：</b>研究線無法打開 Webflow 官方價目頁，以下數字來自搜尋摘錄，請 MC 確認。Premium Site plan 約 US$25／月（年繳），可有 20,000 個 CMS 項目；Code Embed 上限 50,000 字元，需付費方案；Localize Essential 約 US$9／月（三個語系）。合共約 US$34／月。免費 Reviewer 帳戶可在 Designer 內留言。Webflow CMS 沒有公開的 JSON 介面，所以建議另外生成 graph.json，而不是即時讀取 CMS。</div>
+
+<h2 id="workflow">工作流程</h2>
+<p>由我做研究統籌，分派 Sonnet 或 Haiku 子代理做資料抽取和核實，判斷和設計由我負責，決定權在團隊。日期為建議。</p>
+<ol class="phases">
+  <li class="done"><h3>參考掃描</h3><div class="who"><span>Claude 統籌</span><span>Sonnet ×3</span><span>Haiku ×1</span><span>已完成 10/12</span></div><p class="small">四條研究線：多物種地圖網站、關係呈現方式、多於人類視角、工具與 Webflow 流程。所有網址已逐一打開確認，未能確認的另行標示。</p></li>
+  <li><h3>團隊留言與取捨</h3><div class="who"><span>Chris</span><span>Helen</span><span>Fiona</span><span>DY</span><span>目標 10/16</span></div><p class="small">在這頁留言，回答下面的問題，選出兩至三個方案。Fiona 確認鹿地圖是否 Storying Extinction。</p></li>
+  <li><h3>關係表第一版</h3><div class="who"><span>Haiku 抽取</span><span>Sonnet 核對</span><span>Claude 整合</span><span>目標 10/23</span></div><p class="small">由 Data Catalogue、物種編碼文件、各訪問逐字稿抽出節點和關係，每條附來源和時間碼。抽取與核對分開由不同子代理做，避免同一模型自己驗證自己。放上 Google Sheets 讓你逐行留言。</p></li>
+  <li><h3>兩至三個可互動原型</h3><div class="who"><span>Claude</span><span>目標 10/30</span></div><p class="small">用真實水口資料做選定的方案，例如故事線圖和節氣輪，手機版優先。原型就是日後交給 MC 的 Code Embed。</p></li>
+  <li><h3>交給 MC</h3><div class="who"><span>MC</span><span>Fiona 協調</span><span>11 月初</span></div><p class="small">交付 CMS 欄位設計、CSV、graph.json 與嵌入碼。MC 負責整體視覺、物種 icon 和頁面。</p></li>
+  <li><h3>導賞團測試</h3><div class="who"><span>Angus</span><span>Fiona</span><span>12 月至 1 月</span></div><p class="small">把路徑頁帶到現場試用，收集村民和參加者的補充，作為開放參與的第一批內容。</p></li>
+</ol>
+
+<h2 id="questions">需要團隊決定的事</h2>
+<ol class="decisions">
+  <li>首頁入口用甚麼：插畫地圖、節氣潮汐輪，還是讓人先揀一個物種（類似遊戲選角）？</li>
+  <li>主軸是物種還是地景？Chris 與 Helen 在 9 月 3 日會議未收斂。建議的「線＋結」可以兩者兼顧：物種是線，地景是線相遇的結。團隊是否接受？</li>
+  <li>上面的關係動詞表是否夠用？有沒有村民常用、而這裡未包括的說法？</li>
+  <li>「狀態」欄如何對公眾顯示：每條都標，還是只標爭議與未驗證？</li>
+  <li>Webflow 月費約 US$34（未核實）由哪個預算支付：Greenpeace 還是 SUSHUM？</li>
+  <li>Code Embed 由我寫原型交 MC，還是 MC 另找開發者？</li>
+</ol>
+
+<h2 id="library">參考庫</h2>
+<p class="small muted">按類別篩選。「已讀」表示研究線打開並讀過內容；「僅確認存在」表示網址可開但互動內容未能讀取；「需人手確認」請用瀏覽器打開再看。</p>
+<div class="filters" id="filters" role="group" aria-label="篩選參考類別"></div>
+<ul class="lib" id="lib"></ul>
+
+<div class="note"><b>已知問題：</b>terrastories.io 現已變成垃圾內容網站，請用 terrastories.app。島民 ISLANDERS、港大 Common Map（荔枝窩）、重塑水口都找不到在線地圖。孟買生物多樣性插畫地圖找不到正式網址。Bear 71 原版網頁版未有測試。</div>
+
+<footer>水口 22°13′N 113°55′E · 公開版：村民姓名以代號代替，引述改為轉述· 2026-10-12</footer>
+</div>
+
+<script>
+(function(){
+  var NS="http://www.w3.org/2000/svg";
+  function el(tag,attrs,parent){var e=document.createElementNS(NS,tag);for(var k in attrs)e.setAttribute(k,attrs[k]);if(parent)parent.appendChild(e);return e;}
+  function txt(parent,x,y,s,attrs){var t=el("text",Object.assign({x:x,y:y},attrs||{}),parent);t.textContent=s;return t;}
+
+  /* ---------- Storyline ---------- */
+  var sv=document.getElementById("storyline");
+  var eras=["耕作期","截水","棄耕","牛群野化、濕地形成","復耕與旅遊"];
+  var eraSub=["1960年代前","1960年代","1970–90年代","2000年代","2020年代"];
+  var bands=[{k:"forest",n:"山林"},{k:"field",n:"田／濕地"},{k:"village",n:"村"},{k:"flat",n:"泥灘／海"}];
+  var bandY={forest:78,field:150,village:218,flat:286};
+  var X=[175,330,485,640,795];
+  var ents=[
+    {n:"水稻",c:"--c-rice",p:["field","field",null,null,"field"],fade:1},
+    {n:"黃牛",c:"--c-cattle",p:["field","field","forest","field","village"]},
+    {n:"水牛",c:"--c-buffalo",p:[null,null,null,"field","field"]},
+    {n:"村民",c:"--c-human",p:["field","field","flat","village","flat"]},
+    {n:"沙白",c:"--c-clam",p:["flat","flat","flat","flat","flat"]},
+    {n:"觀鳥會",c:"--c-club",p:[null,null,null,null,"field"]},
+    {n:"遊客",c:"--c-visitor",p:[null,null,null,"flat","flat"]}
+  ];
+  // offsets within band per era
+  var off=ents.map(function(){return [0,0,0,0,0];});
+  for(var e=0;e<5;e++){bands.forEach(function(b){var m=[];ents.forEach(function(en,i){if(en.p[e]===b.k)m.push(i);});m.forEach(function(i,j){off[i][e]=(j-(m.length-1)/2)*14;});});}
+  bands.forEach(function(b){
+    el("line",{x1:120,x2:850,y1:bandY[b.k],y2:bandY[b.k],stroke:"var(--line)","stroke-dasharray":"2 5"},sv);
+    txt(sv,10,bandY[b.k]+5,b.n,{fill:"var(--muted)","font-size":"13","font-family":"var(--f-body)"});
+  });
+  X.forEach(function(x,i){
+    txt(sv,x,22,eras[i],{fill:"var(--fg)","font-size":"13","font-weight":"700","text-anchor":"middle","font-family":"var(--f-body)"});
+    txt(sv,x,38,eraSub[i],{fill:"var(--muted)","font-size":"11","text-anchor":"middle","font-family":"var(--f-mono)"});
+  });
+  // convergence knots
+  for(var e2=0;e2<5;e2++){bands.forEach(function(b){var n=ents.filter(function(en){return en.p[e2]===b.k;}).length;if(n>=2){el("rect",{x:X[e2]-16,y:bandY[b.k]-(n*14)/2-4,width:32,height:n*14+8,rx:8,fill:"var(--tide-soft)",stroke:"none"},sv);}});}
+  ents.forEach(function(en,i){
+    var col="var("+en.c+")";
+    for(var e=0;e<4;e++){
+      var a=en.p[e],b=en.p[e+1];
+      if(a&&b){
+        var y1=bandY[a]+off[i][e],y2=bandY[b]+off[i][e+1],x1=X[e],x2=X[e+1],mx=(x1+x2)/2;
+        el("path",{d:"M"+x1+" "+y1+" C"+mx+" "+y1+" "+mx+" "+y2+" "+x2+" "+y2,stroke:col,"stroke-width":3,fill:"none","stroke-linecap":"round"},sv);
+      } else if(a&&!b&&en.fade){
+        var yy=bandY[a]+off[i][e];
+        el("path",{d:"M"+X[e]+" "+yy+" L"+(X[e]+70)+" "+yy,stroke:col,"stroke-width":3,fill:"none","stroke-dasharray":"3 5"},sv);
+        txt(sv,X[e]+74,yy+4,"棄耕",{fill:col,"font-size":"11","font-family":"var(--f-body)"});
+      }
+    }
+    for(var e3=0;e3<5;e3++){
+      if(en.p[e3]&&(e3===0||!en.p[e3-1])){
+        var ys=bandY[en.p[e3]]+off[i][e3];
+        el("circle",{cx:X[e3],cy:ys,r:4.5,fill:col},sv);
+        txt(sv,X[e3]-9,ys+4,en.n,{fill:col,"font-size":"12","font-weight":"700","text-anchor":"end","font-family":"var(--f-body)"});
+      }
+    }
+  });
+  // conflict markers
+  [{e:4,b:"field",t:"用水爭議"},{e:4,b:"flat",t:"過度採集"},{e:1,b:"field",t:"截山水"}].forEach(function(m){
+    var y=bandY[m.b]-34;
+    el("circle",{cx:X[m.e]+28,cy:bandY[m.b]-26,r:4,fill:"none",stroke:"var(--conflict)","stroke-width":2},sv);
+    txt(sv,X[m.e]+36,y+12,m.t,{fill:"var(--conflict)","font-size":"11","font-family":"var(--f-body)"});
+  });
+  var lg=document.getElementById("storyLegend");
+  ents.forEach(function(en){var s=document.createElement("span");s.innerHTML='<i style="background:var('+en.c+')"></i>'+en.n;lg.appendChild(s);});
+  var s2=document.createElement("span");s2.innerHTML='<i style="background:var(--tide-soft);height:10px"></i>線相遇的結';lg.appendChild(s2);
+
+  /* ---------- Wheel ---------- */
+  var w=document.getElementById("wheel"),C=320;
+  var terms=["立春","雨水","驚蟄","春分","清明","穀雨","立夏","小滿","芒種","夏至","小暑","大暑","立秋","處暑","白露","秋分","寒露","霜降","立冬","小雪","大雪","冬至","小寒","大寒"];
+  var months=["正月","二月","三月","四月","五月","六月","七月","八月","九月","十月","十一月","十二月"];
+  function ang(t){return (t/24)*2*Math.PI-Math.PI/2;} // t in term units, 0 = 立春
+  function pt(r,t){var a=ang(t);return [C+r*Math.cos(a),C+r*Math.sin(a)];}
+  function arc(r1,r2,t1,t2,attrs){
+    var a=pt(r2,t1),b=pt(r2,t2),c=pt(r1,t2),d=pt(r1,t1),large=((t2-t1+24)%24)>12?1:0;
+    return el("path",Object.assign({d:"M"+a+" A"+r2+" "+r2+" 0 "+large+" 1 "+b+" L"+c+" A"+r1+" "+r1+" 0 "+large+" 0 "+d+" Z"},attrs),w);
+  }
+  el("circle",{cx:C,cy:C,r:300,fill:"none",stroke:"var(--line)"},w);
+  terms.forEach(function(n,i){
+    arc(262,300,i,i+1,{fill:i%2?"var(--surface)":"var(--bg)",stroke:"var(--line)","stroke-width":.6});
+    var p=pt(281,i+.5);txt(w,p[0],p[1]+4,n,{"text-anchor":"middle","font-size":"12",fill:"var(--fg)","font-family":"var(--f-body)"});
+  });
+  months.forEach(function(n,i){
+    arc(228,258,i*2,i*2+2,{fill:"none",stroke:"var(--line)","stroke-width":.6});
+    var p=pt(243,i*2+1);txt(w,p[0],p[1]+4,n,{"text-anchor":"middle","font-size":"11",fill:"var(--muted)","font-family":"var(--f-body)"});
+  });
+  // lunar month m (1-based) starts approx at term (m-1)*2
+  function M(m){return (m-1)*2;}
+  var rings=[
+    {n:"水稻",c:"--c-rice",r:[200,222],seg:[[M(1),M(6)+2,"一造：正月開田，三月插秧，六月割禾"],[M(6)+1.5,M(9)+2,"二造：六月尾插秧，九月收割"]]},
+    {n:"蔥、番薯、芋頭",c:"--c-club",r:[172,194],seg:[[M(9)+1,M(12)+2,"九月後種番薯、蔥；年尾擔蔥去西環"],[M(1),M(1)+1,"正月初種芋頭"]]},
+    {n:"墨魚",c:"--c-buffalo",r:[144,166],seg:[[M(2),M(5)+2,"釣大墨魚：二月到五月"]]},
+    {n:"沙白",c:"--c-clam",r:[116,138],seg:[[6,12,"夏季日間低潮，較易掘"],[20,24,"冬季低潮多在凌晨"]]}
+  ];
+  rings.forEach(function(rg){
+    el("circle",{cx:C,cy:C,r:(rg.r[0]+rg.r[1])/2,fill:"none",stroke:"var(--line)","stroke-dasharray":"1 4"},w);
+    rg.seg.forEach(function(s){var p=arc(rg.r[0],rg.r[1],s[0],s[1],{fill:"var("+rg.c+")",opacity:.85});var t=el("title",{},p);t.textContent=rg.n+"："+s[2];});
+    var s=document.createElement("span");s.innerHTML='<i style="background:var('+rg.c+');height:8px"></i>'+rg.n;document.getElementById("wheelLegend").appendChild(s);
+  });
+  // 立秋 mark
+  var l1=pt(110,12),l2=pt(300,12);el("line",{x1:l1[0],y1:l1[1],x2:l2[0],y2:l2[1],stroke:"var(--conflict)","stroke-width":1.2,"stroke-dasharray":"4 3"},w);
+  var lq=pt(96,12.6);txt(w,lq[0],lq[1],"立秋前要落田",{"text-anchor":"middle","font-size":"11",fill:"var(--conflict)","font-family":"var(--f-body)"});
+  // today needle: 寒露 began 8 Oct 2026; 12 Oct ≈ 16.27
+  var today=16+4/15, n1=pt(0,today),n2=pt(304,today);
+  el("line",{x1:C,y1:C,x2:n2[0],y2:n2[1],stroke:"var(--tide)","stroke-width":2.5},w);
+  el("circle",{cx:C,cy:C,r:46,fill:"var(--bg)",stroke:"var(--tide)","stroke-width":2},w);
+  txt(w,C,C-6,"今日",{"text-anchor":"middle","font-size":"12",fill:"var(--muted)","font-family":"var(--f-body)"});
+  txt(w,C,C+14,"寒露",{"text-anchor":"middle","font-size":"18","font-weight":"800",fill:"var(--tide)","font-family":"var(--f-display)"});
+
+  /* ---------- Library ---------- */
+  var cats={map:"多物種地圖",rel:"關係呈現",view:"視角與感官",time:"時間與季節",hk:"香港與東亞",tool:"工具",warn:"反例"};
+  var R=[
+    ["Storying Extinction","https://cdil.lib.uidaho.edu/storying-extinction/map.html","University of Idaho Library · 2022","路徑逐頁揭示加自由地圖；紅外線片段與訪談定位在地景上。最可能是 Fiona 說的鹿地圖。",["map"],"已讀"],
+    ["Feral Atlas","https://feralatlas.org","Tsing, Deger, Keleman Saxena, Zhou · Stanford UP 2020","物件隨機漂入的入口；跨物種的動詞標籤；地圖與閱讀室分開。手機上偏重。",["map","rel"],"已讀"],
+    ["Bear 71","https://bear71vr.nfb.ca","NFB · 2012，VR 版其後","以紅外線相機與追蹤網絡講一隻熊；監察者本身亦是故事一部分。避免其第一身動物旁白。",["map","view"],"已讀"],
+    ["Deer 255（Red Desert to Hoback）","https://geonarrative.usgs.gov/muledeer255/","USGS / Wyoming Migration Initiative","單一動物沿遷徙路線逐站講述，標出圍欄、公路等障礙。",["map"],"僅確認存在"],
+    ["Haleakalā 口述歷史 StoryMap","https://storymaps.arcgis.com/stories/265f1fca46074313a28c6ddc5679c3b1","University of Hawaiʻi Center for Oral History · 2022","野化山羊、豬、牛與原生棲地的爭議，由當事人口述而不裁決。與水口黃牛處境相近。",["map"],"僅確認存在"],
+    ["Terrastories","https://terrastories.app","開源（MIT）","社區擁有的地點故事平台，可離線、可設限制存取。適合處理敏感地點與長者同意。",["map","tool"],"已讀"],
+    ["Living Maps（Heidelberg）","https://www.hcts.uni-heidelberg.de/de/node/1094","Heidelberg 學生 StoryMaps","每個物種一條城市路線；但各故事互不相連，正好是水口要補的地方。",["map"],"已讀"],
+    ["Audubon Bird Migration Explorer","https://explorer.audubon.org/en/home","National Audubon Society 等 · 2022","選一個地點，看見它連到遠方哪些地方。可用於白鶴、候鳥。",["map","rel"],"已讀"],
+    ["水口手記（Urban Diary）","https://www.urbandiarist.com/tc/collection/Shui-hau-diary","黎穎詩 · 2026","同一村落的影片（馬蹄蟹、沙白保育）。沒有地圖與物種連結，正是本項目的差異。",["hk"],"已讀"],
+    ["Hong Kong Wildtracks","https://digital.lib.hkbu.edu.hk/hkwildtracks/","浸大圖書館、香港觀鳥會 · 2019","以 1 公里方格與鳥聲認識香港生物多樣性。最接近的本地先例，應引用並說明差異。",["hk","view"],"需人手確認"],
+    ["香港文化共融地圖","https://www.mappinghk.org/map","文化及媒體教育基金 · Humap · 2025","社區自行策展的集合、步行路線、歷史地圖疊層，雙語。",["hk","map"],"僅確認存在"],
+    ["大嶼山文化故事","https://sslo.cedd.gov.hk/en/exploring-more/stories/","土木工程拓展署可持續大嶼辦事處","有水口相關影片，可作官方紀錄的參照。",["hk"],"已讀"],
+    ["臺灣動物路死觀察網","https://roadkill.tw","路殺社、特生中心","低門檻公民回報流程；衝突本身就是資料。",["hk","tool"],"已讀"],
+    ["Movie Narrative Charts（xkcd 657）","https://xkcd.com/657/","Randall Munroe","故事線圖的原型：線靠攏代表同場。",["rel"],"已讀"],
+    ["iStoryline.js","https://github.com/remaerd/iStoryline.js","開源","自動排版故事線，減少線交叉。",["rel","tool"],"已讀"],
+    ["Loom（MIT Media Lab）","https://web.media.mit.edu/~kkarahal/loom/","MIT Media Lab","把時間中的關係畫成經緯交織的布，可作糾纏的視覺語言。",["rel"],"已讀"],
+    ["Who Eats Whom","https://whoeatswhom.org","iNaturalist 社群 · 2026 更新","由一個物種出發，只看一步的食物關係。",["rel"],"僅確認存在"],
+    ["GloBI","https://www.globalbioticinteractions.org","開放資料","生態關係分類詞彙，可作關係表的參照。",["rel","tool"],"已讀"],
+    ["RAWGraphs","https://app.rawgraphs.io/","免費、免寫碼","可直接做沖積圖（例如沙白：食物 → 商品 → 稀缺）並匯出 SVG 給 MC。",["rel","tool"],"已讀"],
+    ["Arc diagram（D3 Graph Gallery）","https://d3-graph-gallery.com/arc.html","D3 Graph Gallery","按棲地排列物種，以弧線表示跨棲地關係。適合研究者索引頁。",["rel"],"已讀"],
+    ["Climate spirals","https://www.climate-lab-book.ac.uk/spirals/","Ed Hawkins","一圈一年，同時看出季節循環與長期變化。",["time","rel"],"已讀"],
+    ["Scrollytelling 寫法（The Pudding）","https://pudding.cool/process/scrollytelling-sticky/","The Pudding","固定圖像加捲動文字的做法，手機版要另行規劃高度。",["rel","tool"],"已讀"],
+    ["Scrollama","https://github.com/russellsamora/scrollama","開源（MIT）","捲動觸發每一步圖像變化的程式庫。",["tool"],"已讀"],
+    ["JuxtaposeJS","https://juxtapose.knightlab.com/","Knight Lab","今昔對比滑桿，可作因果鏈中的一步。",["time","tool"],"已讀"],
+    ["地政總署歷史航空照片","https://www.hkmapservice.gov.hk/OneStopSystem/home","地政總署","1960 年代至今的水口航照，需留意版權。",["hk","time"],"已讀"],
+    ["Controversy mapping（Sciences Po）","https://controverses.sciences-po.fr/","Sciences Po","把分歧當作結構呈現，而不是雜訊。",["rel"],"已讀"],
+    ["Fruiting Bodies","https://fruitingbodies.life/","生成藝術網頁","網頁隨時辰、季節、月相改變；「跟一條線、探索、觀察」三種入口。",["time","rel"],"已讀"],
+    ["72 Seasons","https://www.kurashikata.com/72seasons/","うつくしいくらしかた研究所 · 約 2015","只顯示當下微季節，要人回來再看。節氣輪與低潮閘門的直接範本。",["time"],"已讀"],
+    ["Indigenous seasonal calendars","https://www.bom.gov.au/iwk/calendars/","Australian Bureau of Meteorology","季節由物種現象定義，而非日期。",["time"],"僅確認存在"],
+    ["Deep Time Walk","https://www.deeptimewalk.org","Schumacher College","距離即時間：一米一百萬年。可借作「一步一個潮汐」。",["time","view"],"已讀"],
+    ["The Great Animal Orchestra","https://www.legrandorchestredesanimaux.com/","Fondation Cartier、Upian、Bernie Krause · 2016","按頻率把聲景鋪開，各物種佔一段頻寬。",["view"],"已讀"],
+    ["Dawn Chorus","https://dawn-chorus.org/","Naturkundemuseum Bayern 等 · 2020","同一段錄音以聆聽、聲譜、樂譜三種方式呈現。",["view"],"已讀"],
+    ["Locus Sonus Soundmap","https://locusonus.org/soundmap/","Locus Sonus","即時開放咪高峰地圖；可做「昨晚同一時刻的水口」。",["view"],"已讀"],
+    ["Sounds of the Forest","https://timberfestival.org.uk/soundsoftheforest-soundmap/","Timber Festival · 2020","每地一分鐘錄音，人人可加。適合村民參與。",["view"],"已讀"],
+    ["Snapshot Serengeti","https://www.zooniverse.org/projects/zooniverse/snapshot-serengeti","Zooniverse · 約 2012","公眾辨認紅外線相機畫面；夜間事件只顯示單格。",["view"],"已讀"],
+    ["B-EYE","https://andygiger.com/science/beye/beyehome.html","Andy Giger","蜜蜂視覺模擬，並清楚註明只模擬光學。任何「以…角度看」功能的寫法範本。",["view"],"已讀"],
+    ["The Deep Sea","https://neal.fun/deep-sea/","Neal Agarwal","一條捲動軸只代表一件事（深度）。",["view"],"已讀"],
+    ["Pollinator Pathmaker","https://pollinator.art","Alexandra Daisy Ginsberg · 2021","以傳粉昆蟲的需要作設計準則，人類視角與近似昆蟲視角可切換。",["view"],"已讀"],
+    ["Earth Species Project","https://earthspecies.org/","非牟利 AI 動物溝通研究","以 AI「翻譯」動物語言，正是團隊不想做的代言，可在方法說明中作對照。",["warn"],"已讀"]
+  ];
+  var fb=document.getElementById("filters"),lib=document.getElementById("lib"),cur="all";
+  function render(){
+    lib.innerHTML="";
+    R.forEach(function(r){
+      if(cur!=="all"&&r[4].indexOf(cur)<0)return;
+      var li=document.createElement("li");
+      var nm=document.createElement("div");nm.className="nm";var a=document.createElement("a");a.href=r[1];a.target="_blank";a.rel="noopener";a.textContent=r[0];nm.appendChild(a);
+      var tg=document.createElement("div");tg.className="tag";tg.textContent=r[4].map(function(k){return cats[k];}).join(" · ");
+      var by=document.createElement("div");by.className="by";by.textContent=r[2]+"　";
+      var st=document.createElement("span");st.className="st "+(r[5]==="已讀"?"v":"u");st.textContent=r[5];by.appendChild(st);
+      var us=document.createElement("div");us.className="use";us.textContent=r[3];
+      li.appendChild(nm);li.appendChild(tg);li.appendChild(by);li.appendChild(us);lib.appendChild(li);
+    });
+  }
+  function btn(k,label){var b=document.createElement("button");b.type="button";b.id="f-"+k;b.textContent=label;b.setAttribute("aria-pressed",k===cur?"true":"false");
+    b.addEventListener("click",function(){cur=k;Array.prototype.forEach.call(fb.children,function(c){c.setAttribute("aria-pressed",c===b?"true":"false");});render();});fb.appendChild(b);}
+  btn("all","全部（"+R.length+"）");Object.keys(cats).forEach(function(k){btn(k,cats[k]);});
+  render();
+})();
+</script>
+
+<button id="cm-fab" type="button" aria-expanded="false" aria-controls="cm-panel">留言</button>
+<div id="cm-panel" hidden role="dialog" aria-label="留言">
+  <header><b>留言給研究團隊</b><button id="cm-close" type="button" aria-label="關閉">×</button></header>
+  <div class="body">
+    <label for="cm-section">關於哪一部分<select id="cm-section"></select></label>
+    <label for="cm-name">名字<input id="cm-name" maxlength="60" autocomplete="name" placeholder="例如：Helen"></label>
+    <label for="cm-text">意見<textarea id="cm-text" maxlength="3000" placeholder="你同意、不同意，或想補充甚麼？"></textarea></label>
+    <button id="cm-send" type="button">送出</button>
+    <div id="cm-status" aria-live="polite"></div>
+    <ul id="cm-list"></ul>
+  </div>
+</div>
+<script>
+(function(){
+  var API = "https://script.google.com/macros/s/AKfycbwIi-gujYliTB5kGwyk7klnrloxiNWmZo6AsyLiedmjw74VjAgNUR3FeLcZrkcoRfQoIg/exec";
+  var fab=document.getElementById("cm-fab"),panel=document.getElementById("cm-panel"),sel=document.getElementById("cm-section"),
+      nm=document.getElementById("cm-name"),tx=document.getElementById("cm-text"),send=document.getElementById("cm-send"),
+      st=document.getElementById("cm-status"),list=document.getElementById("cm-list"),all=[];
+  var secs=[{id:"general",t:"整體意見"}];
+  document.querySelectorAll("h2[id]").forEach(function(h){secs.push({id:h.id,t:h.textContent.trim(),el:h});});
+  document.querySelectorAll("section.concept[id]").forEach(function(s){var h=s.querySelector("h3");secs.push({id:s.id,t:"方案："+h.textContent.trim(),el:h});});
+  secs.forEach(function(s){var o=document.createElement("option");o.value=s.id;o.textContent=s.t;sel.appendChild(o);
+    if(s.el){var b=document.createElement("button");b.type="button";b.className="cm-open";b.dataset.sec=s.id;b.innerHTML='留言 <span class="n"></span>';
+      b.addEventListener("click",function(){openPanel(s.id);});s.el.appendChild(b);}});
+  try{nm.value=localStorage.getItem("cm-name")||"";}catch(e){}
+  function openPanel(id){if(id)sel.value=id;panel.hidden=false;fab.setAttribute("aria-expanded","true");renderList();tx.focus();}
+  fab.addEventListener("click",function(){panel.hidden?openPanel():closePanel();});
+  function closePanel(){panel.hidden=true;fab.setAttribute("aria-expanded","false");}
+  document.getElementById("cm-close").addEventListener("click",closePanel);
+  sel.addEventListener("change",renderList);
+  function renderList(){
+    list.innerHTML="";var rows=all.filter(function(r){return r.section===sel.value;});
+    if(!API){st.textContent="留言功能設定中，稍後開放。";return;}
+    if(!rows.length){var li=document.createElement("li");li.className="who";li.textContent="這部分暫時未有留言。";list.appendChild(li);return;}
+    rows.forEach(function(r){var li=document.createElement("li");var w=document.createElement("span");w.className="who";
+      var d=r.t?new Date(r.t):null;w.textContent=(r.name||"匿名")+(d&&!isNaN(d)?" · "+d.toLocaleString("zh-HK",{month:"numeric",day:"numeric",hour:"2-digit",minute:"2-digit"}):"");
+      li.appendChild(w);li.appendChild(document.createTextNode(r.text));
+      if(r.reply){var rp=document.createElement("span");rp.className="rep";rp.textContent="回覆："+r.reply;li.appendChild(rp);}
+      list.appendChild(li);});
+  }
+  function counts(){
+    document.querySelectorAll(".cm-open").forEach(function(b){var n=all.filter(function(r){return r.section===b.dataset.sec;}).length;b.querySelector(".n").textContent=n?n:"";});
+    fab.textContent=all.length?"留言（"+all.length+"）":"留言";
+  }
+  function load(){
+    if(!API){counts();return;}
+    fetch(API).then(function(r){return r.json();}).then(function(d){all=Array.isArray(d)?d:[];counts();if(!panel.hidden)renderList();})
+      .catch(function(){st.textContent="未能載入留言，請稍後再試。";});
+  }
+  send.addEventListener("click",function(){
+    if(!API){st.textContent="留言功能設定中，稍後開放。";return;}
+    var t=tx.value.trim();if(!t){st.textContent="請先寫下意見。";tx.focus();return;}
+    try{localStorage.setItem("cm-name",nm.value.trim());}catch(e){}
+    send.disabled=true;st.textContent="送出中…";
+    fetch(API,{method:"POST",body:JSON.stringify({section:sel.value,name:nm.value.trim(),text:t})})
+      .then(function(r){return r.json();}).then(function(d){
+        if(d&&d.ok){tx.value="";st.textContent="已送出，謝謝。";load();}else{st.textContent="送出失敗，請再試一次。";}
+      }).catch(function(){st.textContent="送出失敗，請檢查網絡後再試。";}).finally(function(){send.disabled=false;});
+  });
+  load();
+})();
+</script>
+
+</body>
+</html>

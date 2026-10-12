@@ -1,0 +1,1278 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Obsidian 式關係圖 V2 多維度版</title>
+<link rel="stylesheet" href="shared.css">
+<script src="data.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<style>
+/* 方案 08：同一張 Obsidian 式關係圖，加上「何時」與「何地」。
+   圖面固定深色（數值取自 shared.css 的深色 token）；時間、地點控制與變化紀錄屬網站本身，照用頁面 token。 */
+:root{
+  --gs-bg:#141B18; --gs-panel:#111614; --gs-line:#2E3934; --gs-fg:#E2E7E1; --gs-muted:#9AA79F;
+  --gs-link:rgba(154,167,159,.42); --gs-accent:#62B8AE; --gs-off:#3B4540;
+  --v-eco:#79C488; --v-use:#DDB04A; --v-chg:#9FB0C0; --v-rec:#62B8AE; --v-past:#C9D1CB; --v-conflict:#E08A73;
+}
+body{overflow-x:hidden}
+p{margin:.7rem 0}
+.vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.eyebrow{font-family:var(--f-mono);font-size:.76rem;letter-spacing:.08em;color:var(--muted);margin:0}
+
+/* 引言 */
+.intro{max-width:46rem;margin:0 auto;padding:36px 16px 18px}
+.intro h1{font-size:clamp(1.8rem,6vw,2.6rem);font-weight:800;letter-spacing:.01em;margin:.35rem 0 .6rem}
+.intro .lede{font-size:1.04rem}
+.intro .how{font-size:.9rem;color:var(--muted);border-left:3px solid var(--tide);padding:.1rem 0 .1rem 12px;margin-top:1rem}
+.intro .how b{color:var(--fg)}
+.alt{display:inline-block;font-weight:700;text-decoration:none;border-bottom:1px solid currentColor;line-height:1.3}
+
+/* 版面：左邊圖＋時間＋地點，右邊變化紀錄／筆記 */
+.ws{max-width:1320px;margin:0 auto;padding:0 16px 8px;display:grid;gap:16px;grid-template-columns:minmax(0,1fr)}
+@media (min-width:1040px){.ws{grid-template-columns:minmax(0,1fr) 380px;align-items:start}}
+.maincol{min-width:0;display:grid;gap:12px}
+
+/* ---------- 深色圖面 ---------- */
+.gwin{position:relative;min-width:0;background:var(--gs-bg);color:var(--gs-fg);border:1px solid var(--gs-line);border-radius:6px;overflow:hidden}
+.tabbar{display:flex;align-items:stretch;min-height:40px;background:var(--gs-panel);border-bottom:1px solid var(--gs-line);font-size:.8rem;flex-wrap:wrap}
+.tab{display:flex;align-items:center;gap:8px;padding:0 14px;background:var(--gs-bg);border-right:1px solid var(--gs-line);margin-bottom:-1px;white-space:nowrap}
+.modes{display:flex;align-items:center;gap:0;margin:6px 10px;border:1px solid var(--gs-line);border-radius:4px;overflow:hidden}
+.modes button{border:0;background:none;color:var(--gs-muted);padding:3px 11px;cursor:pointer;font-size:.78rem;white-space:nowrap}
+.modes button b{font-family:var(--f-mono);font-weight:500;margin-right:5px}
+.modes button[aria-pressed="true"]{background:var(--gs-fg);color:var(--gs-panel)}
+.modes button:focus-visible{outline:2px solid var(--gs-fg);outline-offset:-2px}
+.tabbar .count{margin-left:auto;align-self:center;padding:0 12px;font-family:var(--f-mono);font-size:.72rem;color:var(--gs-muted);white-space:nowrap}
+@media (max-width:560px){.tabbar .count{display:none}.tab{padding:0 10px}}
+
+.stage{position:relative;height:clamp(380px,58svh,520px);touch-action:none;-webkit-user-select:none;user-select:none}
+@media (min-width:1040px){.stage{height:clamp(520px,66vh,660px)}}
+#graph{display:block;width:100%;height:100%;cursor:grab}
+#graph:active{cursor:grabbing}
+
+/* 地名錨點（改良版） */
+.plc text.pn{fill:var(--gs-fg);opacity:.15;font-family:var(--f-display);font-weight:800;font-size:15px;text-anchor:middle}
+.plc .cpm{stroke:var(--gs-muted);stroke-width:1;opacity:.45}
+.plc text.cid{fill:var(--gs-muted);font-family:var(--f-mono);font-size:7.5px;opacity:.5}
+.plc.on text.pn{opacity:.6;fill:var(--gs-accent)}
+.plc.on .cpm{stroke:var(--gs-accent);opacity:1}
+.plc.on text.cid{fill:var(--gs-accent);opacity:1}
+.modeA .placeLayer{display:none}
+.route path{fill:none;stroke-width:1.4;stroke-dasharray:4 4;opacity:.8}
+.route circle{fill:none;stroke-width:1.2}
+.route text{font-family:var(--f-mono);font-size:8px}
+
+/* 連線：狀態 */
+.lk .ln{fill:none;stroke:var(--gs-link);stroke-width:1}
+.lk .ar{fill:var(--gs-link);stroke:none}
+.lk .hit{fill:none;stroke:transparent;stroke-width:12;pointer-events:none}
+.modeB .lk.on .hit{pointer-events:stroke;cursor:help}
+.noarrow .lk .ar{display:none}
+.lk.off{opacity:.07}
+.lk.ghost{opacity:.5}
+.lk.ghost.g2{opacity:.24}
+.lk.ghost .ln{stroke:var(--gs-muted)!important;stroke-dasharray:1.5 3.5!important;stroke-linecap:round;stroke-width:1!important}
+.lk.ghost .ar{opacity:0}
+/* 改良版：按關係類型 */
+.modeB .lk.v-eco .ln{stroke:var(--v-eco)} .modeB .lk.v-eco .ar{fill:var(--v-eco)}
+.modeB .lk.v-use .ln{stroke:var(--v-use)} .modeB .lk.v-use .ar{fill:var(--v-use)}
+.modeB .lk.v-chg .ln{stroke:var(--v-chg)} .modeB .lk.v-chg .ar{fill:var(--v-chg)}
+.modeB .lk.v-rec .ln{stroke:var(--v-rec);stroke-dasharray:5 3;stroke-width:.9} .modeB .lk.v-rec .ar{fill:var(--v-rec)}
+.modeB .lk.v-past .ln{stroke:var(--v-past);stroke-dasharray:1.2 3;stroke-linecap:round;stroke-width:1.5} .modeB .lk.v-past .ar{fill:var(--v-past)}
+.modeB .lk.v-conflict .ln{stroke:var(--v-conflict);stroke-width:2.2} .modeB .lk.v-conflict .ar{fill:var(--v-conflict)}
+.modeB .lk.on{opacity:.85}
+.modeA .lk.hl .ln{stroke:var(--gs-accent);stroke-width:1.5} .modeA .lk.hl .ar{fill:var(--gs-accent)}
+.modeB .lk.hl{opacity:1} .modeB .lk.hl .ln{stroke-width:2.2} .modeB .lk.v-conflict.hl .ln{stroke-width:3}
+.lk.dim{opacity:.07}
+.lk.ghost.dim{opacity:.12}
+.lk.fut{opacity:0!important}
+.lk.fut .hit{pointer-events:none!important}
+.lk.pick{opacity:1!important}
+.lk.pick .ln{stroke:var(--gs-fg)!important;stroke-width:2.6!important;stroke-dasharray:none!important}
+@media (prefers-reduced-motion:no-preference){.lk{transition:opacity .7s ease}.lk .ln{transition:stroke .4s}}
+
+/* 節點 */
+.nd{cursor:pointer;outline:none}
+.nd .dot{stroke:var(--gs-bg);stroke-width:1.2}
+.nd .ring{fill:none;stroke:var(--gs-fg);stroke-width:1.2;stroke-dasharray:2 2;opacity:0}
+.nd .halo{fill:none;stroke-width:2;opacity:0}
+.nd .pin{fill:none;stroke:var(--gs-fg);stroke-width:.8;opacity:0}
+.modeB .nd.anch .pin{opacity:.55}
+.nd:focus-visible .ring{opacity:1}
+.nd.sel .ring{opacity:1;stroke:var(--gs-accent);stroke-dasharray:none}
+.nd.lit .halo{opacity:.9}
+.modeA .nd.hl .dot{fill:var(--gs-accent)}
+.modeB .nd.hl .ring{opacity:1;stroke-dasharray:none;stroke:var(--gs-fg)}
+.nd.dim .dot{opacity:.2}
+.nd.off .dot{fill:var(--gs-off)}
+.nd text{fill:var(--gs-fg);font-size:10px;text-anchor:middle;paint-order:stroke;stroke:var(--gs-bg);stroke-width:3px;stroke-linejoin:round;pointer-events:none}
+.nd.off text{fill:var(--gs-muted)}
+.modeB .nd.main text{font-size:11.5px;font-weight:700}
+@media (prefers-reduced-motion:no-preference){.nd .dot{transition:fill .6s,opacity .2s}.nd .halo{transition:opacity .5s}.nd text{transition:opacity .4s}}
+
+.vlab text{font-size:9px;text-anchor:middle;paint-order:stroke;stroke:var(--gs-bg);stroke-width:3px;fill:var(--gs-fg);pointer-events:none}
+.vlab text.v-conflict{fill:var(--v-conflict);font-weight:700}
+.flash text{font-size:10px;text-anchor:middle;fill:var(--gs-fg);paint-order:stroke;stroke:var(--gs-bg);stroke-width:3px;font-family:var(--f-mono);pointer-events:none}
+
+/* 圖上浮層 */
+.badge{position:absolute;left:12px;top:10px;pointer-events:none;display:none;max-width:60%}
+.badge.on{display:block}
+.badge .b1{display:block;font-family:var(--f-display);font-weight:800;font-size:1.45rem;line-height:1.15;color:var(--gs-fg)}
+.badge .b2{display:block;font-family:var(--f-mono);font-size:.7rem;color:var(--gs-muted)}
+.badge .b3{display:inline-block;margin-top:5px;border:1px solid var(--gs-accent);color:var(--gs-accent);border-radius:10px;padding:0 9px;font-size:.74rem}
+.badge .b3:empty{display:none}
+.tip{position:absolute;z-index:5;max-width:250px;background:var(--gs-panel);border:1px solid var(--gs-line);border-radius:4px;padding:7px 10px;font-size:.78rem;line-height:1.5;color:var(--gs-fg);pointer-events:none;display:none}
+.tip.on{display:block}
+.tip .tv{font-family:var(--f-mono);font-size:.72rem;padding:0 5px;border:1px solid currentColor;border-radius:2px;margin:0 3px}
+.tip .tm{color:var(--gs-muted);font-size:.72rem}
+.tip p{margin:.25rem 0 0}
+.tip .st{font-size:.68rem}
+.zc{position:absolute;right:10px;bottom:10px;display:flex;flex-direction:column;gap:4px}
+.zc button{width:34px;height:34px;border:1px solid var(--gs-line);background:var(--gs-panel);color:var(--gs-fg);border-radius:4px;cursor:pointer;font-family:var(--f-mono);font-size:.95rem;line-height:1;padding:0}
+.zc button:hover{border-color:var(--gs-muted)}
+.zc button:focus-visible,.drawer :focus-visible,.legend :focus-visible{outline:2px solid var(--gs-fg);outline-offset:1px}
+.jump{position:absolute;right:52px;bottom:10px;display:none;font-size:.76rem;background:var(--gs-panel);color:var(--gs-fg);border:1px solid var(--gs-accent);border-radius:14px;padding:3px 11px;text-decoration:none}
+.jump.on{display:inline-block}
+@media (min-width:1040px){.jump.on{display:none}}
+
+/* 圖例 */
+.legend{position:absolute;left:10px;bottom:10px;font-size:.72rem;background:color-mix(in srgb,var(--gs-panel) 88%,transparent);border:1px solid var(--gs-line);border-radius:4px;max-width:min(250px,calc(100% - 110px))}
+.legend summary{cursor:pointer;padding:3px 9px;color:var(--gs-muted);list-style:none}
+.legend summary::-webkit-details-marker{display:none}
+.legend ul{list-style:none;margin:0;padding:2px 9px 8px;display:grid;gap:3px}
+.legend li{display:grid;grid-template-columns:26px 1fr;gap:6px;align-items:center;line-height:1.3}
+.legend li small{color:var(--gs-muted)}
+.legend svg{display:block}
+
+/* 設定抽屜 */
+.drawer{background:var(--gs-panel);border-top:1px solid var(--gs-line);font-size:.82rem;color:var(--gs-fg)}
+@media (min-width:1040px){.drawer{position:absolute;top:50px;right:10px;width:236px;max-height:calc(100% - 180px);overflow:auto;border:1px solid var(--gs-line);border-radius:6px}}
+.drawer summary{cursor:pointer;list-style:none;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.drawer summary::-webkit-details-marker{display:none}
+.drawer>summary{padding:8px 12px;font-weight:700}
+.drawer summary::after{content:"";width:6px;height:6px;border-right:1.5px solid var(--gs-muted);border-bottom:1.5px solid var(--gs-muted);transform:rotate(-45deg);transition:transform .15s;flex:none}
+.drawer details[open]>summary::after,.drawer[open]>summary::after{transform:rotate(45deg)}
+.dsec{border-top:1px solid var(--gs-line)}
+.dsec>summary{padding:7px 12px;color:var(--gs-muted);font-size:.76rem;letter-spacing:.06em}
+.dbody{padding:2px 12px 12px;display:grid;gap:9px}
+@media (max-width:1039px){.drawer .dwrap{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}}
+.row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.row label{flex:1}
+.sw{appearance:none;-webkit-appearance:none;width:30px;height:17px;border-radius:9px;background:#2E3934;position:relative;cursor:pointer;flex:none;margin:0}
+.sw::before{content:"";position:absolute;top:2px;left:2px;width:13px;height:13px;border-radius:50%;background:var(--gs-muted);transition:transform .15s}
+.sw:checked{background:var(--gs-accent)}
+.sw:checked::before{transform:translateX(13px);background:var(--gs-panel)}
+.sw:disabled{opacity:.4;cursor:not-allowed}
+.drawer input[type=search]{width:100%;background:var(--gs-bg);border:1px solid var(--gs-line);color:var(--gs-fg);border-radius:4px;padding:6px 8px;font:inherit}
+.drawer input[type=range]{width:100%;accent-color:var(--gs-accent);margin:2px 0 0}
+.slab{display:flex;justify-content:space-between;color:var(--gs-muted);font-size:.76rem}
+.slab output{font-family:var(--f-mono);color:var(--gs-fg)}
+.grp{list-style:none;margin:0;padding:0;display:grid;gap:5px}
+.grp .row span.k{display:flex;align-items:center;gap:7px}
+.grp i{width:9px;height:9px;border-radius:50%;display:inline-block;flex:none}
+.grp small{font-family:var(--f-mono);color:var(--gs-muted)}
+.seg{display:flex;border:1px solid var(--gs-line);border-radius:4px;overflow:hidden;width:max-content}
+.seg label{padding:2px 12px;cursor:pointer;font-family:var(--f-mono);font-size:.76rem;color:var(--gs-muted)}
+.seg input{position:absolute;opacity:0;width:1px;height:1px}
+.seg input:checked+span{color:var(--gs-panel)}
+.seg label:has(input:checked){background:var(--gs-accent)}
+.seg label:has(input:focus-visible){outline:2px solid var(--gs-fg);outline-offset:-2px}
+.dnote{margin:0;color:var(--gs-muted);font-size:.74rem;line-height:1.5}
+.btnd{border:1px solid var(--gs-line);background:transparent;color:var(--gs-fg);border-radius:4px;padding:4px 10px;cursor:pointer;font-size:.78rem;justify-self:start}
+
+/* ---------- 時間與地點控制（頁面 token） ---------- */
+.dims{display:grid;gap:12px;grid-template-columns:minmax(0,1fr)}
+@media (min-width:760px){.dims{grid-template-columns:minmax(0,1.4fr) minmax(0,1fr)}}
+.ctl{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:12px 14px 14px;min-width:0}
+.ctl-h{display:flex;align-items:center;gap:8px 12px;flex-wrap:wrap}
+.ctl-h h2{font-size:1rem;font-weight:800;margin-right:2px}
+.seg2{display:flex;border:1px solid var(--line);border-radius:4px;overflow:hidden}
+.seg2 button{border:0;background:none;padding:2px 10px;font-size:.8rem;cursor:pointer;color:var(--muted)}
+.seg2 button[aria-pressed="true"]{background:var(--fg);color:var(--bg)}
+.play{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--fg);background:var(--fg);color:var(--bg);border-radius:16px;padding:2px 13px 2px 10px;cursor:pointer;font-size:.82rem;margin-left:auto}
+.play svg{display:block}
+.play .ip{display:block}.play .is{display:none}
+.play[aria-pressed="true"] .ip{display:none}.play[aria-pressed="true"] .is{display:block}
+.cur-t{display:flex;align-items:baseline;gap:4px 10px;flex-wrap:wrap;margin-top:8px;min-height:1.9rem}
+.cur-t b{font-family:var(--f-display);font-size:1.25rem;font-weight:800}
+.cur-t span{font-family:var(--f-mono);font-size:.74rem;color:var(--muted)}
+.simul{font-size:.72rem;color:var(--unverified);border:1px dashed var(--unverified);padding:0 6px;border-radius:3px;white-space:nowrap}
+
+.scrub{display:flex;align-items:flex-start;gap:10px;margin-top:6px}
+.allbtn{border:1px solid var(--line);background:none;border-radius:3px;padding:1px 9px;font-size:.78rem;cursor:pointer;flex:none;margin-top:3px}
+.allbtn[aria-pressed="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.trk{position:relative;flex:1;min-width:0;height:58px;margin:0 16px 0 6px}
+.trk.y{height:44px}
+.trk input[type=range]{position:absolute;left:0;right:0;top:2px;width:100%;margin:0;-webkit-appearance:none;appearance:none;background:transparent;height:24px;cursor:pointer;z-index:2}
+.trk input[type=range]::-webkit-slider-runnable-track{height:2px;background:var(--line)}
+.trk input[type=range]::-moz-range-track{height:2px;background:var(--line)}
+.trk input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:var(--tide);border:3px solid var(--surface);box-shadow:0 0 0 1px var(--tide);margin-top:-8px}
+.trk input[type=range]::-moz-range-thumb{width:12px;height:12px;border-radius:50%;background:var(--tide);border:3px solid var(--surface);box-shadow:0 0 0 1px var(--tide)}
+.trk.unset input[type=range]::-webkit-slider-thumb{background:var(--surface);box-shadow:0 0 0 1px var(--muted)}
+.trk.unset input[type=range]::-moz-range-thumb{background:var(--surface);box-shadow:0 0 0 1px var(--muted)}
+.trk input[type=range]:focus-visible{outline:none}
+.trk input[type=range]:focus-visible::-webkit-slider-thumb{box-shadow:0 0 0 1px var(--tide),0 0 0 4px color-mix(in srgb,var(--tide) 35%,transparent)}
+.tk{position:absolute;top:9px;width:1px;height:10px;background:var(--muted);transform:translateX(-50%)}
+.tk.minor{height:5px;top:11.5px;opacity:.6}
+.stop{position:absolute;top:26px;transform:translateX(-50%);text-align:center;font-size:.8rem;line-height:1.2;white-space:nowrap;background:none;border:0;padding:2px 0;color:var(--fg);cursor:pointer;z-index:3}
+.stop small{display:block;font-family:var(--f-mono);font-size:.64rem;color:var(--muted)}
+.stop.cur{color:var(--tide);font-weight:700}
+.stop:hover{color:var(--tide)}
+@media (max-width:520px){.stop small{display:none}.trk{height:48px}}
+.trk.y .stop{font-size:.72rem;color:var(--muted)}
+
+.gantt{position:relative;margin-top:6px;display:grid;gap:3px}
+.gr{display:grid;grid-template-columns:7.2em 1fr;gap:8px;align-items:center;font-size:.72rem;line-height:1.25}
+.gr .lb{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--muted)}
+.gr.on .lb{color:var(--fg);font-weight:700}
+.gt{position:relative;height:8px;background:color-mix(in srgb,var(--line) 50%,transparent);border-radius:2px}
+.gb{position:absolute;top:0;bottom:0;border-radius:2px;background:var(--bc);opacity:.35;min-width:3px}
+.gr.on .gb{opacity:1}
+.gnow{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--fg);border-radius:1px;pointer-events:none}
+@media (prefers-reduced-motion:no-preference){.gnow{transition:left .35s}.gb{transition:opacity .35s}}
+
+.mapnote{margin-top:10px;font-size:.82rem}
+.mapnote summary{cursor:pointer;color:var(--muted)}
+.mapnote p{color:var(--muted);font-size:.8rem;margin:.5rem 0}
+.tscroll{overflow-x:auto;margin-top:6px}
+.mapt{border-collapse:collapse;font-size:.76rem;min-width:420px;width:100%}
+.mapt th,.mapt td{border-bottom:1px solid var(--line);padding:3px 5px;text-align:center;white-space:nowrap}
+.mapt th:first-child,.mapt td:first-child{text-align:left}
+.mapt thead th{font-weight:500;color:var(--muted)}
+.mapt td i{display:inline-block;width:14px;height:10px;border:1px solid var(--muted);border-radius:1px;vertical-align:middle}
+.mapt td i.on{background:var(--tide);border-color:var(--tide)}
+.mapt td.n{font-family:var(--f-mono);color:var(--muted)}
+
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.chip{border:1px solid var(--line);background:none;border-radius:14px;padding:1px 10px;font-size:.8rem;cursor:pointer;color:var(--fg)}
+.chip small{font-family:var(--f-mono);color:var(--muted);margin-left:3px}
+.chip[aria-pressed="true"]{background:var(--tide);border-color:var(--tide);color:var(--surface)}
+.chip[aria-pressed="true"] small{color:inherit}
+.chip.zero{border-style:dashed;color:var(--muted)}
+.loc{display:block;width:100%;height:auto;margin-top:10px;border:1px solid var(--line);border-radius:4px;background:var(--bg)}
+.loc .cl{cursor:pointer}
+.loc .cl circle.hit{fill:transparent}
+.loc .cl circle.cpd{fill:var(--muted)}
+.loc .cl text{font-size:10px;fill:var(--muted)}
+.loc .cl:hover text,.loc .cl.on text{fill:var(--fg);font-weight:700}
+.loc .cl.on circle.cpd{fill:var(--tide)}
+.loc .cl.on circle.hit{fill:color-mix(in srgb,var(--tide) 16%,transparent);stroke:var(--tide);stroke-width:1}
+.loc .cl.empty circle.cpd{fill:none;stroke:var(--muted)}
+.loc .east{font-family:var(--f-mono);font-size:8.5px;fill:var(--muted)}
+.locnote{font-size:.74rem;color:var(--muted);margin:.4rem 0 0}
+
+/* ---------- 側欄：變化紀錄／筆記 ---------- */
+.side{min-width:0}
+@media (min-width:1040px){.side{position:sticky;top:52px;max-height:calc(100vh - 64px);display:flex;flex-direction:column}}
+.tabs{display:flex;gap:2px;border-bottom:1px solid var(--line)}
+.tabs button{border:0;background:none;padding:7px 14px 6px;font-weight:700;font-size:.9rem;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-1px}
+.tabs button[aria-selected="true"]{color:var(--fg);border-color:var(--fg)}
+.tabs button small{font-family:var(--f-mono);font-weight:500;font-size:.72rem;margin-left:4px}
+.panel{background:var(--surface);border:1px solid var(--line);border-top:0;border-radius:0 0 6px 6px;padding:14px 16px 20px;min-width:0}
+@media (min-width:1040px){.panel{overflow:auto;flex:1;min-height:0}}
+.panel[hidden]{display:none}
+
+.lg-h h3{font-size:1.25rem;font-weight:800;margin:.15rem 0 .2rem}
+.lg-h .cmpw{font-size:.8rem;color:var(--muted);margin:0}
+.sumrow{display:flex;flex-wrap:wrap;gap:4px 14px;font-family:var(--f-mono);font-size:.78rem;margin:.6rem 0 .2rem}
+.sumrow span{display:inline-flex;align-items:center;gap:6px}
+.lgs h4{font-size:.8rem;letter-spacing:.04em;color:var(--muted);display:flex;align-items:center;gap:8px;margin:1rem 0 .2rem;border-bottom:1px solid var(--line);padding-bottom:3px;font-family:var(--f-body)}
+.lgs h4 .n{margin-left:auto;font-family:var(--f-mono);font-weight:500}
+.sl{display:inline-block;width:22px;height:0;border-top:2px solid var(--tide)}
+.sl.gone{border-top-style:dotted;border-color:var(--muted)}
+.sl.cont{border-top-width:1px;border-color:var(--fg)}
+.cl-list{list-style:none;margin:0;padding:0}
+.ci{padding:6px 0 6px 10px;border-left:3px solid var(--line);margin:7px 0}
+.ci.new{border-color:var(--tide)}
+.ci.gone{border-left-style:dotted;border-color:var(--muted)}
+.ci.gone .relb{color:var(--muted)}
+.relb{border:0;background:none;padding:0;font:inherit;color:var(--fg);cursor:pointer;text-align:left;line-height:1.5}
+.relb b{font-weight:700}
+.relb:hover b{text-decoration:underline;text-underline-offset:3px}
+.vb{font-family:var(--f-mono);font-size:.74rem;padding:0 5px;border:1px solid var(--line);border-radius:2px;margin:0 3px;white-space:nowrap}
+.vb.v-conflict{color:var(--conflict);border-color:var(--conflict)}
+.vb.v-past{border-style:dotted}
+.mt{display:flex;flex-wrap:wrap;gap:3px 10px;font-size:.76rem;color:var(--muted);margin-top:3px;align-items:center}
+.src{margin:.15rem 0 0;font-size:.78rem;color:var(--muted)}
+.nq{margin:.3rem 0 0;font-size:.86rem;padding-left:10px;border-left:2px solid var(--line)}
+.eras{display:inline-flex;gap:2px;vertical-align:middle}
+.eras i{width:9px;height:7px;border:1px solid var(--muted);border-radius:1px}
+.eras i.on{background:var(--muted)}
+.eras i.cur{outline:1.5px solid var(--tide);outline-offset:1px}
+.caveat{font-size:.78rem;color:var(--muted);border-top:1px solid var(--line);margin-top:1rem;padding-top:.6rem}
+.ov{list-style:none;margin:.6rem 0 0;padding:0;display:grid;gap:4px}
+.ov button{display:grid;grid-template-columns:5.2em 6.6em 1fr 2em;gap:8px;align-items:center;width:100%;border:0;background:none;padding:3px 0;cursor:pointer;font:inherit;color:var(--fg);text-align:left;font-size:.86rem}
+.ov small{font-family:var(--f-mono);font-size:.68rem;color:var(--muted)}
+.ov .bar{height:6px;background:var(--line);border-radius:2px;overflow:hidden}
+.ov .bar i{display:block;height:100%;background:var(--tide)}
+.ov .n{font-family:var(--f-mono);font-size:.76rem;color:var(--muted);text-align:right}
+.ov button:hover b{color:var(--tide)}
+.none{color:var(--muted);font-size:.86rem}
+
+/* 筆記 */
+.nt-top{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.nt-crumb{font-family:var(--f-mono);font-size:.72rem;color:var(--muted);margin:0}
+.nt-x{border:1px solid var(--line);background:none;border-radius:3px;font-size:.74rem;padding:0 8px;cursor:pointer;color:var(--muted)}
+.nt-title{font-size:1.5rem;font-weight:800;margin:.3rem 0 .7rem;outline:none}
+.props{margin:0 0 .6rem;border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:6px 0;font-size:.84rem}
+.props div{display:grid;grid-template-columns:4.6em 1fr;gap:8px;padding:2px 0;align-items:baseline}
+.props dt{color:var(--muted);font-family:var(--f-mono);font-size:.72rem}
+.props dd{margin:0}
+.kd{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--kc);margin-right:6px;vertical-align:1px;box-shadow:0 0 0 1px var(--line)}
+.tagx{color:var(--tide);background:var(--tide-soft);border-radius:10px;padding:0 8px;font-size:.76rem;margin-right:4px}
+.cpx{font-family:var(--f-mono);font-size:.74rem;border:1px solid var(--line);border-radius:2px;padding:0 5px;margin:0 4px 2px 0;display:inline-block}
+.blurb{font-size:.94rem}
+.nt-sec h3{font-family:var(--f-body);font-size:.8rem;letter-spacing:.06em;color:var(--muted);font-weight:700;border-bottom:1px solid var(--line);padding-bottom:4px;margin:1.1rem 0 .2rem;display:flex;justify-content:space-between}
+.nt-sec h3 .ct{font-family:var(--f-mono);font-weight:500}
+.rl{list-style:none;margin:0;padding:0}
+.rl>li{padding:9px 0;border-bottom:1px dashed var(--line)}
+.rl>li.dimrel{opacity:.6}
+.ln{font-size:.95rem;line-height:1.5}
+.fld{font-family:var(--f-mono);font-size:.78rem;color:var(--muted)}
+.wl{border:0;background:none;padding:0;color:var(--tide);cursor:pointer;font:inherit;text-decoration:underline;text-decoration-color:color-mix(in srgb,var(--tide) 40%,transparent);text-underline-offset:3px;text-align:left}
+.wl:hover{text-decoration-color:var(--tide)}
+.wl .br{color:var(--muted);opacity:.75}
+.ctx{margin:.25rem 0 0;font-size:.8rem;background:var(--bg);padding:2px 8px;border-radius:3px}
+.tst{font-size:.7rem;font-family:var(--f-mono);padding:0 6px;border-radius:2px;border:1px solid var(--line)}
+.tst.on{border-color:var(--tide);color:var(--tide)}
+.tst.ghost{border-style:dotted}
+
+/* 比較 */
+.cmp{max-width:1320px;margin:0 auto;padding:28px 16px 56px}
+.cmp>h2{font-size:clamp(1.35rem,4.5vw,1.8rem);font-weight:800;margin-bottom:.4rem}
+.cmp .lede{max-width:46rem;color:var(--muted)}
+.cols{display:grid;gap:12px 32px;grid-template-columns:minmax(0,1fr);margin-top:1rem}
+@media (min-width:800px){.cols{grid-template-columns:1fr 1fr}}
+.cols h3{font-size:1.05rem;padding-bottom:6px;border-bottom:2px solid var(--fg);display:flex;gap:8px;align-items:baseline}
+.cols h3 small{font-family:var(--f-mono);font-weight:500;font-size:.72rem;color:var(--muted)}
+.cols ol{margin:.6rem 0 0;padding-left:1.4em}
+.cols li{margin:.5rem 0;font-size:.94rem}
+.cols .weak h3{border-color:var(--unverified)}
+.disc{margin-top:1.4rem;max-width:46rem}
+.disc h3{font-size:1rem}
+.disc ol{margin:.3rem 0 0;padding-left:1.4em;font-size:.92rem}
+</style>
+</head>
+<body>
+<header class="sample-bar"><a href="../index.html">← 回到參考頁</a><span class="tag">方案 08 · 示意 sample</span><span class="sp"></span>
+<nav aria-label="其他方案"><a href="c1.html">01</a><a href="c2.html">02</a><a href="c3.html">03</a><a href="c4.html">04</a><a href="c5.html">05</a><a href="c6.html">06</a><a href="c7.html">07</a><a href="c8.html" aria-current="page">08</a></nav></header>
+
+<main>
+<section class="intro">
+  <p class="eyebrow">方案 08 · GRAPH VIEW · 何時與何地</p>
+  <h1>Obsidian 式關係圖 V2 多維度版</h1>
+  <p class="lede">同一份資料、同一種力導向圖，加上「何時」與「何地」兩組控制。拖動年代時間軸（或切換到二十四節氣的「一年之中」），再選一個地點，關係就會長出、結束，並留下「曾經」的點線；變化紀錄面板逐條列出新出現、消失與持續的關係，附來源與核實狀態。</p>
+  <p>「改良版」再把線按關係類型區分（點線是曾經，衝突色是衝突），並把有檢查點的節點拉向它們在地圖上的位置；也可切回「Obsidian 原樣」比較。年代分段與對應為示意，年代未核實。　<a class="alt" href="c7.html">看 V1 簡單版 →</a></p>
+  <p class="how"><b>Webflow 做法：</b>節點、關係、檢查點、農事曆各為一個 CMS Collection；關係以 Reference 連到兩個節點和一個檢查點，所屬年代用五個 Switch 欄位記錄（Webflow 沒有多選 Option）。筆記頁與變化紀錄的文字可由 CMS 原生輸出；關係圖、時間軸、小地圖和過場動畫放在同一個 Code Embed，以 d3 讀取隱藏 Collection List 的 data 屬性。</p>
+</section>
+
+<section class="ws" aria-label="關係圖、時間、地點與變化紀錄">
+ <div class="maincol">
+  <div class="gwin">
+    <div class="tabbar">
+      <span class="tab"><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><g stroke="#9AA79F" stroke-width="1" fill="none"><path d="M3 4 L10 3 M3 4 L6 11 M10 3 L6 11"/></g><g fill="#E2E7E1"><circle cx="3" cy="4" r="2"/><circle cx="10" cy="3" r="1.6"/><circle cx="6" cy="11" r="2.2"/></g></svg>關係圖 · 水口</span>
+      <div class="modes" role="group" aria-label="顯示模式">
+        <button type="button" data-mode="A" aria-pressed="false"><b>A</b>Obsidian 原樣</button>
+        <button type="button" data-mode="B" aria-pressed="true"><b>B</b>改良版</button>
+      </div>
+      <span class="count" id="count" aria-live="polite"></span>
+    </div>
+    <div class="stage" id="stage">
+      <svg id="graph" role="group" aria-label="關係圖。用 Tab 鍵逐一選取節點，按 Enter 開啟筆記。"></svg>
+      <div class="badge" id="badge" aria-hidden="true"><span class="b1"></span><span class="b2"></span><span class="b3"></span></div>
+      <div class="tip" id="tip" role="status"></div>
+      <details class="legend" id="legend"><summary>圖例</summary><ul id="legendList"></ul></details>
+      <a class="jump" id="jump" href="#side"></a>
+      <div class="zc"><button type="button" id="zin" aria-label="放大">+</button><button type="button" id="zout" aria-label="縮小">−</button><button type="button" id="zfit" aria-label="重設畫面" style="font-size:.7rem">[ ]</button></div>
+    </div>
+    <details class="drawer" id="drawer">
+      <summary>圖表設定</summary>
+      <div class="dwrap">
+      <details class="dsec" open><summary>篩選</summary>
+        <div class="dbody">
+          <label><span class="vh">搜尋筆記名稱</span><input type="search" id="q" placeholder="搜尋筆記名稱…" autocomplete="off"></label>
+          <div class="row"><label for="orph">孤立筆記</label><input type="checkbox" class="sw" id="orph" role="switch" checked></div>
+        </div>
+      </details>
+      <details class="dsec"><summary>群組</summary>
+        <div class="dbody"><ul class="grp" id="groups"></ul></div>
+      </details>
+      <details class="dsec"><summary>局部圖</summary>
+        <div class="dbody">
+          <div class="row"><label for="local">只顯示所選筆記附近</label><input type="checkbox" class="sw" id="local" role="switch"></div>
+          <div class="row"><span>深度</span>
+            <div class="seg" role="radiogroup" aria-label="局部圖深度"><label><input type="radio" name="depth" value="1" checked><span>1</span></label><label><input type="radio" name="depth" value="2"><span>2</span></label></div></div>
+          <p class="dnote" id="localNote"></p>
+        </div>
+      </details>
+      <details class="dsec"><summary>顯示與力</summary>
+        <div class="dbody">
+          <div class="row"><label for="arrows">箭頭</label><input type="checkbox" class="sw" id="arrows" role="switch"></div>
+          <p class="dnote" id="arrowNote"></p>
+          <div><div class="slab"><label for="fade">文字淡出門檻</label><output id="fadeO" for="fade"></output></div><input type="range" id="fade" min="0.3" max="2.5" step="0.1" value="0.9"></div>
+          <div><div class="slab"><label for="dist">連結距離</label><output id="distO" for="dist"></output></div><input type="range" id="dist" min="20" max="180" step="5" value="70"></div>
+          <div><div class="slab"><label for="repel">斥力</label><output id="repelO" for="repel"></output></div><input type="range" id="repel" min="20" max="500" step="10" value="220"></div>
+        </div>
+      </details>
+      </div>
+    </details>
+  </div>
+
+  <div class="dims">
+    <section class="ctl" aria-labelledby="tH">
+      <div class="ctl-h">
+        <h2 id="tH">時間</h2>
+        <div class="seg2" role="group" aria-label="時間尺度">
+          <button type="button" data-tm="era" aria-pressed="true">年代</button>
+          <button type="button" data-tm="year" aria-pressed="false">一年之中</button>
+        </div>
+        <button type="button" class="play" id="play" aria-pressed="false">
+          <svg class="ip" width="10" height="11" viewBox="0 0 10 11" aria-hidden="true"><path d="M1 1 L9 5.5 L1 10Z" fill="currentColor"/></svg>
+          <svg class="is" width="10" height="11" viewBox="0 0 10 11" aria-hidden="true"><path d="M1.5 1h2.5v9H1.5zM6 1h2.5v9H6z" fill="currentColor"/></svg>
+          <span id="playL">播放</span></button>
+      </div>
+      <div id="eraPanel">
+        <div class="cur-t" id="eraCur" aria-live="polite"></div>
+        <div class="scrub">
+          <button type="button" class="allbtn" id="allEra" aria-pressed="true">全部</button>
+          <div class="trk unset" id="eraTrk">
+            <input type="range" id="eraR" min="0" max="4" step="1" value="0" aria-label="年代" aria-valuetext="全部時期">
+          </div>
+        </div>
+        <details class="mapnote">
+          <summary>時期如何對應（示意，年代未核實）</summary>
+          <p>五段年代按共用資料的因果鏈命名。每條關係在 data.js 只有一個籠統的「時期」說法，下表是本頁把它歸入哪幾段的判斷，需要團隊確認。</p>
+          <div class="tscroll"><table class="mapt" id="mapT"></table></div>
+          <p>例外：動詞為「記錄」的儀器關係（紅外線相機、AudioMoth）只歸入「現在」，因為儀器是本研究期間才裝設的。</p>
+        </details>
+      </div>
+      <div id="yearPanel" hidden>
+        <div class="cur-t" id="termCur" aria-live="polite"></div>
+        <div class="scrub">
+          <div class="trk y" id="termTrk" style="margin-left:0">
+            <input type="range" id="termR" min="0" max="23" step="1" value="0" aria-label="節氣">
+          </div>
+        </div>
+        <div class="gantt" id="gantt" aria-label="農事與採集的季節"></div>
+        <p class="mapnote" style="color:var(--muted);font-size:.78rem">季節取自村民對耕作年代的口述（保留原本的農曆說法），今天不一定如此。節氣日期為 2026 年約數。亮起的節點表示此節氣有相關活動；連線亮起只表示與該節點相關，不代表關係只在此季節發生。</p>
+      </div>
+    </section>
+
+    <section class="ctl" aria-labelledby="pH">
+      <div class="ctl-h"><h2 id="pH">地點</h2><span class="simul">示意位置</span></div>
+      <div class="chips" id="chips" role="group" aria-label="選擇地點"></div>
+      <svg class="loc" id="loc" viewBox="0 0 360 196" aria-hidden="true"></svg>
+      <p class="locnote">按檢查點 GPS 投影的示意圖，海一側的距離已壓縮。點小地圖上的位置也可選地點；關係按其檢查點歸入地點。</p>
+    </section>
+  </div>
+ </div>
+
+ <aside class="side" id="side" aria-label="變化紀錄與筆記">
+   <div class="tabs" role="tablist">
+     <button type="button" role="tab" id="tabLog" aria-controls="logPanel" aria-selected="true">變化紀錄</button>
+     <button type="button" role="tab" id="tabNote" aria-controls="notePanel" aria-selected="false" tabindex="-1">筆記<small id="noteName"></small></button>
+   </div>
+   <div class="panel" id="logPanel" role="tabpanel" aria-labelledby="tabLog" aria-live="polite"></div>
+   <div class="panel" id="notePanel" role="tabpanel" aria-labelledby="tabNote" hidden></div>
+ </aside>
+</section>
+
+<section class="cmp" aria-labelledby="cmpH">
+  <h2 id="cmpH">V2 補上了甚麼，仍欠甚麼</h2>
+  <p class="lede">與方案 07 的原樣關係圖比較，供團隊討論。</p>
+  <div class="cols">
+    <div>
+      <h3>補上的 <small>ADDED</small></h3>
+      <ol>
+        <li><b>時間。</b>五段年代與二十四節氣兩種尺度。關係會長出、結束，結束後留下「曾經」的點線；沒有關係的節點縮小變灰。</li>
+        <li><b>可讀的變化。</b>變化紀錄面板把每一步寫成清單（新出現、消失、持續），附來源與核實狀態。真正讓人看懂變化的是這份清單，圖形負責整體印象。</li>
+        <li><b>地點。</b>選地點或點小地圖，只亮起在該處記錄的關係；改良版中有檢查點的五個節點被拉向地圖位置，地名放在背景。</li>
+        <li><b>關係類型與衝突。</b>線按動詞分類，「衝突」用衝突色並常駐標籤，「曾經」用點線，懸停可見動詞與來源。</li>
+      </ol>
+    </div>
+    <div class="weak">
+      <h3>仍欠的與風險 <small>LIMITS</small></h3>
+      <ol>
+        <li><b>年代對應是本頁的判斷。</b>data.js 的「過去」「近年」等說法沒有確切年份；對應表（時間軸下）需要團隊確認。</li>
+        <li><b>「消失」可能只是資料缺口。</b>例如「棄耕」一段只有 <span id="eraGap">3</span> 條關係，是因為訪談較少談及這段時期，不代表那時沒有關係。增減不等於好壞。</li>
+        <li><b>兩套時間未能合併。</b>節氣模式只按村民對耕作年代的口述點亮節點，與年代軸各自獨立；潮汐仍未加入。</li>
+        <li><b>地理拉力只作用於五個節點。</b>其餘節點的位置仍由物理模擬決定；海一側的距離已壓縮。</li>
+        <li><b>控制項多。</b>時間、地點、兩種模式加設定抽屜，對公眾可能太複雜；正式版或應預設一條導覽，例如打開時自動播放一次年代。</li>
+      </ol>
+    </div>
+  </div>
+  <div class="disc">
+    <h3>討論</h3>
+    <ol>
+      <li>年代對應表是否合理？「過去」應否只屬耕作期？</li>
+      <li>公眾版保留 A、B 兩種模式，還是只保留改良版？</li>
+      <li>變化紀錄可否成為主體，圖形退為插圖？</li>
+    </ol>
+  </div>
+</section>
+</main>
+
+<script>
+(function () {
+"use strict";
+var D = window.SHUIHAU;
+var $ = function (s) { return document.querySelector(s); };
+var $$ = function (s) { return Array.prototype.slice.call(document.querySelectorAll(s)); };
+var esc = function (s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); };
+var RM = window.matchMedia("(prefers-reduced-motion: reduce)");
+var WIDE = window.matchMedia("(min-width: 1040px)");
+var ST = {observed:"研究員觀察", oral:"村民口述・未核實", consensus:"多人口述一致", check:"待科學核實", conflict:"爭議", pending:"待補"};
+var KINDS = [
+  {id:"species", zh:"物種", c:"#79C488"}, {id:"human", zh:"人", c:"#B3A2DA"},
+  {id:"org", zh:"組織", c:"#DDB04A"}, {id:"infrastructure", zh:"設施", c:"#9FB0C0"},
+  {id:"material", zh:"物料", c:"#D08A55"}, {id:"place", zh:"地方", c:"#62B8AE"},
+  {id:"practice", zh:"做法", c:"#E4A0AC"}, {id:"instrument", zh:"儀器", c:"#8E9A93"}
+];
+var KC = {}; KINDS.forEach(function (k) { KC[k.id] = k; });
+var PLACE = {}; D.places.forEach(function (p) { PLACE[p.id] = p; });
+var CP = {}; D.checkpoints.forEach(function (c) { CP[c.id] = c; });
+var SPECIES_CP = {clam:"clam", cattle:"cattle", buffalo:"buffalo", rice:"rice", villager:"human"};
+var ROUTED = {cattle:1, buffalo:1, villager:1}; /* 會移動的物種：檢查點連成軌跡；沙白與水稻只是檢查點 */
+var TOKEN_DARK = {"--c-rice":"#DDB04A","--c-cattle":"#D08A55","--c-buffalo":"#9FB0C0","--c-human":"#E2E7E1","--c-clam":"#E4A0AC","--c-visitor":"#B3A2DA","--c-club":"#79C488","--c-tide":"#62B8AE"};
+
+/* 年代（示意）：名稱取自因果鏈，年份未核實 */
+var ERAS = [
+  {zh:"耕作期", yr:"1960 年代前"}, {zh:"截水", yr:"1960 年代"}, {zh:"棄耕", yr:"1970–90 年代"},
+  {zh:"濕地形成", yr:"2000 年代"}, {zh:"現在", yr:"2020 年代"}
+];
+var PERIOD_ERAS = {"耕作期":[0], "過去":[0,1], "1960 年代":[1], "近數十年":[2,3,4], "近年":[4], "現在":[3,4], "過去至今":[0,1,2,3,4]};
+var VERB_ERAS = {"記錄":[4]};
+var VCLS = {"造棲地":"eco","傳粉":"eco","食／被食":"eco","採集":"use","耕作／飼養":"use","買賣":"use",
+  "截水／改變水源":"chg","踩出／開路":"chg","取代／佔據":"chg","記錄":"rec","曾經":"past","衝突":"conflict"};
+
+/* ---------- 資料 ---------- */
+var nodes = D.nodes.map(function (n) { return Object.assign({}, n, {out:[], inc:[], nb:new Set(), _st:"on"}); });
+var N = {}; nodes.forEach(function (n) { N[n.id] = n; });
+var rels = D.relations.filter(function (r) { return N[r.from] && N[r.to]; }).map(function (r, i) {
+  return Object.assign({}, r, {i:i, cite:r.source, source:r.from, target:r.to, eras:VERB_ERAS[r.verb] || PERIOD_ERAS[r.period] || [0,1,2,3,4],
+    place:CP[r.cp] ? CP[r.cp].place : null, vc:VCLS[r.verb] || "eco", _st:"on", _cls:"on"});
+});
+rels.forEach(function (r) { N[r.from].out.push(r); N[r.to].inc.push(r); N[r.from].nb.add(r.to); N[r.to].nb.add(r.from); });
+nodes.forEach(function (n) { n.deg = n.out.length + n.inc.length; n.r = 3.4 + 1.9 * Math.sqrt(n.deg); n.cr = n.r; n.anch = !!SPECIES_CP[n.id]; });
+/* 同一對節點之間的多條關係，在改良版中畫成弧線分開 */
+var pairs = {};
+rels.forEach(function (r) { var k = [r.from, r.to].sort().join("|"); (pairs[k] = pairs[k] || []).push(r); });
+Object.keys(pairs).forEach(function (k) { var a = pairs[k]; a.forEach(function (r, j) { var o = (j - (a.length - 1) / 2) * 20; r.off = r.from < r.to ? o : -o; }); });
+
+/* 節氣 */
+var TERMS = D.solarTerms, TDATES = D.solarTermDates2026;
+function todayTerm() {
+  var d = new Date(), md = String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+  var order = TDATES.map(function (s, i) { return {i:i, s:s}; }).sort(function (a, b) { return a.s < b.s ? -1 : 1; });
+  var best = order[order.length - 1].i;
+  order.forEach(function (o) { if (o.s <= md) best = o.i; });
+  return best;
+}
+function actsAt(t) { return D.calendar.filter(function (a) { return a.start < t + 1 && a.end > t; }); }
+
+/* 檢查點分群（地名錨點、小地圖用） */
+var CLUSTERS = [];
+D.places.forEach(function (p) {
+  D.checkpoints.filter(function (c) { return c.place === p.id; }).forEach(function (c) {
+    var g = CLUSTERS.find(function (g) { return g.place === p.id && Math.abs(g.lat - c.lat) < 0.0012 && Math.abs(g.lng - c.lng) < 0.0012; });
+    if (g) g.cps.push(c); else CLUSTERS.push({place:p.id, lat:c.lat, lng:c.lng, cps:[c], label:c.label || p.zh});
+  });
+});
+function projector(w, h, p) {
+  var x = d3.scaleLinear().domain([113.9133, 113.9205, 113.9282]).range([p.l, p.l + (w - p.l - p.r) * 0.8, w - p.r]);
+  var y = d3.scaleLinear().domain([22.2229, 22.2176]).range([p.t, h - p.b]);
+  return function (lat, lng) { return [x(lng), y(lat)]; };
+}
+
+/* ---------- 狀態 ---------- */
+var S = {mode:"B", tmode:"era", era:-1, term:todayTerm(), place:null, hover:null, sel:null, pick:null,
+  q:"", kinds:new Set(KINDS.map(function (k) { return k.id; })), orphans:true, local:false, depth:1,
+  arrows:false, fade:0.9, dist:70, repel:220, k:1, timer:null, flash:[]};
+var LIT = new Set();
+var W = 600, H = 480, PROJ = null;
+
+/* ---------- SVG ---------- */
+var svg = d3.select("#graph").classed("modeB", true);
+var root = svg.append("g");
+var gP = root.append("g").attr("class", "placeLayer");
+var gR = root.append("g").attr("class", "route");
+var gL = root.append("g"), gV = root.append("g").attr("class", "vlab"), gF = root.append("g").attr("class", "flash"), gN = root.append("g");
+var linkSel = gL.selectAll("g"), nodeSel = gN.selectAll("g");
+
+var sim = d3.forceSimulation().velocityDecay(0.5).alphaDecay(0.028)
+  .force("link", d3.forceLink().id(function (d) { return d.id; }))
+  .force("charge", d3.forceManyBody().distanceMax(380))
+  .force("x", d3.forceX()).force("y", d3.forceY())
+  .force("collide", d3.forceCollide().radius(function (d) { return d.cr + 3; }))
+  .on("tick", ticked);
+sim.stop();
+
+function measure() {
+  var st = $("#stage"); W = st.clientWidth || 600; H = st.clientHeight || 480;
+  PROJ = projector(W, H, {l:46, r:40, t:W < 560 ? 92 : 78, b:40});
+  nodes.forEach(function (n) {
+    if (!n.anch) { n.gx = n.gy = null; return; }
+    var cps = D.checkpoints.filter(function (c) { return c.species === SPECIES_CP[n.id]; });
+    var pts = cps.map(function (c) { return PROJ(c.lat, c.lng); });
+    n.gx = d3.mean(pts, function (p) { return p[0]; }); n.gy = d3.mean(pts, function (p) { return p[1]; });
+  });
+  drawPlaces(); setForces();
+}
+function setForces() {
+  var B = S.mode === "B";
+  sim.force("x").x(function (d) { return B && d.anch ? d.gx : W / 2; }).strength(function (d) { return B ? (d.anch ? 0.35 : 0.018) : 0.06; });
+  sim.force("y").y(function (d) { return B && d.anch ? d.gy : H / 2; }).strength(function (d) { return B ? (d.anch ? 0.35 : 0.018) : 0.06; });
+  sim.force("charge").strength(function (d) { return -S.repel * (B ? 0.55 : 1) * (d._st === "on" ? 1 : 0.45); });
+  sim.force("link").distance(function () { return S.dist * (B ? 0.8 : 1); })
+    .strength(function (r) { return r._st === "on" ? 0.8 / Math.max(1, Math.min(r.source.deg, r.target.deg)) : 0.03; });
+}
+function seed() {
+  nodes.forEach(function (n, i) {
+    var a = i * 2.39996, rr = 14 * Math.sqrt(i + 0.5);
+    n.x = (S.mode === "B" && n.anch ? n.gx : W / 2) + rr * Math.cos(a) * (n.anch ? 0.2 : 1);
+    n.y = (S.mode === "B" && n.anch ? n.gy : H / 2) + rr * Math.sin(a) * (n.anch ? 0.2 : 1);
+  });
+}
+
+/* 地名錨點 */
+function drawPlaces() {
+  var g = gP.selectAll("g.plc").data(CLUSTERS).join(function (e) {
+    var x = e.append("g").attr("class", "plc");
+    x.append("text").attr("class", "pn");
+    return x;
+  });
+  g.classed("on", function (c) { return S.place === c.place; });
+  g.each(function (c) {
+    var pts = c.cps.map(function (p) { return PROJ(p.lat, p.lng); });
+    var cx = d3.mean(pts, function (p) { return p[0]; }), cy = d3.mean(pts, function (p) { return p[1]; });
+    var sel = d3.select(this);
+    sel.select("text.pn").attr("x", cx).attr("y", cy - 16).text(c.cps[0].label ? c.label : c.label.split("（")[0]);
+    sel.selectAll("path.cpm").data(pts).join("path").attr("class", "cpm").attr("d", function (p) { return "M" + (p[0] - 3) + "," + p[1] + "h6M" + p[0] + "," + (p[1] - 3) + "v6"; });
+    sel.selectAll("text.cid").data(c.cps).join("text").attr("class", "cid")
+      .attr("x", function (p, i) { return pts[i][0] + 5; }).attr("y", function (p, i) { return pts[i][1] + 9 + (i % 2) * 7; }).text(function (p) { return p.id; });
+  });
+}
+
+/* ---------- 可見範圍（設定抽屜） ---------- */
+function localSet() {
+  if (!S.local || !S.sel) return null;
+  var seen = new Set([S.sel]), frontier = [S.sel];
+  for (var d = 0; d < S.depth; d++) {
+    var nx = [];
+    frontier.forEach(function (id) { N[id].nb.forEach(function (m) { if (!seen.has(m)) { seen.add(m); nx.push(m); } }); });
+    frontier = nx;
+  }
+  return seen;
+}
+function refresh(heat) {
+  var q = S.q.trim().toLowerCase(), loc = localSet();
+  var vis = nodes.filter(function (n) {
+    return S.kinds.has(n.kind) && (!q || (n.zh + " " + (n.en || "")).toLowerCase().indexOf(q) >= 0) &&
+      (!loc || loc.has(n.id)) && (S.orphans || n.deg > 0);
+  });
+  var vs = new Set(vis.map(function (n) { return n.id; }));
+  var vl = rels.filter(function (r) { return vs.has(r.from) && vs.has(r.to); });
+  sim.nodes(vis); sim.force("link").links(vl);
+
+  linkSel = gL.selectAll("g.lk").data(vl, function (r) { return r.i; }).join(function (e) {
+    var g = e.append("g");
+    g.append("path").attr("class", "hit");
+    g.append("path").attr("class", "ln");
+    g.append("path").attr("class", "ar");
+    g.select(".hit")
+      .on("pointerenter", function (ev, r) { if (ev.pointerType === "mouse") showTip(ev, r); })
+      .on("pointermove", function (ev, r) { if (ev.pointerType === "mouse") showTip(ev, r); })
+      .on("pointerleave", hideTip)
+      .on("click", function (ev, r) { ev.stopPropagation(); showTip(ev, r); });
+    return g;
+  });
+  nodeSel = gN.selectAll("g.nd").data(vis, function (d) { return d.id; }).join(function (enter) {
+    var g = enter.append("g").attr("class", "nd").attr("tabindex", 0).attr("role", "button")
+      .attr("aria-label", function (d) { return d.zh + "，" + KC[d.kind].zh + "，" + d.deg + " 條連結"; });
+    g.append("circle").attr("class", "halo");
+    g.append("circle").attr("class", "pin");
+    g.append("circle").attr("class", "ring");
+    g.append("circle").attr("class", "dot");
+    g.append("text");
+    g.call(drag)
+      .on("pointerenter", function (e, d) { if (e.pointerType === "mouse") { S.hover = d.id; paint(); } })
+      .on("pointerleave", function (e) { if (e.pointerType === "mouse") { S.hover = null; paint(); } })
+      .on("focus", function (e, d) { S.hover = d.id; paint(); })
+      .on("blur", function () { S.hover = null; paint(); })
+      .on("keydown", function (e, d) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); select(d.id); } });
+    return g;
+  });
+  nodeSel.classed("main", function (d) { return !!d.main; }).classed("anch", function (d) { return d.anch; });
+  nodeSel.select(".dot").attr("fill", function (d) { return KC[d.kind].c; }).attr("r", function (d) { return d.cr; });
+  nodeSel.select(".halo").attr("r", function (d) { return d.r + 5; }).attr("stroke", function (d) { return KC[d.kind].c; });
+  nodeSel.select(".pin").attr("r", function (d) { return d.r + 2.5; });
+  nodeSel.select(".ring").attr("r", function (d) { return d.r + 4; });
+  nodeSel.select("text").text(function (d) { return d.zh; });
+
+  $("#localNote").textContent = S.local ? (S.sel ? "以「" + N[S.sel].zh + "」為中心，深度 " + S.depth + "。" : "先在圖上點選一則筆記。") : "開啟後只顯示所選筆記附近的筆記。";
+  apply(false, heat);
+}
+
+/* ---------- 時間與地點 → 每條關係的狀態 ---------- */
+function filterActive() { return S.tmode === "year" || S.era >= 0 || !!S.place; }
+function inPlace(r) { return !S.place || r.place === S.place; }
+function relState(r) {
+  if (S.tmode === "year") return inPlace(r) && (LIT.has(r.from) || LIT.has(r.to)) ? "on" : "off";
+  if (S.era < 0) return inPlace(r) ? "on" : "off";
+  if (r.eras.indexOf(S.era) >= 0) return inPlace(r) ? "on" : "off";
+  var last = r.eras[r.eras.length - 1];
+  if (last < S.era) return inPlace(r) ? (S.era === last + 1 ? "ghost g1" : "ghost g2") : "off";
+  return "fut";
+}
+function apply(animate, heat) {
+  animate = animate && !RM.matches;
+  LIT = S.tmode === "year" ? new Set(actsAt(S.term).map(function (a) { return a.node; })) : new Set();
+  var fa = filterActive(), vl = sim.force("link").links(), flashes = [];
+  vl.forEach(function (r) {
+    var cls = relState(r), base = cls.split(" ")[0], prev = r._st;
+    r._grow = animate && base === "on" && prev !== "on";
+    if (animate && S.step && prev === "on" && base === "ghost") flashes.push(r);
+    r._st = base; r._cls = cls;
+  });
+  sim.nodes().forEach(function (n) {
+    if (!fa) { n._st = "on"; return; }
+    var st = LIT.has(n.id) ? "on" : "off";
+    if (st !== "on") vl.forEach(function (r) { if ((r.from === n.id || r.to === n.id) && r._st === "on") st = "on"; });
+    n._st = st; n.cr = st === "on" ? n.r : Math.max(2.4, n.r * 0.55);
+  });
+  sim.nodes().forEach(function (n) { if (!fa) n.cr = n.r; });
+
+  linkSel.attr("class", function (r) { return "lk v-" + r.vc + " " + r._cls; });
+  linkSel.filter(function (r) { return r._grow; }).select(".ln").each(function () { grow(d3.select(this)); });
+  nodeSel.classed("off", function (d) { return d._st !== "on"; }).classed("lit", function (d) { return LIT.has(d.id); });
+  nodeSel.select(".dot").interrupt().transition().duration(animate ? 650 : 0).attr("r", function (d) { return d.cr; });
+  if (flashes.length) flash(flashes);
+
+  setForces();
+  sim.force("collide").radius(function (d) { return d.cr + 3; });
+  paint(); updateHud(); renderLog();
+  if (S.sel) renderNote();
+  if (heat === false) return;
+  if (RM.matches) { for (var i = 0; i < 160; i++) sim.tick(); ticked(); }
+  else sim.alpha(Math.max(sim.alpha(), heat || 0.25)).restart();
+}
+/* 新出現的關係由起點長向終點 */
+function grow(path) {
+  path.interrupt().attr("pathLength", 1).style("stroke-dasharray", "1 1").style("stroke-dashoffset", 1)
+    .transition().duration(900).ease(d3.easeCubicOut).style("stroke-dashoffset", 0)
+    .on("end interrupt", function () { d3.select(this).attr("pathLength", null).style("stroke-dasharray", null).style("stroke-dashoffset", null); });
+}
+/* 結束的關係淡出，短暫標示「曾經」 */
+function flash(list) {
+  var id = Date.now();
+  list.forEach(function (r) { S.flash.push({r:r, id:id}); });
+  renderFlash();
+  setTimeout(function () {
+    gF.selectAll("text").filter(function (f) { return f.id === id; }).transition().duration(RM.matches ? 0 : 500).style("opacity", 0)
+      .on("end", function () { S.flash = S.flash.filter(function (f) { return f.id !== id; }); renderFlash(); });
+  }, RM.matches ? 2600 : 1700);
+}
+function renderFlash() {
+  gF.selectAll("text").data(S.flash.filter(function (f) { return f.r._st === "ghost"; }), function (f) { return f.id + "-" + f.r.i; })
+    .join("text").text("曾經");
+  placeLabels();
+}
+
+/* ---------- 繪製 ---------- */
+function geom(r) {
+  var s = r.source, t = r.target, dx = t.x - s.x, dy = t.y - s.y, d = Math.hypot(dx, dy) || 1, ux = dx / d, uy = dy / d;
+  var off = S.mode === "B" ? r.off : 0, cx = (s.x + t.x) / 2 - uy * off, cy = (s.y + t.y) / 2 + ux * off;
+  var ex = t.x - cx, ey = t.y - cy, ed = Math.hypot(ex, ey) || 1; ex /= ed; ey /= ed;
+  var tr = t.cr + 1.5, x2 = t.x - ex * tr, y2 = t.y - ey * tr, bx = x2 - ex * 6, by = y2 - ey * 6;
+  var f = function (v) { return Math.round(v * 10) / 10; };
+  r._mx = 0.25 * s.x + 0.5 * cx + 0.25 * x2; r._my = 0.25 * s.y + 0.5 * cy + 0.25 * y2;
+  r._d = "M" + f(s.x) + "," + f(s.y) + "Q" + f(cx) + "," + f(cy) + " " + f(x2) + "," + f(y2);
+  r._a = "M" + f(x2) + "," + f(y2) + "L" + f(bx - ey * 2.8) + "," + f(by + ex * 2.8) + "L" + f(bx + ey * 2.8) + "," + f(by - ex * 2.8) + "Z";
+}
+function ticked() {
+  if (S.mode === "B") sim.nodes().forEach(function (d) { d.x = Math.max(14, Math.min(W - 14, d.x)); d.y = Math.max(14, Math.min(H - 14, d.y)); });
+  linkSel.each(geom);
+  linkSel.select(".hit").attr("d", function (r) { return r._d; });
+  linkSel.select(".ln").attr("d", function (r) { return r._d; });
+  linkSel.select(".ar").attr("d", function (r) { return r._a; });
+  nodeSel.attr("transform", function (d) { return "translate(" + d.x + "," + d.y + ")"; });
+  nodeSel.select("text").attr("y", function (d) { return d.cr + 12; });
+  placeLabels();
+}
+function placeLabels() {
+  gV.selectAll("text").attr("x", function (r) { return r._mx; }).attr("y", function (r) { return r._my - 3; });
+  gF.selectAll("text").attr("x", function (f) { return f.r._mx; }).attr("y", function (f) { return f.r._my + 4; });
+}
+function focusId() { return S.hover || S.sel; }
+function paint() {
+  var f = focusId(), nb = f && N[f] ? N[f].nb : null;
+  nodeSel.classed("hl", function (d) { return d.id === f; })
+    .classed("dim", function (d) { return !!f && d.id !== f && !nb.has(d.id); })
+    .classed("sel", function (d) { return d.id === S.sel; });
+  var on = function (r) { return !!f && (r.from === f || r.to === f); };
+  linkSel.classed("hl", on).classed("dim", function (r) { return !!f && !on(r); })
+    .classed("pick", function (r) { return S.pick === r.i; });
+  /* 改良版：懸停節點時在線上寫出動詞；衝突常駐 */
+  var lab = S.mode !== "B" ? [] : linkSel.data().filter(function (r) {
+    return r._st === "on" && (on(r) || r.vc === "conflict" || S.pick === r.i);
+  });
+  gV.selectAll("text").data(lab, function (r) { return r.i; }).join("text")
+    .attr("class", function (r) { return "v-" + r.vc; }).text(function (r) { return r.verb; });
+  placeLabels();
+  drawRoute(f);
+  labels();
+}
+function labels() {
+  var base = Math.max(0, Math.min(1, (S.k - S.fade) / 0.5)), f = focusId(), fa = filterActive();
+  nodeSel.select("text").attr("opacity", function (d) {
+    if (f) return (d.id === f || N[f].nb.has(d.id)) ? (d._st === "on" ? 1 : 0.55) : base * 0.2;
+    if (S.mode === "B") return d._st === "on" ? (d.main ? 1 : 0.82) : 0.3;
+    if (fa) return d._st === "on" ? Math.max(base, 0.85) : base * 0.3;
+    return base;
+  });
+}
+/* 改良版：懸停或選取主角物種時，顯示其檢查點；會移動的物種連成軌跡 */
+function drawRoute(f) {
+  var data = [];
+  if (S.mode === "B" && f && SPECIES_CP[f]) {
+    var cps = D.checkpoints.filter(function (c) { return c.species === SPECIES_CP[f]; }).sort(function (a, b) { return a.id < b.id ? -1 : 1; });
+    data = [{id:f, cps:cps, pts:cps.map(function (c) { return PROJ(c.lat, c.lng); }), col:TOKEN_DARK[N[f].color] || "#E2E7E1"}];
+  }
+  var g = gR.selectAll("g").data(data, function (d) { return d.id; }).join("g");
+  g.selectAll("path").data(function (d) { return ROUTED[d.id] ? [d] : []; }).join("path")
+    .attr("stroke", function (d) { return d.col; }).attr("d", function (d) { return "M" + d.pts.map(function (p) { return p[0] + "," + p[1]; }).join("L"); });
+  g.selectAll("circle").data(function (d) { return d.pts.map(function (p) { return {p:p, col:d.col}; }); }).join("circle")
+    .attr("cx", function (d) { return d.p[0]; }).attr("cy", function (d) { return d.p[1]; }).attr("r", 5).attr("stroke", function (d) { return d.col; });
+  g.selectAll("text").data(function (d) { return d.cps.map(function (c, i) { return {c:c, p:d.pts[i], col:d.col}; }); }).join("text")
+    .attr("x", function (d) { return d.p[0] + 7; }).attr("y", function (d) { return d.p[1] - 6; }).attr("fill", function (d) { return d.col; }).text(function (d) { return d.c.id; });
+}
+
+/* 線的提示（改良版） */
+function showTip(ev, r) {
+  if (S.mode !== "B" || r._st !== "on") return;
+  var t = $("#tip"), rect = $("#stage").getBoundingClientRect();
+  t.innerHTML = "<b>" + esc(N[r.from].zh) + '</b><span class="tv" style="color:var(--v-' + r.vc + ')">' + esc(r.verb) + "</span><b>" + esc(N[r.to].zh) + "</b>" +
+    '<p class="tm">' + esc(r.period) + " · " + esc(cpLabel(r.cp)) + " " + chip(r.status) + "</p>" + (r.note ? "<p>" + esc(r.note) + "</p>" : "") +
+    '<p class="tm">來源：' + esc(r.cite) + "</p>";
+  t.classList.add("on");
+  var x = ev.clientX - rect.left + 12, y = ev.clientY - rect.top + 12;
+  x = Math.min(x, rect.width - t.offsetWidth - 8); y = Math.min(y, rect.height - t.offsetHeight - 8);
+  t.style.left = Math.max(8, x) + "px"; t.style.top = Math.max(8, y) + "px";
+}
+function hideTip() { $("#tip").classList.remove("on"); }
+
+/* 拖曳 */
+var drag = d3.drag()
+  .on("start", function (e, d) {
+    if (!e.active && !RM.matches) sim.alphaTarget(0.2).restart();
+    d.fx = d.x; d.fy = d.y; d._sx = e.x; d._sy = e.y; d._mv = false; hideTip();
+  })
+  .on("drag", function (e, d) {
+    d.fx = e.x; d.fy = e.y;
+    if (Math.hypot(e.x - d._sx, e.y - d._sy) > 3 / S.k) d._mv = true;
+    if (RM.matches) { d.x = e.x; d.y = e.y; ticked(); }
+  })
+  .on("end", function (e, d) {
+    if (!e.active) sim.alphaTarget(0);
+    d.fx = null; d.fy = null;
+    if (!d._mv) select(d.id);
+  });
+
+/* 縮放 */
+var zoom = d3.zoom().scaleExtent([0.25, 6]).on("zoom", function (e) {
+  root.attr("transform", e.transform); S.k = e.transform.k; labels(); hideTip();
+});
+svg.call(zoom).on("dblclick.zoom", null);
+svg.on("click", function (e) { if (e.target === svg.node()) { hideTip(); select(null); } });
+function tz() { return RM.matches ? svg : svg.transition().duration(600); }
+function fit(animate) {
+  if (S.mode === "B") { (animate ? tz() : svg).call(zoom.transform, d3.zoomIdentity); return; }
+  var vis = sim.nodes(); if (!vis.length) return;
+  var x0 = d3.min(vis, function (d) { return d.x - d.r; }), x1 = d3.max(vis, function (d) { return d.x + d.r; });
+  var y0 = d3.min(vis, function (d) { return d.y - d.r; }), y1 = d3.max(vis, function (d) { return d.y + d.r + 14; });
+  var k = Math.max(0.35, Math.min(1.6, Math.min(W / (x1 - x0 + 60), H / (y1 - y0 + 90))));
+  var t = d3.zoomIdentity.translate(W / 2 - k * (x0 + x1) / 2, H / 2 - k * (y0 + y1) / 2 + 12).scale(k);
+  (animate ? tz() : svg).call(zoom.transform, t);
+}
+$("#zin").onclick = function () { tz().call(zoom.scaleBy, 1.35); };
+$("#zout").onclick = function () { tz().call(zoom.scaleBy, 1 / 1.35); };
+$("#zfit").onclick = function () { fit(true); };
+
+/* 模式 */
+function setMode(m) {
+  S.mode = m;
+  svg.classed("modeB", m === "B").classed("modeA", m === "A").classed("noarrow", m === "A" && !S.arrows);
+  $$(".modes button").forEach(function (b) { b.setAttribute("aria-pressed", b.dataset.mode === m ? "true" : "false"); });
+  $("#arrows").disabled = m === "B";
+  $("#arrowNote").textContent = m === "B" ? "改良版固定顯示箭頭（關係有方向）。" : "Obsidian 預設不顯示箭頭。";
+  hideTip(); buildLegend(); setForces(); paint();
+  if (RM.matches) { for (var i = 0; i < 300; i++) sim.tick(); ticked(); fit(false); }
+  else { sim.alpha(0.8).restart(); if (m === "B") fit(true); else setTimeout(function () { fit(true); }, 1100); }
+}
+$$(".modes button").forEach(function (b) { b.onclick = function () { if (S.mode !== b.dataset.mode) setMode(b.dataset.mode); }; });
+
+function legendLine(cls, extra) {
+  return '<svg width="26" height="8" aria-hidden="true"><path d="M1 4H25" stroke="' + cls + '" stroke-width="' + (extra && extra.w || 1.5) + '" fill="none"' + (extra && extra.dash ? ' stroke-dasharray="' + extra.dash + '" stroke-linecap="round"' : "") + "/></svg>";
+}
+function buildLegend() {
+  var L = [];
+  if (S.mode === "B") {
+    L.push([legendLine("#79C488"), "生態關係", "造棲地、傳粉、食／被食"]);
+    L.push([legendLine("#DDB04A"), "人的使用", "採集、耕作／飼養、買賣"]);
+    L.push([legendLine("#9FB0C0"), "改變環境", "截水、開路、佔據"]);
+    L.push([legendLine("#62B8AE", {dash:"5 3", w:1}), "記錄", "相機、錄音器"]);
+    L.push([legendLine("#C9D1CB", {dash:"1.2 3", w:1.6}), "曾經", "關係本身是過去式"]);
+    L.push([legendLine("#E08A73", {w:2.4}), "衝突", "爭議，常駐標籤"]);
+  } else {
+    L.push([legendLine("rgba(154,167,159,.6)"), "連結", "Obsidian 不分類型"]);
+  }
+  L.push([legendLine("#9AA79F", {dash:"1.5 3.5", w:1}), "已結束", "時間軸上已過去的關係"]);
+  L.push(['<svg width="26" height="10" aria-hidden="true"><circle cx="13" cy="5" r="3" fill="#3B4540"/></svg>', "縮小的灰點", "此刻沒有關係的節點"]);
+  if (S.mode === "B") L.push(['<svg width="26" height="14" aria-hidden="true"><circle cx="13" cy="7" r="4" fill="#79C488"/><circle cx="13" cy="7" r="6.3" fill="none" stroke="#E2E7E1" stroke-width=".8" opacity=".6"/></svg>', "外圈", "有檢查點，被拉向地圖位置"]);
+  $("#legendList").innerHTML = L.map(function (l) { return "<li>" + l[0] + "<span>" + l[1] + " <small>" + l[2] + "</small></span></li>"; }).join("");
+}
+
+/* ---------- 浮層、計數 ---------- */
+function updateHud() {
+  var b = $("#badge"), fa = filterActive();
+  b.classList.toggle("on", fa);
+  if (S.tmode === "year") { b.querySelector(".b1").textContent = TERMS[S.term]; b.querySelector(".b2").textContent = "一年之中 · " + TDATES[S.term] + " 起（2026）"; }
+  else if (S.era >= 0) { b.querySelector(".b1").textContent = ERAS[S.era].zh; b.querySelector(".b2").textContent = ERAS[S.era].yr + " · 示意"; }
+  else { b.querySelector(".b1").textContent = "全部時期"; b.querySelector(".b2").textContent = ""; }
+  b.querySelector(".b3").textContent = S.place ? PLACE[S.place].zh : "";
+  var vl = sim.force("link").links(), onN = vl.filter(function (r) { return r._st === "on"; }).length;
+  $("#count").textContent = fa ? onN + " / " + vl.length + " 條關係亮起" : sim.nodes().length + " 則筆記 · " + vl.length + " 條關係";
+}
+
+/* ---------- 時間控制 ---------- */
+function stopPlay() {
+  if (S.timer) { clearInterval(S.timer); S.timer = null; }
+  $("#play").setAttribute("aria-pressed", "false"); $("#playL").textContent = "播放";
+}
+$("#play").onclick = function () {
+  if (S.timer) { stopPlay(); return; }
+  $("#play").setAttribute("aria-pressed", "true"); $("#playL").textContent = "暫停";
+  if (S.tmode === "era") {
+    if (S.era < 0 || S.era >= 4) setEra(0);
+    S.timer = setInterval(function () { if (S.era >= 4) { stopPlay(); return; } setEra(S.era + 1); }, RM.matches ? 4200 : 2900);
+  } else {
+    var n = 0;
+    S.timer = setInterval(function () { if (++n >= 24) { stopPlay(); return; } setTerm((S.term + 1) % 24); }, RM.matches ? 2600 : 1150);
+  }
+};
+function posPct(i, n) { return "calc(9px + (100% - 18px) * " + (i / n) + ")"; }
+(function buildEraTrack() {
+  var trk = $("#eraTrk"), h = "";
+  ERAS.forEach(function (e, i) {
+    h += '<span class="tk" style="left:' + posPct(i, 4) + '"></span>' +
+      '<button type="button" class="stop" data-era="' + i + '" style="left:' + posPct(i, 4) + '">' + e.zh + "<small>" + e.yr + "</small></button>";
+  });
+  trk.insertAdjacentHTML("beforeend", h);
+  trk.addEventListener("click", function (e) { var b = e.target.closest(".stop"); if (b) { stopPlay(); setEra(+b.dataset.era); } });
+  $("#eraR").addEventListener("input", function (e) { stopPlay(); setEra(+e.target.value); });
+  $("#eraR").addEventListener("pointerdown", function () { if (S.era < 0) { stopPlay(); setEra(+$("#eraR").value); } });
+  $("#allEra").onclick = function () { stopPlay(); setEra(-1); };
+})();
+function setEra(i) {
+  S.step = S.era >= 0 && i === S.era + 1;
+  S.era = i;
+  $("#eraTrk").classList.toggle("unset", i < 0);
+  $("#allEra").setAttribute("aria-pressed", i < 0 ? "true" : "false");
+  if (i >= 0) $("#eraR").value = i;
+  $("#eraR").setAttribute("aria-valuetext", i < 0 ? "全部時期" : ERAS[i].zh + "，" + ERAS[i].yr);
+  $$("#eraTrk .stop").forEach(function (b) { b.classList.toggle("cur", +b.dataset.era === i); });
+  $("#eraCur").innerHTML = i < 0 ? "<b>全部時期</b><span>所有關係同時顯示，就像 Obsidian 原來的樣子</span>"
+    : "<b>" + esc(ERAS[i].zh) + "</b><span>" + esc(ERAS[i].yr) + '</span><span class="simul">示意・年代未核實</span>';
+  setTab("log"); apply(true); S.step = false;
+}
+(function buildTermTrack() {
+  var trk = $("#termTrk"), h = "";
+  TERMS.forEach(function (t, i) {
+    h += '<span class="tk' + (i % 6 ? " minor" : "") + '" style="left:' + posPct(i, 23) + '"></span>';
+    if (i % 6 === 0) h += '<button type="button" class="stop" data-term="' + i + '" style="left:' + posPct(i, 23) + '">' + t + "</button>";
+  });
+  trk.insertAdjacentHTML("beforeend", h);
+  trk.addEventListener("click", function (e) { var b = e.target.closest(".stop"); if (b) { stopPlay(); setTerm(+b.dataset.term); } });
+  $("#termR").addEventListener("input", function (e) { stopPlay(); setTerm(+e.target.value); });
+  /* 農事曆條 */
+  var g = D.calendar.map(function (a) {
+    var nd = N[a.node];
+    return '<div class="gr" data-act="' + esc(a.id) + '"><span class="lb" title="' + esc(a.zh) + '">' + esc(a.zh) + '</span><span class="gt"><span class="gb" style="--bc:var(' + esc(nd ? nd.color : "--muted") + ");left:" + (a.start / 24 * 100) + "%;width:" + ((a.end - a.start) / 24 * 100) + '%"></span></span></div>';
+  }).join("");
+  $("#gantt").innerHTML = g + '<span class="gnow" id="gnow"></span>';
+})();
+function setTerm(t) {
+  S.term = t; $("#termR").value = t;
+  $("#termR").setAttribute("aria-valuetext", TERMS[t] + "，" + TDATES[t] + " 起");
+  var acts = actsAt(t), ids = new Set(acts.map(function (a) { return a.id; }));
+  $$("#gantt .gr").forEach(function (r) { r.classList.toggle("on", ids.has(r.dataset.act)); });
+  $("#gnow").style.left = "calc(7.2em + 8px + (100% - 7.2em - 8px) * " + ((t + 0.5) / 24) + " - 1px)";
+  $("#termCur").innerHTML = "<b>" + esc(TERMS[t]) + "</b><span>" + esc(TDATES[t]) + " 起（2026 年約數）</span><span>" + (acts.length ? acts.length + " 項活動" : "沒有記錄的活動") + "</span>";
+  setTab("log"); apply(true);
+}
+function setTmode(m) {
+  stopPlay(); S.tmode = m;
+  $$(".seg2 button").forEach(function (b) { b.setAttribute("aria-pressed", b.dataset.tm === m ? "true" : "false"); });
+  $("#eraPanel").hidden = m !== "era"; $("#yearPanel").hidden = m !== "year";
+  if (m === "year") setTerm(S.term); else setEra(S.era);
+}
+$$(".seg2 button").forEach(function (b) { b.onclick = function () { if (S.tmode !== b.dataset.tm) setTmode(b.dataset.tm); }; });
+
+/* 對應表 */
+(function buildMapTable() {
+  var order = ["耕作期", "過去", "1960 年代", "近數十年", "近年", "現在", "過去至今"];
+  var h = "<thead><tr><th>data.js 時期</th>" + ERAS.map(function (e) { return "<th>" + e.zh + "</th>"; }).join("") + "<th>關係數</th></tr></thead><tbody>";
+  order.forEach(function (p) {
+    var n = rels.filter(function (r) { return r.period === p && !VERB_ERAS[r.verb]; }).length;
+    h += "<tr><td>" + p + "</td>" + ERAS.map(function (e, i) { return '<td><i class="' + (PERIOD_ERAS[p].indexOf(i) >= 0 ? "on" : "") + '"></i></td>'; }).join("") + '<td class="n">' + n + "</td></tr>";
+  });
+  var nr = rels.filter(function (r) { return VERB_ERAS[r.verb]; }).length;
+  h += "<tr><td>例外：記錄</td>" + ERAS.map(function (e, i) { return '<td><i class="' + (i === 4 ? "on" : "") + '"></i></td>'; }).join("") + '<td class="n">' + nr + "</td></tr></tbody>";
+  $("#mapT").innerHTML = h;
+  var unknown = rels.filter(function (r) { return !PERIOD_ERAS[r.period] && !VERB_ERAS[r.verb]; });
+  if (unknown.length) console.warn("未對應的時期：", unknown.map(function (r) { return r.period; }));
+  $("#eraGap").textContent = rels.filter(function (r) { return r.eras.indexOf(2) >= 0; }).length;
+})();
+
+/* ---------- 地點控制 ---------- */
+function placeCount(p) { return rels.filter(function (r) { return r.place === p; }).length; }
+(function buildPlaces() {
+  $("#chips").innerHTML = '<button type="button" class="chip" data-place="" aria-pressed="true">全部地點</button>' +
+    D.places.map(function (p) { var n = placeCount(p.id); return '<button type="button" class="chip' + (n ? "" : " zero") + '" data-place="' + p.id + '" aria-pressed="false">' + esc(p.zh) + "<small>" + n + "</small></button>"; }).join("");
+  $("#chips").addEventListener("click", function (e) { var b = e.target.closest(".chip"); if (b) setPlace(b.dataset.place || null); });
+  var lp = projector(360, 196, {l:30, r:26, t:34, b:34});
+  /* 標籤位置按每個檢查點群手動擺放，避免重疊：[dx, dy, 對齊] */
+  var LBL = {"4.3":[-6, 18, "start"], "2.1":[-12, 4, "end"], "3.2":[9, 15, "start"], "2.2":[0, -12, "middle"],
+    "2.3":[14, -10, "start"], "3.4":[10, 6, "start"], "4.6":[0, 19, "middle"], "1.2":[0, 20, "middle"],
+    "3.1":[0, -12, "middle"], "1.1":[0, 20, "middle"]};
+  var sx = lp(22.22, 113.9235)[0];
+  var h = '<path d="M' + sx + ' 8 V188" stroke="var(--line)" stroke-dasharray="2 4"/><text class="east" x="354" y="190" text-anchor="end">海一側距離已壓縮</text>';
+  CLUSTERS.forEach(function (c) {
+    var pts = c.cps.map(function (p) { return lp(p.lat, p.lng); });
+    var cx = d3.mean(pts, function (p) { return p[0]; }), cy = d3.mean(pts, function (p) { return p[1]; });
+    var n = rels.filter(function (r) { return c.cps.some(function (p) { return p.id === r.cp; }); }).length;
+    var o = LBL[c.cps[0].id] || [0, 18, "middle"];
+    var name = c.cps[0].label ? c.label : c.label.split("（")[0];
+    if (c.place === "road" && c.cps[0].id === "3.1") name = c.label;
+    h += '<g class="cl' + (n ? "" : " empty") + '" data-place="' + c.place + '"><circle class="hit" cx="' + cx.toFixed(1) + '" cy="' + cy.toFixed(1) + '" r="13"/>' +
+      pts.map(function (p) { return '<circle class="cpd" cx="' + p[0].toFixed(1) + '" cy="' + p[1].toFixed(1) + '" r="3"/>'; }).join("") +
+      '<text x="' + (cx + o[0]).toFixed(1) + '" y="' + (cy + o[1]).toFixed(1) + '" text-anchor="' + o[2] + '">' + esc(name) + "</text></g>";
+  });
+  $("#loc").innerHTML = h;
+  $("#loc").addEventListener("click", function (e) { var g = e.target.closest(".cl"); if (g) setPlace(S.place === g.dataset.place ? null : g.dataset.place); });
+})();
+function setPlace(p) {
+  S.place = p;
+  $$("#chips .chip").forEach(function (b) { b.setAttribute("aria-pressed", (b.dataset.place || null) === p ? "true" : "false"); });
+  $$("#loc .cl").forEach(function (g) { g.classList.toggle("on", g.dataset.place === p); });
+  gP.selectAll("g.plc").classed("on", function (c) { return S.place === c.place; });
+  setTab("log"); apply(true);
+}
+
+/* ---------- 變化紀錄 ---------- */
+function chip(s) { return '<span class="st ' + esc(s) + '">' + esc(ST[s] || s) + "</span>"; }
+function cpLabel(id) { var c = CP[id]; return c ? id + " " + (c.label || PLACE[c.place].zh) : id; }
+function erasMini(r) {
+  return '<span class="eras" title="所屬年代：' + r.eras.map(function (e) { return ERAS[e].zh; }).join("、") + '">' +
+    ERAS.map(function (e, i) { return '<i class="' + (r.eras.indexOf(i) >= 0 ? "on" : "") + (S.tmode === "era" && S.era === i ? " cur" : "") + '"></i>'; }).join("") + "</span>";
+}
+function relItem(r, cls) {
+  return '<li class="ci ' + cls + '"><button type="button" class="relb" data-ri="' + r.i + '"><b>' + esc(N[r.from].zh) + '</b><span class="vb v-' + r.vc + '">' + esc(r.verb) + "</span><b>" + esc(N[r.to].zh) + "</b></button>" +
+    '<div class="mt"><span class="mono">' + esc(r.period) + "</span>" + erasMini(r) + "<span>" + esc(cpLabel(r.cp)) + "</span>" + chip(r.status) + "</div>" +
+    (r.note ? '<p class="nq">' + esc(r.note) + "</p>" : "") + '<p class="src">來源：' + esc(r.cite) + "</p></li>";
+}
+function group(title, cls, list, empty) {
+  return '<section class="lgs"><h4><span class="sl ' + cls + '"></span>' + title + '<span class="n">' + list.length + "</span></h4>" +
+    (list.length ? '<ul class="cl-list">' + list.join("") + "</ul>" : '<p class="none">' + empty + "</p>") + "</section>";
+}
+function termRange(a) {
+  var s = Math.floor(a.start), e = Math.max(s, Math.ceil(a.end) - 1) % 24;
+  return s === e ? TERMS[s] : TERMS[s] + "至" + TERMS[e];
+}
+function actItem(a, cls) {
+  var nd = N[a.node];
+  return '<li class="ci ' + cls + '"><button type="button" class="relb" data-node="' + esc(a.node) + '"><b>' + esc(a.zh) + '</b></button>' +
+    '<div class="mt"><span>' + esc(termRange(a)) + "</span><span>節點：" + esc(nd ? nd.zh : a.node) + "</span></div>" +
+    '<p class="nq">' + esc(a.lunar) + '</p><p class="src">來源：' + esc(a.source) + "</p></li>";
+}
+var placeTxt = function () { return S.place ? "（只計在「" + PLACE[S.place].zh + "」記錄的關係）" : ""; };
+function renderLog() {
+  var el = $("#logPanel"), h = "";
+  if (S.tmode === "year") {
+    var t = S.term, p = (t + 23) % 24, now = actsAt(t), before = actsAt(p);
+    var nowIds = new Set(now.map(function (a) { return a.id; })), befIds = new Set(before.map(function (a) { return a.id; }));
+    var started = now.filter(function (a) { return !befIds.has(a.id); }), ended = before.filter(function (a) { return !nowIds.has(a.id); }), cont = now.filter(function (a) { return befIds.has(a.id); });
+    var litNames = Array.from(LIT).map(function (id) { return N[id] ? N[id].zh : id; });
+    h = '<div class="lg-h"><p class="eyebrow">一年之中 · ' + esc(TDATES[t]) + ' 起</p><h3>' + esc(TERMS[t]) + '</h3><p class="cmpw">與上一個節氣「' + esc(TERMS[p]) + "」比較</p></div>" +
+      '<div class="sumrow"><span><i class="sl"></i>+' + started.length + " 開始</span><span><i class=\"sl gone\"></i>−" + ended.length + " 結束</span><span><i class=\"sl cont\"></i>" + cont.length + " 持續</span></div>" +
+      (litNames.length ? '<p class="cmpw">亮起的節點：' + esc(litNames.join("、")) + placeTxt() + "</p>" : "") +
+      group("本節氣開始的活動", "", started.map(function (a) { return actItem(a, "new"); }), "沒有活動在這個節氣開始。") +
+      group("上一節氣後結束的活動", "gone", ended.map(function (a) { return actItem(a, "gone"); }), "沒有活動在此結束。") +
+      group("持續的活動", "cont", cont.map(function (a) { return actItem(a, "cont"); }), "沒有。") +
+      '<p class="caveat">季節資料來自村民對耕作年代的口述，今天不一定如此。資料中沒有記錄的節氣，不代表當時沒有活動。</p>';
+  } else if (S.era < 0) {
+    var max = 1, counts = ERAS.map(function (e, i) { var n = rels.filter(function (r) { return r.eras.indexOf(i) >= 0 && inPlace(r); }).length; max = Math.max(max, n); return n; });
+    h = '<div class="lg-h"><p class="eyebrow">全部時期' + (S.place ? " · " + esc(PLACE[S.place].zh) : "") + '</p><h3>關係如何隨年代改變？</h3>' +
+      '<p class="cmpw">現在圖上同時顯示所有關係。選一個年代或按「播放」，這裡會列出每一段與上一段比較時新出現、消失和持續的關係。</p></div>' +
+      '<ul class="ov">' + ERAS.map(function (e, i) {
+        return '<li><button type="button" data-era="' + i + '"><b>' + e.zh + "</b><small>" + e.yr + '</small><span class="bar"><i style="width:' + (counts[i] / max * 100) + '%"></i></span><span class="n">' + counts[i] + "</span></button></li>";
+      }).join("") + "</ul>" + '<p class="caveat">每段的關係數' + placeTxt() + '。年代分段為示意，見時間軸下的對應表。</p>';
+    if (S.place) {
+      var here = rels.filter(function (r) { return r.place === S.place; });
+      h += group("在「" + esc(PLACE[S.place].zh) + "」記錄的關係", "cont", here.map(function (r) { return relItem(r, "cont"); }), "資料中沒有以此地點檢查點記錄的關係。這是一個缺口，不代表此處沒有關係。");
+    }
+  } else {
+    var i = S.era, cur = rels.filter(function (r) { return r.eras.indexOf(i) >= 0 && inPlace(r); });
+    var prv = i > 0 ? rels.filter(function (r) { return r.eras.indexOf(i - 1) >= 0 && inPlace(r); }) : [];
+    var ps = new Set(prv), cs = new Set(cur);
+    var nw = cur.filter(function (r) { return !ps.has(r); }), gone = prv.filter(function (r) { return !cs.has(r); }), cont2 = cur.filter(function (r) { return ps.has(r); });
+    h = '<div class="lg-h"><p class="eyebrow">' + esc(ERAS[i].yr) + " · 示意" + (S.place ? " · " + esc(PLACE[S.place].zh) : "") + "</p><h3>" + esc(ERAS[i].zh) + "</h3>" +
+      '<p class="cmpw">' + (i > 0 ? "與上一時期「" + esc(ERAS[i - 1].zh) + "」比較" : "起點：沒有更早的時期可比較，以下是此時期的關係") + placeTxt() + "</p></div>" +
+      '<div class="sumrow"><span><i class="sl"></i>+' + nw.length + " 新出現</span><span><i class=\"sl gone\"></i>−" + gone.length + " 消失</span><span><i class=\"sl cont\"></i>" + cont2.length + " 持續</span></div>" +
+      group(i > 0 ? "新出現的關係" : "此時期的關係", "", nw.map(function (r) { return relItem(r, "new"); }), "沒有新出現的關係。") +
+      (i > 0 ? group("消失的關係", "gone", gone.map(function (r) { return relItem(r, "gone"); }), "沒有關係在此消失。") : "") +
+      (i > 0 ? group("持續的關係", "cont", cont2.map(function (r) { return relItem(r, "cont"); }), "沒有。") : "") +
+      '<p class="caveat">「消失」只表示資料中沒有這段時期的紀錄，不一定代表關係真的斷絕；增減也不代表好壞。圖上的灰色點線是已結束的關係。</p>';
+  }
+  el.innerHTML = h;
+}
+$("#logPanel").addEventListener("click", function (e) {
+  var o = e.target.closest(".ov button"); if (o) { stopPlay(); setEra(+o.dataset.era); return; }
+  var b = e.target.closest(".relb"); if (!b) return;
+  if (b.dataset.node) { focusNode(b.dataset.node, true); return; }
+  var r = rels[+b.dataset.ri]; S.pick = r.i; focusNode(r.from, true);
+  clearTimeout(S.pickT); S.pickT = setTimeout(function () { S.pick = null; paint(); }, 2600);
+});
+$("#logPanel").addEventListener("pointerover", function (e) {
+  var b = e.target.closest(".relb[data-ri]"), v = b ? +b.dataset.ri : null;
+  if (v !== S.pick) { S.pick = v; paint(); }
+});
+$("#logPanel").addEventListener("pointerleave", function () { if (S.pick != null) { S.pick = null; paint(); } });
+
+/* ---------- 側欄分頁、筆記 ---------- */
+function setTab(t) {
+  var log = t === "log";
+  $("#tabLog").setAttribute("aria-selected", log); $("#tabNote").setAttribute("aria-selected", !log);
+  $("#tabLog").tabIndex = log ? 0 : -1; $("#tabNote").tabIndex = log ? -1 : 0;
+  $("#logPanel").hidden = !log; $("#notePanel").hidden = log;
+}
+$("#tabLog").onclick = function () { setTab("log"); };
+$("#tabNote").onclick = function () { setTab("note"); };
+$(".tabs").addEventListener("keydown", function (e) {
+  if (e.key === "ArrowRight" || e.key === "ArrowLeft") { var to = $("#tabLog").getAttribute("aria-selected") === "true" ? "note" : "log"; setTab(to); (to === "log" ? $("#tabLog") : $("#tabNote")).focus(); }
+});
+function select(id) {
+  S.sel = id;
+  if (S.local) refresh(0.3); else paint();
+  renderNote();
+  $("#noteName").textContent = id ? "：" + N[id].zh : "";
+  var j = $("#jump");
+  if (id) { j.textContent = "筆記：" + N[id].zh + " ↓"; j.classList.add("on"); setTab("note"); } else j.classList.remove("on");
+}
+function ensureVisible(id) {
+  var n = N[id], changed = false;
+  if (!S.kinds.has(n.kind)) { S.kinds.add(n.kind); var cb = document.querySelector('#groups input[value="' + n.kind + '"]'); if (cb) cb.checked = true; changed = true; }
+  if (S.q && (n.zh + " " + (n.en || "")).toLowerCase().indexOf(S.q.trim().toLowerCase()) < 0) { S.q = ""; $("#q").value = ""; changed = true; }
+  if (!S.orphans && n.deg === 0) { S.orphans = true; $("#orph").checked = true; changed = true; }
+  return changed;
+}
+function focusNode(id, keepTab) {
+  var changed = ensureVisible(id);
+  S.hover = null;
+  if (changed && !S.local) refresh(0.3);
+  if (keepTab) { S.sel = id; if (S.local) refresh(0.3); else paint(); renderNote(); $("#noteName").textContent = "：" + N[id].zh; }
+  else select(id);
+  var n = N[id];
+  setTimeout(function () {
+    var k = Math.max(S.k, S.mode === "B" ? 1.25 : 1.3);
+    tz().call(zoom.transform, d3.zoomIdentity.translate(W / 2 - k * n.x, H / 2 - k * n.y).scale(k));
+  }, S.local || changed ? 250 : 0);
+  if (!WIDE.matches) $("#stage").scrollIntoView({behavior: RM.matches ? "auto" : "smooth", block: "center"});
+}
+var TSTATE = {on:"此刻亮起", ghost:"已結束（曾經）", fut:"此時尚未出現", off:"不在所選地點或季節"};
+function wl(id) { return '<button type="button" class="wl" data-id="' + esc(id) + '"><span class="br" aria-hidden="true">[[</span>' + esc(N[id].zh) + '<span class="br" aria-hidden="true">]]</span></button>'; }
+function relMeta(r) {
+  var fa = filterActive(), st = relState(r).split(" ")[0];
+  return '<div class="mt"><span class="mono">' + esc(r.period) + "</span>" + erasMini(r) + "<span>檢查點 " + esc(cpLabel(r.cp)) + "</span>" + chip(r.status) +
+    (fa ? '<span class="tst ' + st + '">' + TSTATE[st] + "</span>" : "") + "</div>" +
+    '<p class="src">來源：' + esc(r.cite) + "</p>" + (r.note ? '<p class="nq">' + esc(r.note) + "</p>" : "");
+}
+function renderNote() {
+  var el = $("#notePanel"), h;
+  if (!S.sel) {
+    h = '<p class="nt-crumb">水口 vault /</p><h2 class="nt-title">未開啟筆記</h2><p class="blurb">在圖上點選一個圓點，或在變化紀錄中點一條關係，這裡就會開啟對應的筆記：性質、向外的連結（Links）與反向連結（Backlinks），每條關係標明所屬年代和此刻的狀態。</p>';
+  } else {
+    var n = N[S.sel], k = KC[n.kind], fa = filterActive();
+    var cps = SPECIES_CP[n.id] ? D.checkpoints.filter(function (c) { return c.species === SPECIES_CP[n.id]; }) : [];
+    var cls = function (r) { return fa && relState(r).split(" ")[0] !== "on" ? ' class="dimrel"' : ""; };
+    var cal = D.calendar.filter(function (a) { return a.node === n.id; });
+    h = '<div class="nt-top"><p class="nt-crumb">水口 vault / ' + esc(k.zh) + ' /</p><button type="button" class="nt-x" id="ntClose">關閉</button></div>' +
+      '<h2 class="nt-title" tabindex="-1">' + esc(n.zh) + "</h2>" +
+      '<dl class="props"><div><dt>kind</dt><dd><span class="kd" style="--kc:' + k.c + '"></span>' + esc(k.zh) + "</dd></div>" +
+      (n.en ? "<div><dt>en</dt><dd>" + esc(n.en) + "</dd></div>" : "") +
+      (n.sci ? "<div><dt>學名</dt><dd><i>" + esc(n.sci) + "</i></dd></div>" : "") +
+      (cps.length ? "<div><dt>檢查點</dt><dd>" + cps.map(function (c) { return '<span class="cpx">' + esc(c.id + " " + (c.label || PLACE[c.place].zh)) + "</span>"; }).join("") + "</dd></div>" : "") +
+      (cal.length ? "<div><dt>季節</dt><dd>" + cal.map(function (a) { return esc(a.zh) + "（" + esc(termRange(a)) + "）"; }).join("；") + "</dd></div>" : "") +
+      '<div><dt>tags</dt><dd><span class="tagx">#' + esc(k.zh) + "</span>" + (n.main ? '<span class="tagx">#主角</span>' : "") + "</dd></div></dl>" +
+      '<p class="blurb">' + esc(n.blurb) + "</p>" +
+      '<section class="nt-sec"><h3><span>Links</span><span class="ct">' + n.out.length + "</span></h3>" +
+      (n.out.length ? '<ul class="rl">' + n.out.map(function (r) {
+        return "<li" + cls(r) + '><div class="ln"><span class="fld">' + esc(r.verb) + "::</span> " + wl(r.to) + "</div>" + relMeta(r) + "</li>";
+      }).join("") + "</ul>" : '<p class="none">這則筆記沒有向外的連結。</p>') + "</section>" +
+      '<section class="nt-sec"><h3><span>Backlinks</span><span class="ct">' + n.inc.length + "</span></h3>" +
+      (n.inc.length ? '<ul class="rl">' + n.inc.map(function (r) {
+        return "<li" + cls(r) + '><div class="ln">' + wl(r.from) + '</div><p class="ctx"><span class="fld">' + esc(r.verb) + "::</span> [[" + esc(n.zh) + "]]</p>" + relMeta(r) + "</li>";
+      }).join("") + "</ul>" : '<p class="none">沒有其他筆記連到這裡。</p>') + "</section>";
+  }
+  el.innerHTML = h;
+  var x = $("#ntClose"); if (x) x.onclick = function () { select(null); setTab("log"); };
+}
+$("#notePanel").addEventListener("click", function (e) { var b = e.target.closest(".wl"); if (b) focusNode(b.dataset.id); });
+
+/* ---------- 設定抽屜 ---------- */
+$("#groups").innerHTML = KINDS.map(function (k) {
+  var c = nodes.filter(function (n) { return n.kind === k.id; }).length;
+  return '<li class="row"><span class="k"><i style="background:' + k.c + '"></i><label for="g_' + k.id + '">' + k.zh + "</label> <small>" + c + '</small></span><input type="checkbox" class="sw" role="switch" id="g_' + k.id + '" value="' + k.id + '" checked></li>';
+}).join("");
+$("#groups").addEventListener("change", function (e) { if (e.target.checked) S.kinds.add(e.target.value); else S.kinds.delete(e.target.value); refresh(0.4); });
+$("#q").addEventListener("input", function (e) { S.q = e.target.value; refresh(0.4); });
+$("#orph").addEventListener("change", function (e) { S.orphans = e.target.checked; refresh(0.3); });
+$("#local").addEventListener("change", function (e) { S.local = e.target.checked; refresh(0.5); });
+$$('input[name="depth"]').forEach(function (r) { r.addEventListener("change", function () { S.depth = +r.value; refresh(0.5); }); });
+$("#arrows").addEventListener("change", function (e) { S.arrows = e.target.checked; svg.classed("noarrow", S.mode === "A" && !S.arrows); });
+function bindRange(id, key, fmt, after) {
+  var el = $("#" + id), o = $("#" + id + "O");
+  var set = function () { S[key] = +el.value; o.textContent = fmt(S[key]); };
+  set(); el.addEventListener("input", function () { set(); after(); });
+}
+bindRange("fade", "fade", function (v) { return v.toFixed(1); }, labels);
+bindRange("dist", "dist", function (v) { return v; }, function () { setForces(); if (!RM.matches) sim.alpha(0.4).restart(); });
+bindRange("repel", "repel", function (v) { return v; }, function () { setForces(); if (!RM.matches) sim.alpha(0.4).restart(); });
+if (WIDE.matches) $("#legend").open = true;
+
+/* ---------- 啟動 ---------- */
+svg.classed("modeB", true).classed("modeA", false);
+$("#arrows").disabled = true; $("#arrowNote").textContent = "改良版固定顯示箭頭（關係有方向）。";
+measure(); seed(); buildLegend();
+refresh(false);
+for (var i = 0; i < (RM.matches ? 300 : 160); i++) sim.tick();
+ticked(); fit(false);
+setEra(-1);
+$("#termR").value = S.term;
+renderNote();
+if (!RM.matches) sim.alpha(0.2).restart();
+
+var lastW = W, lastH = H;
+new ResizeObserver(function () {
+  var st = $("#stage");
+  if (Math.abs(st.clientWidth - lastW) < 30 && Math.abs(st.clientHeight - lastH) < 30) return;
+  lastW = st.clientWidth; lastH = st.clientHeight;
+  measure(); paint();
+  if (RM.matches) { for (var i = 0; i < 200; i++) sim.tick(); ticked(); } else sim.alpha(0.35).restart();
+  setTimeout(function () { fit(true); }, RM.matches ? 0 : 700);
+}).observe($("#stage"));
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,44 @@
+/* 水口方案 sample 共用樣式：與參考頁同一套色彩與字體 token */
+@import url("https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@600;800&family=Noto+Sans+TC:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap");
+
+:root{
+  --bg:#F2F3EE; --surface:#FAFBF7; --fg:#1D2420; --muted:#5B6660; --line:#CED4CB;
+  --tide:#1F6B66; --tide-soft:#DCEBE8; --conflict:#A3412C; --conflict-soft:#F3E2DC; --unverified:#8A6A12;
+  --c-rice:#B8891A; --c-cattle:#9A5B2C; --c-buffalo:#3E4A56; --c-human:#1D2420; --c-clam:#C07A86; --c-visitor:#7D6AA6; --c-club:#3D8A4C; --c-tide:#1F6B66;
+  --f-display:"Noto Serif TC","Songti TC","PMingLiU",serif;
+  --f-body:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#111614; --surface:#18201D; --fg:#E2E7E1; --muted:#9AA79F; --line:#2E3934;
+  --tide:#62B8AE; --tide-soft:#1C3330; --conflict:#E08A73; --conflict-soft:#3A221C; --unverified:#D8B455;
+  --c-rice:#DDB04A; --c-cattle:#D08A55; --c-buffalo:#9FB0C0; --c-human:#E2E7E1; --c-clam:#E4A0AC; --c-visitor:#B3A2DA; --c-club:#79C488; --c-tide:#62B8AE;
+  color-scheme:dark}}
+
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:16px;line-height:1.7}
+h1,h2,h3{font-family:var(--f-display);text-wrap:balance;line-height:1.3;margin:0}
+a{color:var(--tide);text-underline-offset:3px}
+button{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--tide);outline-offset:2px}
+.mono{font-family:var(--f-mono)}
+
+/* 頂部說明列：每個 sample 必須有 */
+.sample-bar{position:sticky;top:0;z-index:50;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;
+  padding:8px 16px;padding-top:calc(8px + env(safe-area-inset-top,0px));background:var(--fg);color:var(--bg);font-size:.82rem}
+.sample-bar a{color:var(--bg);text-decoration:none;font-weight:700}
+.sample-bar .tag{font-family:var(--f-mono);font-size:.74rem;padding:0 7px;border:1px solid currentColor;border-radius:3px;opacity:.85}
+.sample-bar .sp{flex:1}
+.sample-bar nav{display:flex;gap:4px}
+.sample-bar nav a{font-family:var(--f-mono);font-weight:500;padding:0 6px;border-radius:3px;opacity:.7}
+.sample-bar nav a[aria-current="page"]{opacity:1;background:var(--bg);color:var(--fg)}
+
+/* 狀態標籤 */
+.st{font-size:.74rem;padding:0 7px;border-radius:3px;white-space:nowrap}
+.st.observed,.st.consensus{background:var(--tide-soft);color:var(--tide)}
+.st.oral,.st.check,.st.pending{border:1px dashed var(--unverified);color:var(--unverified)}
+.st.conflict{background:var(--conflict-soft);color:var(--conflict)}
+.simulated{font-size:.76rem;color:var(--unverified);border:1px dashed var(--unverified);padding:1px 8px;border-radius:3px;display:inline-block}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}

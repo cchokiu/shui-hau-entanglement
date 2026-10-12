@@ -1,0 +1,701 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>路徑，或者自由漫遊</title>
+<link rel="stylesheet" href="shared.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<style>
+/* 方案 03：左邊（或上方）是地圖，右邊（或下方）是逐站揭示的面板。
+   檢查點編號用等寬字，是團隊自己的「行話」；虛線只代表次序，不代表實際路線。 */
+[hidden]{display:none!important}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.muted{color:var(--muted)}
+.intro{max-width:46rem;margin:0 auto;padding:28px 16px 22px}
+.intro .eyebrow{font-family:var(--f-mono);font-size:.76rem;letter-spacing:.06em;color:var(--muted);margin:0 0 .4rem}
+.intro h1{font-size:clamp(1.9rem,6vw,2.6rem);font-weight:800;letter-spacing:.02em}
+.intro p{margin:.7rem 0 0;max-width:42rem}
+.intro .build{font-size:.88rem;color:var(--muted);border-left:3px solid var(--line);padding-left:12px;margin-top:1rem}
+.intro .build b{color:var(--fg);font-weight:700}
+
+/* ---------- stage ---------- */
+.stage{border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:var(--surface)}
+.map-wrap{position:relative;isolation:isolate;height:46svh;min-height:270px;max-height:440px}
+#map{position:absolute;inset:0}
+/* 底圖載入前／失敗時的設計底色：測量紙點格 + 潮線 */
+#map,.leaflet-container{background-color:var(--bg);
+  background-image:radial-gradient(circle,var(--line) 1px,transparent 1.4px);
+  background-size:18px 18px;font-family:var(--f-body)}
+.map-overlays{position:absolute;left:10px;bottom:24px;z-index:650;display:flex;flex-direction:column;align-items:flex-start;gap:6px;max-width:calc(100% - 20px);pointer-events:none}
+.map-key,.map-note{font-size:.74rem;line-height:1.45;background:var(--surface);color:var(--muted);border:1px solid var(--line);border-radius:3px;padding:3px 8px}
+.map-key svg{vertical-align:middle;margin-right:5px}
+.map-note{color:var(--unverified);border-style:dashed;border-color:var(--unverified)}
+.tiles-off .leaflet-tile-pane{opacity:0}
+
+.panel{position:relative;z-index:1;margin-top:-14px;background:var(--surface);border-top:1px solid var(--line);border-radius:14px 14px 0 0;padding:6px 16px 28px}
+.panel::before{content:"";display:block;width:38px;height:4px;border-radius:2px;background:var(--line);margin:4px auto 10px}
+@media (min-width:900px){
+  .stage{display:grid;grid-template-columns:minmax(0,1fr) 410px;height:calc(100svh - var(--barh,38px));min-height:600px;max-height:900px}
+  .map-wrap{height:auto;max-height:none}
+  .map-overlays{bottom:12px}
+  .panel{margin-top:0;border-radius:0;border-top:0;border-left:1px solid var(--line);overflow-y:auto;padding:0 24px 32px}
+  .panel::before{display:none}
+}
+
+/* dark mode：只保留 CARTO light 底圖，用濾鏡轉暗 */
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .leaflet-tile-pane{filter:invert(1) hue-rotate(180deg) brightness(.82) contrast(.88) saturate(.6)}}
+
+/* ---------- leaflet 細節 ---------- */
+.leaflet-control-attribution{background:color-mix(in srgb,var(--surface) 85%,transparent)!important;color:var(--muted)!important;font-size:10px!important}
+.leaflet-control-attribution a{color:var(--muted)!important}
+.leaflet-bar a{background:var(--surface);color:var(--fg);border-bottom-color:var(--line)}
+.leaflet-bar{border:1px solid var(--line)!important;box-shadow:none!important}
+.leaflet-popup-content-wrapper,.leaflet-popup-tip{background:var(--surface);color:var(--fg);box-shadow:0 1px 0 var(--line);border:1px solid var(--line)}
+.leaflet-popup-content-wrapper{border-radius:4px}
+.leaflet-popup-content{margin:12px 14px;font-size:.86rem;line-height:1.55}
+.leaflet-container a.leaflet-popup-close-button{color:var(--muted)}
+.leaflet-marker-icon:focus-visible{outline:2px solid var(--tide);outline-offset:2px}
+
+.stopm{display:grid;place-items:center;width:100%;height:100%;border-radius:50%;border:2px solid var(--c);background:var(--surface);color:var(--fg);font-family:var(--f-mono);font-size:.78rem;font-weight:500}
+.stopm.done{background:color-mix(in srgb,var(--c) 22%,var(--surface))}
+.stopm.now{background:var(--c);color:var(--surface);font-size:.95rem;box-shadow:0 0 0 4px color-mix(in srgb,var(--c) 22%,transparent)}
+.stopm.now::after{content:"";position:absolute;inset:-9px;border-radius:50%;border:1.5px solid var(--c);animation:ring 2.4s ease-out infinite}
+@keyframes ring{from{transform:scale(.7);opacity:.9}to{transform:scale(1.35);opacity:0}}
+.cpm{display:inline-flex;align-items:center;gap:4px;height:22px;padding:0 7px 0 5px;border-radius:11px;border:1.5px solid var(--c);background:var(--surface);color:var(--fg);font-family:var(--f-mono);font-size:.72rem;white-space:nowrap;cursor:pointer}
+.cpm i{width:8px;height:8px;border-radius:50%;background:var(--c)}
+
+/* ---------- panel 共用 ---------- */
+.crumbs{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:.84rem;padding:4px 0 10px;border-bottom:1px solid var(--line)}
+.crumbs .sp{flex:1}
+.linkbtn{background:none;border:0;padding:6px 2px;color:var(--tide);cursor:pointer;text-decoration:underline;text-underline-offset:3px;min-height:36px}
+.kicker{font-family:var(--f-mono);font-size:.76rem;color:var(--muted);margin:16px 0 4px;letter-spacing:.03em}
+.panel h2{font-size:1.45rem;font-weight:800}
+.lede{margin:.5rem 0 0;color:var(--muted);font-size:.94rem}
+
+/* start */
+.trail-list{list-style:none;margin:18px 0 0;padding:0;border-top:1px solid var(--fg)}
+.trail-list li{border-bottom:1px solid var(--line)}
+.trail-opt{display:grid;grid-template-columns:96px 1fr;gap:14px;width:100%;text-align:left;background:none;border:0;padding:16px 4px;cursor:pointer;align-items:start}
+.trail-opt:hover .t-title,.trail-opt:focus-visible .t-title{text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:4px}
+.trail-opt svg{width:96px;height:72px;border:1px solid var(--line);background:var(--bg);border-radius:2px}
+.t-meta{display:block;font-family:var(--f-mono);font-size:.72rem;color:var(--muted)}
+.t-title{display:block;font-family:var(--f-display);font-weight:800;font-size:1.16rem;line-height:1.35;margin:2px 0 4px}
+.t-intro{display:block;font-size:.88rem;line-height:1.6;color:var(--fg)}
+.t-go{display:inline-block;margin-top:6px;font-size:.82rem;color:var(--tide);font-weight:700}
+.roam{margin-top:20px;padding:14px 0 0;border-top:1px dashed var(--line)}
+.roam-btn{display:inline-flex;align-items:center;gap:10px;background:none;border:1.5px solid var(--fg);border-radius:3px;padding:9px 16px;font-weight:700;cursor:pointer;min-height:44px}
+.roam-btn:hover{background:var(--fg);color:var(--surface)}
+.roam p{margin:.5rem 0 0;font-size:.84rem;color:var(--muted)}
+.today{display:flex;flex-wrap:wrap;gap:4px 12px;margin-top:22px;font-size:.8rem;color:var(--muted)}
+
+/* trail */
+.stepper{position:sticky;top:0;z-index:2;background:var(--surface);padding:12px 0 12px;border-bottom:1px solid var(--line)}
+@media (max-width:899px){.stepper{top:var(--barh,38px)}}
+.step-row{display:flex;align-items:center;gap:12px}
+.count{display:flex;align-items:baseline;gap:5px;min-width:5.2rem}
+.count .num{font-family:var(--f-display);font-weight:800;font-size:2rem;line-height:1;color:var(--lead)}
+.count .of{font-family:var(--f-mono);font-size:.82rem;color:var(--muted)}
+.prog{list-style:none;display:flex;gap:4px;margin:0;padding:0;flex:1}
+.prog li{flex:1}
+.prog button{display:block;width:100%;height:22px;padding:0;border:0;background:none;cursor:pointer;position:relative}
+.prog button::before{content:"";position:absolute;left:0;right:0;top:9px;height:4px;border-radius:2px;background:var(--line)}
+.prog button.done::before{background:color-mix(in srgb,var(--lead) 45%,var(--line))}
+.prog button[aria-current="step"]::before{background:var(--lead);top:7px;height:8px}
+.navbtns{display:flex;gap:8px;margin-top:10px}
+.nb{flex:1;display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;border-radius:3px;border:1.5px solid var(--fg);background:none;cursor:pointer;font-weight:700;font-size:.92rem}
+.nb.next{background:var(--fg);color:var(--surface)}
+.nb:disabled{opacity:.35;cursor:default}
+.stop .cp{font-family:var(--f-mono);font-size:.78rem;color:var(--muted);margin:16px 0 2px}
+.stop .cp b{color:var(--fg);font-weight:500}
+.stop h2:focus{outline:none}
+.stop h2:focus-visible{outline:2px solid var(--tide)}
+.stop p.txt{margin:.6rem 0 0}
+.tide-strip{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;margin-top:12px;padding:8px 10px;border-left:3px solid var(--tide);background:var(--tide-soft);font-size:.84rem;line-height:1.5}
+.tide-strip svg{flex:none}
+
+/* 媒體預留框：取景框角 + 類型 */
+.media{margin:16px 0 0}
+.frame{position:relative;aspect-ratio:16/9;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:28px 18px;text-align:center;
+  background:
+   linear-gradient(var(--fg),var(--fg)) left 8px top 8px/14px 1.5px no-repeat,
+   linear-gradient(var(--fg),var(--fg)) left 8px top 8px/1.5px 14px no-repeat,
+   linear-gradient(var(--fg),var(--fg)) right 8px top 8px/14px 1.5px no-repeat,
+   linear-gradient(var(--fg),var(--fg)) right 8px top 8px/1.5px 14px no-repeat,
+   linear-gradient(var(--fg),var(--fg)) left 8px bottom 8px/14px 1.5px no-repeat,
+   linear-gradient(var(--fg),var(--fg)) left 8px bottom 8px/1.5px 14px no-repeat,
+   linear-gradient(var(--fg),var(--fg)) right 8px bottom 8px/14px 1.5px no-repeat,
+   linear-gradient(var(--fg),var(--fg)) right 8px bottom 8px/1.5px 14px no-repeat,
+   repeating-linear-gradient(135deg,transparent 0 9px,color-mix(in srgb,var(--line) 55%,transparent) 9px 10px),
+   var(--bg);
+  border:1px solid var(--line)}
+.frame.audio{aspect-ratio:auto;min-height:132px}
+.frame .kind{position:absolute;top:10px;left:30px;font-family:var(--f-mono);font-size:.7rem;color:var(--muted);letter-spacing:.04em}
+.frame .tc{position:absolute;bottom:10px;right:30px;font-family:var(--f-mono);font-size:.7rem;color:var(--muted)}
+.frame .cap{font-family:var(--f-display);font-weight:600;font-size:.98rem;max-width:22rem;line-height:1.45}
+.frame svg{color:var(--fg);opacity:.75}
+
+/* 在這裡遇見 */
+.meet{margin-top:20px}
+.meet h3,.rels h3{font-size:.95rem;font-weight:600;font-family:var(--f-body);margin-bottom:8px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{display:inline-flex;align-items:center;gap:7px;min-height:36px;padding:4px 12px 4px 9px;border:1px solid var(--line);border-radius:18px;background:var(--surface);cursor:pointer;font-size:.9rem}
+.chip i{width:10px;height:10px;border-radius:50%;background:var(--c)}
+.chip[aria-expanded="true"]{border-color:var(--fg);background:var(--bg);font-weight:700}
+.blurb{margin-top:8px;padding:10px 12px;border-left:3px solid var(--c,var(--line));background:var(--bg);font-size:.88rem;line-height:1.6}
+.blurb b{font-family:var(--f-display)}
+.blurb .sci{font-style:italic;color:var(--muted);margin-left:6px;font-size:.82rem}
+.blurb p{margin:.25rem 0 0}
+
+/* 關係（popup 與面板共用） */
+details.rels{margin-top:18px;border-top:1px solid var(--line);padding-top:8px}
+details.rels summary{cursor:pointer;font-size:.88rem;font-weight:700;padding:6px 0;min-height:36px}
+.rel-list{list-style:none;margin:6px 0 0;padding:0}
+.rel-list li{padding:8px 0;border-top:1px dashed var(--line)}
+.rel-list li:first-child{border-top:0}
+.rel-line{display:flex;flex-wrap:wrap;align-items:center;gap:4px 6px;font-weight:700}
+.rel-line .verb{font-weight:400;font-size:.76rem;padding:0 6px;border:1px solid var(--line);border-radius:3px;color:var(--muted)}
+.rel-line .verb::before{content:"— "}.rel-line .verb::after{content:" →"}
+.rel-meta{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;margin-top:3px;font-size:.76rem;color:var(--muted)}
+.rel-note{margin:.2rem 0 0;font-size:.84rem}
+.pop-h{display:flex;align-items:baseline;gap:8px;padding-bottom:6px;border-bottom:1px solid var(--line);margin-bottom:6px}
+.pop-h .code{font-family:var(--f-mono);font-weight:500;font-size:1rem}
+.pop-h b{font-family:var(--f-display);font-size:1rem}
+.pop-sp{display:flex;align-items:center;gap:6px;font-size:.78rem;color:var(--muted)}
+.pop-sp i{width:9px;height:9px;border-radius:50%;background:var(--c)}
+.pop-empty{color:var(--muted);font-size:.82rem;margin:.4rem 0 0}
+.pop-trails{margin-top:8px;padding-top:6px;border-top:1px solid var(--line);font-size:.8rem}
+.pop-trails button{display:block;background:none;border:0;padding:3px 0;color:var(--tide);text-decoration:underline;text-underline-offset:3px;cursor:pointer;text-align:left;font-size:.82rem}
+
+/* 路線完結 */
+.trail-end{margin-top:22px;padding:16px 0 0;border-top:2px solid var(--fg)}
+.trail-end h3{font-size:1.1rem;margin:2px 0 10px}
+.trail-end .nb{width:100%;margin-top:8px;flex:none}
+.keyhint{font-size:.76rem;color:var(--muted);margin-top:18px}
+kbd{font-family:var(--f-mono);font-size:.74rem;border:1px solid var(--line);border-bottom-width:2px;border-radius:3px;padding:0 5px;background:var(--bg)}
+
+/* free */
+.legend{border:0;margin:16px 0 0;padding:0}
+.legend legend{font-size:.84rem;font-weight:700;padding:0;margin-bottom:8px}
+.legend .chips{gap:6px}
+.lg{display:inline-flex;align-items:center;gap:7px;min-height:38px;padding:4px 12px 4px 9px;border:1.5px solid var(--c);border-radius:19px;background:color-mix(in srgb,var(--c) 12%,var(--surface));cursor:pointer;font-size:.88rem}
+.lg i{width:11px;height:11px;border-radius:50%;background:var(--c)}
+.lg .n{font-family:var(--f-mono);font-size:.74rem;color:var(--muted)}
+.lg[aria-pressed="false"]{background:none;border-style:dashed;border-color:var(--line);color:var(--muted)}
+.lg[aria-pressed="false"] i{background:none;border:1.5px solid var(--c)}
+.cplist{list-style:none;margin:18px 0 0;padding:0;border-top:1px solid var(--fg)}
+.cplist li{border-bottom:1px solid var(--line)}
+.cplist button{display:grid;grid-template-columns:3.2rem 1fr auto;gap:8px;align-items:baseline;width:100%;background:none;border:0;padding:9px 2px;text-align:left;cursor:pointer;font-size:.9rem}
+.cplist button:hover{background:var(--bg)}
+.cplist .code{font-family:var(--f-mono);display:flex;align-items:center;gap:6px}
+.cplist .code i{width:9px;height:9px;border-radius:50%;background:var(--c);flex:none}
+.cplist .cnt{font-family:var(--f-mono);font-size:.72rem;color:var(--muted)}
+.detail{margin-top:14px;padding:12px;border:1px solid var(--line);background:var(--bg)}
+
+/* SVG 後備示意圖 */
+.svgmap svg{position:absolute;inset:0;width:100%;height:100%}
+.svgmap text{font-family:var(--f-mono);font-size:11px;fill:var(--fg)}
+.svgmap [role="button"]{cursor:pointer}
+.svgmap [role="button"]:focus{outline:none}
+.svgmap [role="button"]:focus-visible circle,.svgmap [role="button"]:focus-visible rect{stroke:var(--tide);stroke-width:3}
+
+/* 導賞 */
+.guide{max-width:46rem;margin:0 auto;padding:30px 16px 64px}
+.guide h2{font-size:1.3rem;font-weight:800}
+.guide ol{margin:14px 0 0;padding:0;list-style:none;counter-reset:g}
+.guide li{counter-increment:g;display:grid;grid-template-columns:2rem 1fr;gap:8px;padding:10px 0;border-top:1px solid var(--line);font-size:.94rem}
+.guide li::before{content:counter(g,decimal-leading-zero);font-family:var(--f-mono);font-size:.8rem;color:var(--muted);padding-top:3px}
+.guide li b{font-weight:700}
+.guide .simulated{margin-left:2px}
+
+@media (prefers-reduced-motion:reduce){.stopm.now::after{display:none}}
+</style>
+</head>
+<body>
+<header class="sample-bar"><a href="../index.html">← 回到參考頁</a><span class="tag">方案 03 · 示意 sample</span><span class="sp"></span>
+<nav aria-label="其他方案"><a href="c1.html">01</a><a href="c2.html">02</a><a href="c3.html" aria-current="page">03</a><a href="c4.html">04</a><a href="c5.html">05</a><a href="c6.html">06</a><a href="c7.html">07</a><a href="c8.html">08</a></nav></header>
+
+<section class="intro">
+  <p class="eyebrow">方案 03 · 參考 Storying Extinction（University of Idaho）</p>
+  <h1>路徑，或者自由漫遊</h1>
+  <p>兩條策展路徑按次序逐站揭示，沿途遇見未列為重點的生命；不想跟次序的人，可以跳過路徑，直接在地圖上打開全部檢查點。正式版會在每站放入紅外線片段與訪談影片，並加入現場定位與離線底圖，讓導賞員直接帶到水口使用。</p>
+  <p class="build"><b>Webflow 做法：</b>路徑、站點、檢查點、物種、關係用 CMS Collection（原生，可由團隊直接編輯）；地圖、逐站切換與鍵盤操作以 Code Embed 載入 Leaflet，讀取頁面上隱藏 Collection List 輸出的資料。</p>
+</section>
+
+<main class="stage" id="stage">
+  <div class="map-wrap" id="mapWrap">
+    <div id="map" role="region" aria-label="水口檢查點地圖"></div>
+    <div class="map-overlays">
+      <span class="map-key" id="mapKey" hidden><svg width="28" height="6" aria-hidden="true"><line x1="0" y1="3" x2="28" y2="3" stroke="currentColor" stroke-width="2" stroke-dasharray="5 4"/></svg>示意連線：只表示站點次序，並非實際行走路線</span>
+      <span class="map-note" id="mapNote" hidden></span>
+    </div>
+  </div>
+  <aside class="panel" id="panel" aria-label="路徑與檢查點"></aside>
+</main>
+<p class="sr-only" aria-live="polite" id="live"></p>
+
+<section class="guide" aria-labelledby="guideH">
+  <h2 id="guideH">導賞員現場使用</h2>
+  <ol>
+    <li><span><b>出發前</b>在有網絡的地方把路線瀏覽一次，讓底圖留在瀏覽器暫存。水口部分位置訊號不穩；底圖載入失敗時，檢查點、編號與連線仍會顯示，可照常帶隊。</span></li>
+    <li><span><b>每到一站</b>按「下一站」，或用鍵盤 <kbd>←</kbd> <kbd>→</kbd>；投影時多數翻頁器送出的按鍵（<kbd>PgUp</kbd> <kbd>PgDn</kbd>）亦可切換。</span></li>
+    <li><span><b>泥灘站（4.4、3.5）</b>要配合退潮。頁面上的潮位是<span class="simulated">模擬資料</span>，出發前請以天文台潮汐預報為準。</span></li>
+    <li><span><b>預存某一站：</b>網址會記住目前位置（例如 <span class="mono">#trail=buffalo&amp;stop=4</span>），可預先把連結存在手機。</span></li>
+    <li><span><b>收集補充：</b>參加者遇見清單以外的生命，請記下檢查點編號與時間交回團隊；未核實的說法日後以「村民口述」等標籤公開，不會當作定論。</span></li>
+  </ol>
+</section>
+
+<script src="data.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+(function(){
+"use strict";
+var D = window.SHUIHAU;
+var panel = document.getElementById("panel");
+var mapEl = document.getElementById("map");
+var live = document.getElementById("live");
+var mapKey = document.getElementById("mapKey");
+var mapNote = document.getElementById("mapNote");
+
+/* ---------- 查表 ---------- */
+function byId(arr){ var o = {}; arr.forEach(function(x){ o[x.id] = x; }); return o; }
+var nodeById = byId(D.nodes), cpById = byId(D.checkpoints), placeById = byId(D.places), trailById = byId(D.trails);
+var SPECIES = ["clam","buffalo","cattle","rice","human"];
+function spNode(sp){ return nodeById[sp === "human" ? "villager" : sp]; }
+function spLabel(sp){ return sp === "human" ? "人（村民）" : spNode(sp).zh; }
+function tok(name){ return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+function spColor(sp){ return tok(spNode(sp).color); }
+function nodeColor(id){ var n = nodeById[id]; return tok(n ? n.color : "--muted"); }
+function nodeZh(id){ var n = nodeById[id]; return n ? n.zh : id; }
+function cpPlace(c){ return c.label || placeById[c.place].zh; }
+function relsAt(id){ return D.relations.filter(function(r){ return r.cp === id; }); }
+function esc(s){ return String(s).replace(/[&<>"]/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]; }); }
+function pad2(n){ return (n < 10 ? "0" : "") + n; }
+var STATUS = { observed:"研究員觀察", oral:"村民口述・未核實", consensus:"多人口述一致", check:"待科學核實", conflict:"爭議", pending:"待補充" };
+var reduceMQ = matchMedia("(prefers-reduced-motion: reduce)");
+
+/* ---------- 時間：節氣與模擬潮汐 ---------- */
+function hkParts(d){
+  var f = new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Hong_Kong",year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",hour12:false});
+  var p = {}; f.formatToParts(d).forEach(function(x){ p[x.type] = x.value; }); return p;
+}
+function solarTermToday(){
+  var p = hkParts(new Date()), md = p.month + "-" + p.day, best = 21, bestMd = "";
+  D.solarTermDates2026.forEach(function(d, i){ if (d <= md && d >= bestMd){ best = i; bestMd = d; } });
+  return { name: D.solarTerms[best], date: p.year + "-" + md };
+}
+function tideInfo(now){
+  var T = D.tide, ref = new Date(T.lowTideRef).getTime(), P = T.periodHours * 3600e3;
+  var ph = (now - ref) / P, h = T.meanM - T.ampM * Math.cos(2 * Math.PI * ph);
+  var next = new Date(ref + Math.ceil(ph) * P), p = hkParts(next);
+  return { h: h, low: h <= T.lowThresholdM, next: (p.hour === "24" ? "00" : p.hour) + ":" + p.minute };
+}
+
+/* ---------- 狀態與網址 ---------- */
+var S = { mode:"start", trail:null, idx:0, hidden:{}, hover:null, openNode:null };
+function writeHash(){
+  var h = S.mode === "trail" ? "#trail=" + S.trail + "&stop=" + (S.idx + 1) : S.mode === "free" ? "#free" : "";
+  try { history.replaceState(null, "", h || location.pathname + location.search); } catch(e){}
+}
+function readHash(){
+  var h = location.hash.slice(1);
+  if (h === "free") return { mode:"free" };
+  var m = /trail=([a-z]+)(?:&stop=(\d+))?/.exec(h);
+  if (m && trailById[m[1]]){
+    var n = trailById[m[1]].stops.length, i = Math.min(Math.max(parseInt(m[2] || "1", 10) - 1, 0), n - 1);
+    return { mode:"trail", trail:m[1], idx:i };
+  }
+  return { mode:"start" };
+}
+
+/* ---------- 共用 HTML 片段 ---------- */
+function relHtml(r){
+  return '<li><div class="rel-line"><span>' + esc(nodeZh(r.from)) + '</span><span class="verb">' + esc(r.verb) + '</span><span>' + esc(nodeZh(r.to)) + '</span></div>' +
+    '<div class="rel-meta"><span class="st ' + r.status + '">' + STATUS[r.status] + '</span><span>' + esc(r.period) + '</span><span>來源：' + esc(r.source) + '</span></div>' +
+    (r.note ? '<p class="rel-note">' + esc(r.note) + '</p>' : '') + '</li>';
+}
+function cpHtml(id){
+  var c = cpById[id], rels = relsAt(id), h = '';
+  h += '<div class="pop-h"><span class="code">' + esc(c.id) + '</span><b>' + esc(cpPlace(c)) + '</b></div>';
+  h += '<div class="pop-sp" style="--c:' + spColor(c.species) + '"><i></i>' + esc(spLabel(c.species)) + '的檢查點</div>';
+  if (c.alt) h += '<p class="pop-empty">另有一個記錄位置：' + esc(c.alt.label) + '（地圖上的空心圈）。</p>';
+  h += rels.length ? '<ul class="rel-list">' + rels.map(relHtml).join("") + '</ul>'
+                   : '<p class="pop-empty">這個檢查點暫未有已整理的關係紀錄。</p>';
+  var via = [];
+  D.trails.forEach(function(t){ t.stops.forEach(function(s, i){ if (s.cp === id) via.push('<button type="button" data-trail="' + t.id + '" data-stop="' + i + '">走路徑：' + esc(t.zh) + '（第 ' + (i + 1) + ' 站）</button>'); }); });
+  if (via.length) h += '<div class="pop-trails">' + via.join("") + '</div>';
+  return '<div class="pop">' + h + '</div>';
+}
+function hash(s){ var h = 2166136261; for (var i = 0; i < s.length; i++){ h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
+function mediaHtml(str){
+  var i = str.indexOf("："), kind = i > 0 ? str.slice(0, i) : "媒體", cap = i > 0 ? str.slice(i + 1) : str;
+  var audio = kind === "錄音" || kind === "聲音", glyph;
+  if (audio){
+    var seed = hash(str), bars = "";
+    for (var b = 0; b < 46; b++){ seed = (Math.imul(seed, 1103515245) + 12345) >>> 0; var v = 3 + (seed % 1000) / 1000 * 16 * (0.45 + 0.55 * Math.abs(Math.sin(b / 6))); bars += '<rect x="' + (b * 5) + '" y="' + (20 - v).toFixed(1) + '" width="2.4" height="' + (v * 2).toFixed(1) + '" rx="1"/>'; }
+    glyph = '<svg width="230" height="40" viewBox="0 0 230 40" fill="currentColor" aria-hidden="true">' + bars + '</svg>';
+  } else if (kind === "影片"){
+    glyph = '<svg width="44" height="44" viewBox="0 0 44 44" aria-hidden="true"><circle cx="22" cy="22" r="20" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M18 14v16l12-8z" fill="currentColor"/></svg>';
+  } else {
+    glyph = '<svg width="44" height="44" viewBox="0 0 44 44" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="22" cy="22" r="9"/><path d="M22 4v10M22 30v10M4 22h10M30 22h10"/></svg>';
+  }
+  return '<figure class="media"><div class="frame' + (audio ? ' audio' : '') + '" role="img" aria-label="' + esc(kind + "（待上載）：" + cap) + '">' +
+    '<span class="kind">' + esc(kind) + ' · 待上載</span>' + glyph + '<span class="cap">' + esc(cap) + '</span>' +
+    '<span class="tc">' + (audio || kind === "影片" ? "00:00 / --:--" : "原始檔待整理") + '</span></div></figure>';
+}
+
+/* 路徑小地圖（起點頁用） */
+var allPts = [];
+D.checkpoints.forEach(function(c){ allPts.push([c.lat, c.lng]); if (c.alt) allPts.push([c.alt.lat, c.alt.lng]); });
+var KX = Math.cos(D.meta.center[0] * Math.PI / 180);
+var BB = allPts.reduce(function(b, p){ var x = p[1] * KX, y = p[0]; return [Math.min(b[0], x), Math.min(b[1], y), Math.max(b[2], x), Math.max(b[3], y)]; }, [Infinity, Infinity, -Infinity, -Infinity]);
+function projector(W, H, pad){
+  var sx = BB[2] - BB[0], sy = BB[3] - BB[1], s = Math.min((W - 2 * pad) / sx, (H - 2 * pad) / sy);
+  var ox = (W - sx * s) / 2, oy = (H - sy * s) / 2;
+  return function(lat, lng){ return [ox + (lng * KX - BB[0]) * s, oy + (BB[3] - lat) * s]; };
+}
+function sketch(t){
+  var P = projector(96, 72, 9), col = "var(" + nodeById[t.lead].color + ")", h = '';
+  D.checkpoints.forEach(function(c){ var p = P(c.lat, c.lng); h += '<circle cx="' + p[0].toFixed(1) + '" cy="' + p[1].toFixed(1) + '" r="1.6" fill="var(--muted)" opacity=".5"/>'; });
+  var pts = t.stops.map(function(s){ var c = cpById[s.cp]; return P(c.lat, c.lng); });
+  h += '<polyline points="' + pts.map(function(p){ return p[0].toFixed(1) + "," + p[1].toFixed(1); }).join(" ") + '" fill="none" stroke="' + col + '" stroke-width="1.6" stroke-dasharray="3 2.5"/>';
+  pts.forEach(function(p, i){ h += '<circle cx="' + p[0].toFixed(1) + '" cy="' + p[1].toFixed(1) + '" r="' + (i ? 3 : 4) + '" fill="' + (i ? "var(--surface)" : col) + '" stroke="' + col + '" stroke-width="1.5"/>'; });
+  return '<svg viewBox="0 0 96 72" aria-hidden="true">' + h + '</svg>';
+}
+
+/* ---------- 面板 ---------- */
+function renderStart(){
+  var st = solarTermToday(), td = tideInfo(Date.now());
+  panel.innerHTML =
+    '<p class="kicker">選一條路徑，或者不選</p>' +
+    '<h2 tabindex="-1" id="ph">跟一條路線走，還是自己亂行？</h2>' +
+    '<p class="lede">路徑按次序逐站揭示；地圖上的每一點，也可以不按次序自由打開。</p>' +
+    '<ol class="trail-list">' + D.trails.map(function(t, k){
+      return '<li><button type="button" class="trail-opt" data-trail="' + t.id + '" data-stop="0">' + sketch(t) +
+        '<span><span class="t-meta">路徑 ' + "AB"[k] + ' · ' + t.stops.length + ' 站 · ' + t.stops.map(function(s){ return s.cp; }).join(" → ") + '</span>' +
+        '<span class="t-title">' + esc(t.zh) + '</span><span class="t-intro">' + esc(t.intro) + '</span>' +
+        '<span class="t-go">由第 1 站開始 →</span></span></button></li>';
+    }).join("") + '</ol>' +
+    '<div class="roam"><button type="button" class="roam-btn" data-go="free">我寧願自己亂行 <span aria-hidden="true">→</span></button>' +
+    '<p>不跟次序：打開全部 ' + D.checkpoints.length + ' 個檢查點，按物種開關，看每一點記錄了哪些關係。</p></div>' +
+    '<div class="today mono"><span>今天 ' + st.date + ' · ' + st.name + '</span><span>下一次低潮約 ' + td.next + '</span><span class="simulated">模擬潮汐</span></div>';
+}
+
+function renderTrail(){
+  var t = trailById[S.trail], s = t.stops[S.idx], c = cpById[s.cp], n = t.stops.length, last = S.idx === n - 1;
+  var lead = "var(" + nodeById[t.lead].color + ")", other = D.trails.filter(function(x){ return x.id !== t.id; })[0];
+  var h = '<div class="crumbs"><button type="button" class="linkbtn" data-go="start">← 所有路徑</button><span class="sp"></span><button type="button" class="linkbtn" data-go="free">改為自由漫遊</button></div>';
+  h += '<div class="stepper" style="--lead:' + lead + '"><div class="step-row"><div class="count" aria-hidden="true"><span class="num">' + pad2(S.idx + 1) + '</span><span class="of">/ ' + pad2(n) + '</span></div>' +
+    '<ol class="prog" aria-label="' + esc(t.zh) + '：進度">' + t.stops.map(function(x, i){
+      return '<li><button type="button" data-stop-idx="' + i + '" class="' + (i < S.idx ? "done" : "") + '"' + (i === S.idx ? ' aria-current="step"' : '') + ' aria-label="第 ' + (i + 1) + ' 站：' + esc(x.title) + '"></button></li>';
+    }).join("") + '</ol></div>' +
+    '<div class="navbtns"><button type="button" class="nb prev" data-move="-1"' + (S.idx === 0 ? " disabled" : "") + '><span aria-hidden="true">←</span>上一站</button>' +
+    '<button type="button" class="nb next" data-move="1"' + (last ? " disabled" : "") + '>' + (last ? "已到最後一站" : '下一站<span aria-hidden="true">→</span>') + '</button></div></div>';
+  h += '<article class="stop"><p class="cp">' + esc(t.zh) + ' · 第 ' + (S.idx + 1) + ' 站，共 ' + n + ' 站<br>檢查點 <b>' + c.id + '</b> · ' + esc(cpPlace(c)) + '</p>' +
+    '<h2 tabindex="-1" id="ph">' + esc(s.title) + '</h2><p class="txt">' + esc(s.text) + '</p>';
+  if (c.place === "flat" || c.place === "sea"){
+    var td = tideInfo(Date.now());
+    h += '<div class="tide-strip"><svg width="34" height="12" viewBox="0 0 34 12" aria-hidden="true"><path d="M0 6c4-5 7-5 11 0s7 5 11 0 7-5 11 0" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>' +
+      '<span>泥灘站要配合退潮。現時潮位約 ' + td.h.toFixed(1) + ' 米' + (td.low ? '，屬低潮時段' : '') + '；下一次低潮約 ' + td.next + '。</span><span class="simulated">模擬資料</span></div>';
+  }
+  h += mediaHtml(s.media);
+  h += '<section class="meet" aria-labelledby="meetH"><h3 id="meetH">在這裡遇見</h3><div class="chips">' + s.meet.map(function(id){
+      return '<button type="button" class="chip" data-node="' + id + '" aria-expanded="' + (S.openNode === id) + '" aria-controls="blurb" style="--c:var(' + nodeById[id].color + ')"><i></i>' + esc(nodeById[id].zh) + '</button>';
+    }).join("") + '</div><div class="blurb" id="blurb"' + (S.openNode ? ' style="--c:var(' + nodeById[S.openNode].color + ')"' : ' hidden') + '>' +
+    (S.openNode ? blurbHtml(S.openNode) : '') + '</div></section>';
+  var rels = relsAt(c.id);
+  h += '<details class="rels"><summary>檢查點 ' + c.id + ' 的關係紀錄（' + rels.length + '）</summary>' +
+    (rels.length ? '<ul class="rel-list">' + rels.map(relHtml).join("") + '</ul>' : '<p class="pop-empty">暫未有已整理的關係紀錄。</p>') + '</details>';
+  if (last){
+    h += '<div class="trail-end"><p class="kicker" style="margin-top:0">路線完結 · ' + n + ' / ' + n + '</p><h3>接下來，由你決定</h3>' +
+      '<button type="button" class="nb next" data-trail="' + other.id + '" data-stop="0">走另一條：' + esc(other.zh) + ' <span aria-hidden="true">→</span></button>' +
+      '<button type="button" class="nb" data-go="free">自由漫遊全部檢查點</button>' +
+      '<button type="button" class="linkbtn" data-go="start">回到路徑選擇</button></div>';
+  }
+  h += '</article><p class="keyhint">鍵盤：<kbd>←</kbd> <kbd>→</kbd> 切換站點（焦點在地圖上時，箭咀鍵改為移動地圖）。</p>';
+  panel.innerHTML = h;
+}
+function blurbHtml(id){
+  var n = nodeById[id];
+  return '<b>' + esc(n.zh) + '</b>' + (n.sci ? '<span class="sci">' + esc(n.sci) + '</span>' : '') + '<p>' + esc(n.blurb) + '</p>';
+}
+
+function renderFree(){
+  var counts = {};
+  D.checkpoints.forEach(function(c){ counts[c.species] = (counts[c.species] || 0) + 1; });
+  var h = '<div class="crumbs"><button type="button" class="linkbtn" data-go="start">← 路徑選擇</button></div>' +
+    '<p class="kicker">自由漫遊 · ' + D.checkpoints.length + ' 個檢查點</p><h2 tabindex="-1" id="ph">不跟次序，自己亂行</h2>' +
+    '<p class="lede">按地圖上的編號，或在下面的清單選擇，看看每一點記錄了哪些關係，以及這些說法的核實狀態。</p>' +
+    '<fieldset class="legend"><legend>物種（按一下開關）</legend><div class="chips">' + SPECIES.map(function(sp){
+      return '<button type="button" class="lg" data-sp="' + sp + '" aria-pressed="' + !S.hidden[sp] + '" style="--c:var(' + spNode(sp).color + ')"><i></i>' + esc(spLabel(sp)) + '<span class="n">' + counts[sp] + '</span></button>';
+    }).join("") + '</div></fieldset><div class="detail" id="detail" hidden></div>';
+  var vis = D.checkpoints.filter(function(c){ return !S.hidden[c.species]; });
+  h += vis.length ? '<ul class="cplist" aria-label="檢查點清單">' + vis.map(function(c){
+      var r = relsAt(c.id).length;
+      return '<li><button type="button" data-cp="' + c.id + '" style="--c:var(' + spNode(c.species).color + ')"><span class="code"><i></i>' + c.id + '</span><span>' + esc(cpPlace(c)) + '</span><span class="cnt">' + (r ? r + " 條關係" : "—") + '</span></button></li>';
+    }).join("") + '</ul>'
+    : '<p class="pop-empty" style="margin-top:16px">所有物種都已關閉。按上面的物種重新顯示。</p>';
+  panel.innerHTML = h;
+}
+
+/* ---------- 地圖：Leaflet ---------- */
+function stopIcon(i, cls, col){
+  var big = cls === "now", sz = big ? 36 : 28;
+  return L.divIcon({ className:"", iconSize:[sz, sz], iconAnchor:[sz / 2, sz / 2],
+    html:'<span class="stopm ' + cls + '" style="--c:' + col + ';position:relative">' + (i + 1) + '</span>' });
+}
+
+/* 候選標籤位置（像素），由近至遠 */
+var SLOTS = [];
+[-2,-1,0,1,2].forEach(function(i){ [-4,-3,-2,-1,0,1,2,3,4].forEach(function(j){ SLOTS.push([i * 54, j * 24]); }); });
+SLOTS.sort(function(a, b){ return (Math.abs(a[0]) * 1.4 + Math.abs(a[1])) - (Math.abs(b[0]) * 1.4 + Math.abs(b[1])); });
+function LeafletView(){
+  var map = L.map(mapEl, { zoomControl:true, attributionControl:false, zoomSnap:0.5 }).setView(D.meta.center, 16);
+  L.control.attribution({ position:"topright", prefix:false }).addTo(map);
+  var tiles = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", { maxZoom:19, attribution:"衛星影像 © Esri, Maxar, Earthstar Geographics" }).addTo(map);
+  var osm = L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom:19, attribution:"© OpenStreetMap contributors" });
+  L.control.layers({ "衛星影像": tiles, "街道地圖": osm }, null, { position:"bottomleft" }).addTo(map);
+  var ok = 0, bad = 0, blocked = false, wrap = document.getElementById("mapWrap");
+  function tileState(){
+    if (blocked) return;
+    if (ok === 0 && bad > 0){ wrap.classList.add("tiles-off"); note("底圖未能載入（離線或網絡不穩）。檢查點的相對位置與連線仍然正確，可照常使用。"); }
+    else if (ok > 0){ wrap.classList.remove("tiles-off"); note(bad > 6 ? "部分底圖未能載入；檢查點位置不受影響。" : ""); }
+  }
+  tiles.on("tileload", function(){ ok++; tileState(); });
+  tiles.on("tileerror", function(){ bad++; tileState(); });
+  if (navigator.onLine === false){ wrap.classList.add("tiles-off"); note("裝置現時離線：只顯示檢查點與連線，沒有底圖。"); }
+  window.addEventListener("online", function(){ tiles.redraw(); });
+  /* 底圖服務有時回傳「需要 API key」的替代圖（HTTP 200）。取兩塊不同位置的圖比較；內容完全相同即視為替代圖，改用點格底色。 */
+  (function probe(){
+    return; /* 已改用 Esri 衛星影像，不再需要偵測 CARTO 替代圖 */
+    var z = 16, n = Math.pow(2, z), lat = D.meta.center[0] * Math.PI / 180;
+    var x = Math.floor((D.meta.center[1] + 180) / 360 * n), y = Math.floor((1 - Math.log(Math.tan(lat) + 1 / Math.cos(lat)) / Math.PI) / 2 * n);
+    function get(u){ return fetch(u, { mode:"cors" }).then(function(r){ return r.ok ? r.arrayBuffer() : null; }); }
+    Promise.all([get("https://a.basemaps.cartocdn.com/light_all/" + z + "/" + x + "/" + y + ".png"), get("https://b.basemaps.cartocdn.com/light_all/" + (z - 2) + "/" + (x >> 2) + "/" + ((y >> 2) + 1) + ".png")]).then(function(r){
+      if (!r[0] || !r[1] || r[0].byteLength !== r[1].byteLength) return;
+      var A = new Uint8Array(r[0]), B = new Uint8Array(r[1]);
+      for (var i = 0; i < A.length; i++) if (A[i] !== B[i]) return;
+      blocked = true; wrap.classList.add("tiles-off");
+      note("底圖服務回傳「需要 API key」替代圖，暫以點格底色顯示；檢查點位置與連線不受影響。");
+    }).catch(function(){});
+  })();
+
+  var layer = L.layerGroup().addTo(map), markers = {}, lastMode = null, openId = null, allB = L.latLngBounds(allPts);
+  map.on("popupopen", function(e){ openId = e.popup._cpId || null; });
+  map.on("popupclose", function(){ openId = null; });
+  map.on("zoomend", function(){ if (S.mode === "free"){ var keep = openId; drawFree(); if (keep && markers[keep]) markers[keep].openPopup(); } });
+  function ll(id){ var c = cpById[id]; return [c.lat, c.lng]; }
+  function move(target, zoom){
+    if (reduceMQ.matches) map.setView(target, zoom, { animate:false });
+    else map.flyTo(target, zoom, { duration:0.9 });
+  }
+  function popup(id){ var p = L.popup({ maxWidth:290, maxHeight:Math.max(160, Math.min(280, mapEl.clientHeight - 120)), autoPanPadding:[16, 16] }).setContent(function(){ return cpHtml(id); }); p._cpId = id; return p; }
+  var freeLayer = L.layerGroup().addTo(map);
+  /* 自由漫遊：按目前縮放計算標籤位置，互相重疊時上下錯開，並以短線連回真實位置 */
+  function drawFree(){
+    freeLayer.clearLayers(); markers = {};
+    if (S.mode !== "free") return;
+    var surf = tok("--surface"), placed = [];
+    var vis = D.checkpoints.filter(function(c){ return !S.hidden[c.species]; }).sort(function(a, b){ return b.lat - a.lat; });
+    vis.forEach(function(c){
+      var col = spColor(c.species), p = map.latLngToContainerPoint([c.lat, c.lng]), dx = 0, dy = 0;
+      for (var k = 0; k < SLOTS.length; k++){
+        var xx = p.x + SLOTS[k][0], yy = p.y + SLOTS[k][1];
+        if (!placed.some(function(q){ return Math.abs(q.x - xx) < 50 && Math.abs(q.y - yy) < 23; })){ dx = SLOTS[k][0]; dy = SLOTS[k][1]; break; }
+      }
+      placed.push({ x:p.x + dx, y:p.y + dy });
+      if (c.alt){
+        L.polyline([[c.lat, c.lng], [c.alt.lat, c.alt.lng]], { color:col, weight:1.5, dashArray:"2 5", opacity:.8, interactive:false }).addTo(freeLayer);
+        L.circleMarker([c.alt.lat, c.alt.lng], { radius:7, color:col, weight:2, fillColor:surf, fillOpacity:.6 }).bindPopup(popup(c.id)).addTo(freeLayer);
+      }
+      if (dx || dy){
+        L.polyline([[c.lat, c.lng], map.containerPointToLatLng([p.x + dx, p.y + dy])], { color:col, weight:1.2, opacity:.9, interactive:false }).addTo(freeLayer);
+        L.circleMarker([c.lat, c.lng], { radius:3, color:col, weight:1, fillColor:col, fillOpacity:1, interactive:false }).addTo(freeLayer);
+      }
+      var icon = L.divIcon({ className:"", iconSize:[48, 22], iconAnchor:[24 - dx, 11 - dy], html:'<span class="cpm" style="--c:' + col + '"><i></i>' + c.id + '</span>' });
+      var m = L.marker([c.lat, c.lng], { icon:icon, title:c.id + " " + cpPlace(c) + "（" + spLabel(c.species) + "）", riseOnHover:true }).addTo(freeLayer);
+      m.bindPopup(popup(c.id));
+      markers[c.id] = m;
+    });
+  }
+  function render(){
+    layer.clearLayers();
+    var faint = tok("--muted"), surf = tok("--surface");
+    if (S.mode !== "free"){
+      D.checkpoints.forEach(function(c){ L.circleMarker([c.lat, c.lng], { radius:3, color:faint, weight:1, opacity:.55, fillColor:faint, fillOpacity:.35, interactive:false }).addTo(layer); });
+    }
+    if (S.mode === "start"){
+      D.trails.forEach(function(t){
+        var col = nodeColor(t.lead), on = S.hover === t.id, dim = S.hover && !on;
+        L.polyline(t.stops.map(function(s){ return ll(s.cp); }), { color:col, weight:on ? 4 : 2.5, opacity:dim ? .2 : .85, dashArray:"6 6", interactive:false }).addTo(layer);
+        t.stops.forEach(function(s, i){ L.circleMarker(ll(s.cp), { radius:on ? 7 : (i ? 4 : 5), color:col, weight:2, opacity:dim ? .25 : 1, fillColor:i ? surf : col, fillOpacity:dim ? .25 : 1, interactive:false }).addTo(layer); });
+      });
+      if (lastMode !== "start") map.fitBounds(allB, { padding:[28, 28], maxZoom:16, animate:!reduceMQ.matches });
+    }
+    if (S.mode === "trail"){
+      var t = trailById[S.trail], col = nodeColor(t.lead);
+      L.polyline(t.stops.map(function(s){ return ll(s.cp); }), { color:col, weight:3, opacity:.9, dashArray:"7 6", interactive:false }).addTo(layer);
+      t.stops.forEach(function(s, i){
+        var cls = i === S.idx ? "now" : i < S.idx ? "done" : "";
+        var m = L.marker(ll(s.cp), { icon:stopIcon(i, cls, col), title:"第 " + (i + 1) + " 站：" + s.title, zIndexOffset:i === S.idx ? 1000 : 0, keyboard:true }).addTo(layer);
+        m.on("click", function(){ go({ idx:i }); });
+      });
+      /* 飛到目前一站，同時保留前後兩站在畫面內，方便現場辨認方向 */
+      var nb = t.stops.slice(Math.max(0, S.idx - 1), S.idx + 2).map(function(s){ return ll(s.cp); });
+      var fb = L.latLngBounds(nb), opt = { padding:[44, 44], maxZoom:17 };
+      if (reduceMQ.matches) map.fitBounds(fb, Object.assign({ animate:false }, opt));
+      else map.flyToBounds(fb, Object.assign({ duration:0.9 }, opt));
+    }
+    if (S.mode === "free" && lastMode !== "free") map.fitBounds(allB, { padding:[30, 30], maxZoom:16, animate:false });
+    drawFree();
+    lastMode = S.mode;
+  }
+  return {
+    render:render,
+    select:function(id){ var m = markers[id]; if (m) m.openPopup(); },
+    closePopup:function(){ map.closePopup(); }
+  };
+}
+
+/* ---------- 地圖：Leaflet 未能載入時的 SVG 示意圖 ---------- */
+function SvgView(){
+  mapEl.classList.add("svgmap");
+  note("地圖程式庫未能載入（可能離線），改用簡化示意圖；位置按 GPS 比例繪畫，沒有底圖。");
+  var NS = "http://www.w3.org/2000/svg", svg = document.createElementNS(NS, "svg");
+  svg.setAttribute("aria-label", "檢查點示意圖"); mapEl.appendChild(svg);
+  function render(){
+    var W = mapEl.clientWidth || 600, H = mapEl.clientHeight || 400, P = projector(W, H, 34), h = '';
+    svg.setAttribute("viewBox", "0 0 " + W + " " + H);
+    function pt(id){ var c = cpById[id]; return P(c.lat, c.lng); }
+    if (S.mode !== "free") D.checkpoints.forEach(function(c){ var p = P(c.lat, c.lng); h += '<circle cx="' + p[0] + '" cy="' + p[1] + '" r="3" fill="var(--muted)" opacity=".45"/>'; });
+    var trails = S.mode === "start" ? D.trails : S.mode === "trail" ? [trailById[S.trail]] : [];
+    trails.forEach(function(t){
+      var col = "var(" + nodeById[t.lead].color + ")", dim = S.mode === "start" && S.hover && S.hover !== t.id;
+      h += '<polyline points="' + t.stops.map(function(s){ return pt(s.cp).join(","); }).join(" ") + '" fill="none" stroke="' + col + '" stroke-width="2.5" stroke-dasharray="7 6" opacity="' + (dim ? .2 : .9) + '"/>';
+      t.stops.forEach(function(s, i){
+        var p = pt(s.cp), now = S.mode === "trail" && i === S.idx, r = now ? 16 : 12;
+        var fill = now ? col : (S.mode === "trail" && i < S.idx) ? "color-mix(in srgb," + col + " 22%,var(--surface))" : "var(--surface)";
+        h += '<g' + (S.mode === "trail" ? ' role="button" tabindex="0" data-stop-idx="' + i + '" aria-label="第 ' + (i + 1) + ' 站：' + esc(s.title) + '"' : '') + ' opacity="' + (dim ? .3 : 1) + '">' +
+          '<circle cx="' + p[0] + '" cy="' + p[1] + '" r="' + r + '" fill="' + fill + '" stroke="' + col + '" stroke-width="2"/>' +
+          '<text x="' + p[0] + '" y="' + (p[1] + 4) + '" text-anchor="middle" style="fill:' + (now ? "var(--surface)" : "var(--fg)") + '">' + (i + 1) + '</text></g>';
+      });
+    });
+    var placed = [], under = '';
+    if (S.mode === "free") D.checkpoints.slice().sort(function(a, b){ return b.lat - a.lat; }).forEach(function(c){
+      if (S.hidden[c.species]) return;
+      var p0 = P(c.lat, c.lng), col = "var(" + spNode(c.species).color + ")", dx = 0, dy = 0;
+      for (var k = 0; k < SLOTS.length; k++){
+        var xx = p0[0] + SLOTS[k][0], yy = p0[1] + SLOTS[k][1];
+        if (!placed.some(function(q){ return Math.abs(q[0] - xx) < 50 && Math.abs(q[1] - yy) < 23; })){ dx = SLOTS[k][0]; dy = SLOTS[k][1]; break; }
+      }
+      placed.push([p0[0] + dx, p0[1] + dy]);
+      if (dx || dy) under += '<line x1="' + p0[0] + '" y1="' + p0[1] + '" x2="' + (p0[0] + dx) + '" y2="' + (p0[1] + dy) + '" stroke="' + col + '" stroke-width="1.2"/><circle cx="' + p0[0] + '" cy="' + p0[1] + '" r="3" fill="' + col + '"/>';
+      var p = [p0[0] + dx, p0[1]], y = p0[1] + dy;
+      if (c.alt){ var q = P(c.alt.lat, c.alt.lng); under += '<line x1="' + p0[0] + '" y1="' + p0[1] + '" x2="' + q[0] + '" y2="' + q[1] + '" stroke="' + col + '" stroke-dasharray="2 5" stroke-width="1.5"/><circle cx="' + q[0] + '" cy="' + q[1] + '" r="6" fill="var(--surface)" stroke="' + col + '" stroke-width="2"/>'; }
+      h += '<g role="button" tabindex="0" data-cp="' + c.id + '" aria-label="' + c.id + ' ' + esc(cpPlace(c)) + '"><rect x="' + (p[0] - 22) + '" y="' + (y - 11) + '" width="44" height="22" rx="11" fill="var(--surface)" stroke="' + col + '" stroke-width="1.5"/>' +
+        '<circle cx="' + (p[0] - 12) + '" cy="' + y + '" r="4" fill="' + col + '"/><text x="' + (p[0] + 4) + '" y="' + (y + 4) + '" text-anchor="middle">' + c.id + '</text></g>';
+    });
+    svg.innerHTML = under + h;
+  }
+  window.addEventListener("resize", render);
+  return {
+    render:render,
+    select:function(id){ var d = document.getElementById("detail"); if (!d) return; d.innerHTML = cpHtml(id); d.hidden = false; d.scrollIntoView({ block:"nearest", behavior:reduceMQ.matches ? "auto" : "smooth" }); },
+    closePopup:function(){}
+  };
+}
+
+function setBarH(){ var b = document.querySelector(".sample-bar"); if (b) document.documentElement.style.setProperty("--barh", b.offsetHeight + "px"); }
+setBarH(); window.addEventListener("resize", setBarH);
+function note(msg){ mapNote.textContent = msg; mapNote.hidden = !msg; }
+var view = window.L ? LeafletView() : SvgView();
+
+/* ---------- 流程 ---------- */
+function render(focus){
+  if (S.mode === "start") renderStart(); else if (S.mode === "trail") renderTrail(); else renderFree();
+  mapKey.hidden = S.mode === "free";
+  view.render();
+  writeHash();
+  if (focus){ var ph = document.getElementById("ph"); if (ph) ph.focus({ preventScroll:true }); }
+}
+function go(patch, opts){
+  opts = opts || {};
+  var prevMode = S.mode, prevKey = S.trail + ":" + S.idx;
+  for (var k in patch) S[k] = patch[k];
+  if (S.trail + ":" + S.idx !== prevKey || S.mode !== prevMode) S.openNode = null;
+  if (S.mode !== "start") S.hover = null;
+  view.closePopup();
+  render(opts.focus !== false && (S.mode !== prevMode || opts.focus));
+  if (S.mode === "trail"){
+    var t = trailById[S.trail];
+    live.textContent = t.zh + "，第 " + (S.idx + 1) + " 站，共 " + t.stops.length + " 站：" + t.stops[S.idx].title;
+    if (S.mode !== prevMode || opts.top) panel.scrollTop = 0;
+  } else if (S.mode !== prevMode){ live.textContent = S.mode === "free" ? "自由漫遊：顯示全部檢查點" : "路徑選擇"; panel.scrollTop = 0; }
+}
+function step(d){
+  if (S.mode !== "trail") return;
+  var n = trailById[S.trail].stops.length, i = S.idx + d;
+  if (i < 0 || i >= n) return;
+  go({ idx:i }, { focus:false, top:true });
+}
+
+document.addEventListener("click", function(e){
+  var el = e.target.closest("[data-trail],[data-go],[data-move],[data-stop-idx],[data-node],[data-sp],[data-cp]");
+  if (!el) return;
+  if (el.hasAttribute("data-trail")) return go({ mode:"trail", trail:el.dataset.trail, idx:+(el.dataset.stop || 0) }, { focus:true, top:true });
+  if (el.hasAttribute("data-go")) return go({ mode:el.dataset.go }, { focus:true });
+  if (el.hasAttribute("data-move")){
+    var mv = +el.dataset.move; step(mv);
+    var b = panel.querySelector(mv > 0 ? ".nb.next[data-move]" : ".nb.prev");
+    if (b && !b.disabled) b.focus(); else { var o = panel.querySelector(mv > 0 ? ".nb.prev" : ".nb.next[data-move]"); if (o && !o.disabled) o.focus(); else { var tE = panel.querySelector(".trail-end .nb"); if (tE) tE.focus(); } }
+    return;
+  }
+  if (el.hasAttribute("data-stop-idx")){ go({ idx:+el.dataset.stopIdx }, { focus:false, top:true }); var pb = panel.querySelector('.prog [data-stop-idx="' + el.dataset.stopIdx + '"]'); if (pb && el.closest(".prog")) pb.focus(); return; }
+  if (el.hasAttribute("data-node")){
+    var id = el.dataset.node; S.openNode = S.openNode === id ? null : id;
+    panel.querySelectorAll(".chip").forEach(function(c){ c.setAttribute("aria-expanded", String(c.dataset.node === S.openNode)); });
+    var bl = document.getElementById("blurb");
+    if (S.openNode){ bl.innerHTML = blurbHtml(S.openNode); bl.style.setProperty("--c", "var(" + nodeById[S.openNode].color + ")"); bl.hidden = false; }
+    else bl.hidden = true;
+    return;
+  }
+  if (el.hasAttribute("data-sp")){
+    var sp = el.dataset.sp; S.hidden[sp] = !S.hidden[sp];
+    view.closePopup(); render(false);
+    var nb = panel.querySelector('[data-sp="' + sp + '"]'); if (nb) nb.focus();
+    live.textContent = spLabel(sp) + (S.hidden[sp] ? "已隱藏" : "已顯示");
+    return;
+  }
+  if (el.hasAttribute("data-cp")) return view.select(el.dataset.cp);
+});
+/* 起點頁：滑過或聚焦路徑，地圖預覽該路線 */
+function hoverTrail(e){
+  if (S.mode !== "start") return;
+  var b = e.target.closest && e.target.closest(".trail-opt"), id = b ? b.dataset.trail : null;
+  if (id !== S.hover){ S.hover = id; view.render(); }
+}
+panel.addEventListener("mouseover", hoverTrail);
+panel.addEventListener("focusin", hoverTrail);
+panel.addEventListener("mouseleave", function(){ if (S.mode === "start" && S.hover){ S.hover = null; view.render(); } });
+
+document.addEventListener("keydown", function(e){
+  var t = e.target;
+  if (t.closest && t.closest("[role=button]") && t.tagName.toLowerCase() === "g" && (e.key === "Enter" || e.key === " ")){ e.preventDefault(); t.dispatchEvent(new MouseEvent("click", { bubbles:true })); return; }
+  if (e.altKey || e.ctrlKey || e.metaKey || S.mode !== "trail") return;
+  if (/^(input|textarea|select)$/i.test(t.tagName) || (t.closest && t.closest(".leaflet-container"))) return;
+  if (e.key === "ArrowRight" || e.key === "PageDown"){ e.preventDefault(); step(1); }
+  else if (e.key === "ArrowLeft" || e.key === "PageUp"){ e.preventDefault(); step(-1); }
+  else if (e.key === "Escape" && S.openNode){ S.openNode = null; render(false); }
+});
+window.addEventListener("hashchange", function(){ var h = readHash(); if (h.mode !== S.mode || h.trail !== S.trail || h.idx !== S.idx) go(h, { focus:false, top:true }); });
+/* 深淺色切換時，從 token 重新取色 */
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", function(){ view.render(); });
+
+var init = readHash();
+for (var k in init) S[k] = init[k];
+render(false);
+})();
+</script>
+</body>
+</html>

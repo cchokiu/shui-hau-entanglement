@@ -1,0 +1,582 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Obsidian 式關係圖 V1 簡單版</title>
+<link rel="stylesheet" href="shared.css">
+<script src="data.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<style>
+/* 方案 07：照 Obsidian Graph view 原樣模擬。
+   圖面是固定的深色面（數值取自 shared.css 的深色 token），淺色主題下也不變；頁面其他部分照用 token。 */
+:root{
+  --gs-bg:#141B18; --gs-panel:#111614; --gs-line:#2E3934; --gs-fg:#E2E7E1; --gs-muted:#9AA79F;
+  --gs-link:rgba(154,167,159,.42); --gs-accent:#62B8AE;
+}
+body{overflow-x:hidden}
+p{margin:.7rem 0}
+.vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.eyebrow{font-family:var(--f-mono);font-size:.76rem;letter-spacing:.08em;color:var(--muted);margin:0}
+
+/* 引言 */
+.intro{max-width:46rem;margin:0 auto;padding:36px 16px 18px}
+.intro h1{font-size:clamp(1.8rem,6vw,2.6rem);font-weight:800;letter-spacing:.01em;margin:.35rem 0 .6rem}
+.intro .lede{font-size:1.04rem}
+.intro .how{font-size:.9rem;color:var(--muted);border-left:3px solid var(--tide);padding:.1rem 0 .1rem 12px;margin-top:1rem}
+.intro .how b{color:var(--fg)}
+.alt{display:inline-block;font-weight:700;text-decoration:none;border-bottom:1px solid currentColor;line-height:1.3}
+
+/* 工作區：圖在左，筆記在右；手機上筆記疊在下面 */
+.ws{max-width:1280px;margin:0 auto;padding:0 16px 8px;display:grid;gap:16px;grid-template-columns:minmax(0,1fr)}
+@media (min-width:1000px){.ws{grid-template-columns:minmax(0,1fr) 360px;align-items:start}}
+
+/* 深色圖面（模擬 Obsidian 的視窗） */
+.gwin{position:relative;min-width:0;background:var(--gs-bg);color:var(--gs-fg);border:1px solid var(--gs-line);border-radius:6px;overflow:hidden}
+.tabbar{display:flex;align-items:stretch;height:38px;background:var(--gs-panel);border-bottom:1px solid var(--gs-line);font-size:.8rem}
+.tab{display:flex;align-items:center;gap:8px;padding:0 14px;background:var(--gs-bg);border-right:1px solid var(--gs-line);margin-bottom:-1px;white-space:nowrap}
+.tab svg{flex:none}
+.tabbar .count{margin-left:auto;align-self:center;padding-right:12px;font-family:var(--f-mono);font-size:.72rem;color:var(--gs-muted);white-space:nowrap}
+.stage{position:relative;height:clamp(360px,62svh,520px);touch-action:none;-webkit-user-select:none;user-select:none}
+@media (min-width:1000px){.stage{height:clamp(500px,74vh,700px)}}
+#graph{display:block;width:100%;height:100%;cursor:grab}
+#graph:active{cursor:grabbing}
+.lk{fill:none;stroke:var(--gs-link);stroke-width:1}
+.ar{fill:var(--gs-link);stroke:none}
+.lk.hl{stroke:var(--gs-accent);stroke-width:1.5}
+.ar.hl{fill:var(--gs-accent)}
+.lk.dim,.ar.dim{opacity:.1}
+.nd{cursor:pointer;outline:none}
+.nd .dot{stroke:var(--gs-bg);stroke-width:1.2}
+.nd .ring{fill:none;stroke:var(--gs-fg);stroke-width:1.2;stroke-dasharray:2 2;opacity:0}
+.nd:focus-visible .ring{opacity:1}
+.nd.sel .ring{opacity:1;stroke:var(--gs-accent);stroke-dasharray:none}
+.nd.hl .dot{fill:var(--gs-accent)}
+.nd.dim .dot{opacity:.2}
+.nd text{fill:var(--gs-fg);font-size:10px;text-anchor:middle;paint-order:stroke;stroke:var(--gs-bg);stroke-width:3px;stroke-linejoin:round;pointer-events:none}
+@media (prefers-reduced-motion:no-preference){.lk,.ar,.nd .dot,.nd text{transition:opacity .18s,fill .18s,stroke .18s}}
+
+.hint{position:absolute;left:10px;bottom:10px;margin:0;font-family:var(--f-mono);font-size:.68rem;color:var(--gs-muted);pointer-events:none;max-width:60%}
+.empty{position:absolute;inset:0;display:none;align-items:center;justify-content:center;color:var(--gs-muted);font-size:.9rem;pointer-events:none}
+.empty.on{display:flex}
+.zc{position:absolute;right:10px;bottom:10px;display:flex;flex-direction:column;gap:4px}
+.zc button{width:34px;height:34px;border:1px solid var(--gs-line);background:var(--gs-panel);color:var(--gs-fg);border-radius:4px;cursor:pointer;font-family:var(--f-mono);font-size:.95rem;line-height:1;padding:0}
+.zc button:hover{border-color:var(--gs-muted)}
+.zc button:focus-visible,.drawer :focus-visible{outline:2px solid var(--gs-fg);outline-offset:1px}
+.jump{position:absolute;left:10px;top:10px;display:none;font-size:.78rem;background:var(--gs-panel);color:var(--gs-fg);border:1px solid var(--gs-accent);border-radius:14px;padding:3px 12px;text-decoration:none}
+.jump.on{display:inline-block}
+@media (min-width:1000px){.jump.on{display:none}}
+
+/* 圖表設定抽屜：桌面浮在圖右上角，手機排在圖下面 */
+.drawer{background:var(--gs-panel);border-top:1px solid var(--gs-line);font-size:.82rem;color:var(--gs-fg)}
+@media (min-width:1000px){.drawer{position:absolute;top:48px;right:10px;width:252px;max-height:calc(100% - 100px);overflow:auto;border:1px solid var(--gs-line);border-radius:6px}}
+.drawer summary{cursor:pointer;list-style:none;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.drawer summary::-webkit-details-marker{display:none}
+.drawer>summary{padding:9px 12px;font-weight:700}
+.drawer summary::after{content:"";width:6px;height:6px;border-right:1.5px solid var(--gs-muted);border-bottom:1.5px solid var(--gs-muted);transform:rotate(-45deg);transition:transform .15s;flex:none}
+.drawer details[open]>summary::after,.drawer[open]>summary::after{transform:rotate(45deg)}
+.dsec{border-top:1px solid var(--gs-line)}
+.dsec>summary{padding:7px 12px;color:var(--gs-muted);font-size:.76rem;letter-spacing:.06em}
+.dbody{padding:2px 12px 12px;display:grid;gap:9px}
+@media (max-width:999px){.drawer .dwrap{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}}
+.row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.row label{flex:1}
+.sw{appearance:none;-webkit-appearance:none;width:30px;height:17px;border-radius:9px;background:#2E3934;position:relative;cursor:pointer;flex:none;margin:0}
+.sw::before{content:"";position:absolute;top:2px;left:2px;width:13px;height:13px;border-radius:50%;background:var(--gs-muted);transition:transform .15s}
+.sw:checked{background:var(--gs-accent)}
+.sw:checked::before{transform:translateX(13px);background:var(--gs-panel)}
+.drawer input[type=search]{width:100%;background:var(--gs-bg);border:1px solid var(--gs-line);color:var(--gs-fg);border-radius:4px;padding:6px 8px;font:inherit}
+.drawer input[type=range]{width:100%;accent-color:var(--gs-accent);margin:2px 0 0}
+.slab{display:flex;justify-content:space-between;color:var(--gs-muted);font-size:.76rem}
+.slab output{font-family:var(--f-mono);color:var(--gs-fg)}
+.grp{list-style:none;margin:0;padding:0;display:grid;gap:5px}
+.grp .row span.k{display:flex;align-items:center;gap:7px}
+.grp i{width:9px;height:9px;border-radius:50%;display:inline-block;flex:none}
+.grp small{font-family:var(--f-mono);color:var(--gs-muted)}
+.seg{display:flex;gap:0;border:1px solid var(--gs-line);border-radius:4px;overflow:hidden;width:max-content}
+.seg label{padding:2px 12px;cursor:pointer;font-family:var(--f-mono);font-size:.76rem;color:var(--gs-muted)}
+.seg input{position:absolute;opacity:0;width:1px;height:1px}
+.seg input:checked+span{color:var(--gs-panel)}
+.seg label:has(input:checked){background:var(--gs-accent)}
+.seg label:has(input:focus-visible){outline:2px solid var(--gs-fg);outline-offset:-2px}
+.dnote{margin:0;color:var(--gs-muted);font-size:.74rem;line-height:1.5}
+.btnd{border:1px solid var(--gs-line);background:transparent;color:var(--gs-fg);border-radius:4px;padding:4px 10px;cursor:pointer;font-size:.78rem;justify-self:start}
+.btnd:hover{border-color:var(--gs-muted)}
+
+/* 筆記面板：照 Obsidian 筆記的結構，但用頁面 token */
+.note{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:16px 18px 22px;min-width:0}
+@media (min-width:1000px){.note{position:sticky;top:52px;max-height:calc(100vh - 64px);overflow:auto}}
+.nt-top{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.nt-crumb{font-family:var(--f-mono);font-size:.72rem;color:var(--muted);margin:0}
+.nt-x{border:1px solid var(--line);background:none;border-radius:3px;font-size:.74rem;padding:0 8px;cursor:pointer;color:var(--muted)}
+.nt-title{font-size:1.55rem;font-weight:800;margin:.3rem 0 .7rem;outline:none}
+.props{margin:0 0 .6rem;border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:6px 0;font-size:.84rem}
+.props div{display:grid;grid-template-columns:4.6em 1fr;gap:8px;padding:2px 0;align-items:baseline}
+.props dt{color:var(--muted);font-family:var(--f-mono);font-size:.72rem}
+.props dd{margin:0}
+.kd{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--kc);margin-right:6px;vertical-align:1px;box-shadow:0 0 0 1px var(--line)}
+.tagx{color:var(--tide);background:var(--tide-soft);border-radius:10px;padding:0 8px;font-size:.76rem;margin-right:4px}
+.cpx{font-family:var(--f-mono);font-size:.74rem;border:1px solid var(--line);border-radius:2px;padding:0 5px;margin:0 4px 2px 0;display:inline-block}
+.blurb{font-size:.94rem}
+.nt-sec h3{font-family:var(--f-body);font-size:.8rem;letter-spacing:.06em;color:var(--muted);font-weight:700;border-bottom:1px solid var(--line);padding-bottom:4px;margin:1.1rem 0 .2rem;display:flex;justify-content:space-between}
+.nt-sec h3 .ct{font-family:var(--f-mono);font-weight:500}
+.rl{list-style:none;margin:0;padding:0}
+.rl>li{padding:9px 0;border-bottom:1px dashed var(--line)}
+.ln{font-size:.95rem;line-height:1.5}
+.fld{font-family:var(--f-mono);font-size:.78rem;color:var(--muted)}
+.wl{border:0;background:none;padding:0;color:var(--tide);cursor:pointer;font:inherit;text-decoration:underline;text-decoration-color:color-mix(in srgb,var(--tide) 40%,transparent);text-underline-offset:3px;text-align:left}
+.wl:hover{text-decoration-color:var(--tide)}
+.wl .br{color:var(--muted);opacity:.75}
+.ctx{margin:.25rem 0 0;font-size:.8rem;background:var(--bg);padding:2px 8px;border-radius:3px}
+.mt{display:flex;flex-wrap:wrap;gap:3px 10px;font-size:.76rem;color:var(--muted);margin-top:4px;align-items:center}
+.src{margin:.2rem 0 0;font-size:.78rem;color:var(--muted)}
+.nq{margin:.3rem 0 0;font-size:.86rem;padding-left:10px;border-left:2px solid var(--line)}
+.none{color:var(--muted);font-size:.86rem}
+.hubs{list-style:none;margin:.4rem 0 0;padding:0;display:grid;gap:6px}
+.hubs li{display:grid;grid-template-columns:8.5em 1fr 2em;gap:8px;align-items:center;font-size:.9rem}
+.hubs .bar{height:4px;background:var(--line);border-radius:2px;overflow:hidden}
+.hubs .bar i{display:block;height:100%;background:var(--muted)}
+.hubs .n{font-family:var(--f-mono);font-size:.76rem;color:var(--muted);text-align:right}
+
+/* 比較 */
+.cmp{max-width:1280px;margin:0 auto;padding:28px 16px 56px}
+.cmp>h2{font-size:clamp(1.35rem,4.5vw,1.8rem);font-weight:800;margin-bottom:.4rem}
+.cmp .lede{max-width:46rem;color:var(--muted)}
+.cols{display:grid;gap:12px 32px;grid-template-columns:minmax(0,1fr);margin-top:1rem}
+@media (min-width:800px){.cols{grid-template-columns:1fr 1fr}}
+.cols h3{font-size:1.05rem;padding-bottom:6px;border-bottom:2px solid var(--fg);display:flex;gap:8px;align-items:baseline}
+.cols h3 small{font-family:var(--f-mono);font-weight:500;font-size:.72rem;color:var(--muted)}
+.cols ol{margin:.6rem 0 0;padding-left:1.4em}
+.cols li{margin:.5rem 0;font-size:.94rem}
+.cols li b{font-weight:700}
+.cols .weak h3{border-color:var(--conflict)}
+.next{margin-top:1.6rem;display:grid;gap:12px 32px;grid-template-columns:minmax(0,1fr)}
+@media (min-width:800px){.next{grid-template-columns:1fr 1fr}}
+.next h3{font-size:1rem;margin-bottom:.3rem}
+.next p,.next li{font-size:.92rem}
+.next ol{margin:.3rem 0 0;padding-left:1.4em}
+</style>
+</head>
+<body>
+<header class="sample-bar"><a href="../index.html">← 回到參考頁</a><span class="tag">方案 07 · 示意 sample</span><span class="sp"></span>
+<nav aria-label="其他方案"><a href="c1.html">01</a><a href="c2.html">02</a><a href="c3.html">03</a><a href="c4.html">04</a><a href="c5.html">05</a><a href="c6.html">06</a><a href="c7.html" aria-current="page">07</a><a href="c8.html">08</a></nav></header>
+
+<main>
+<section class="intro">
+  <p class="eyebrow">方案 07 · GRAPH VIEW · 對照組</p>
+  <h1>Obsidian 式關係圖 V1 簡單版</h1>
+  <p class="lede">照 Obsidian 的關係圖（Graph view）原樣，把共用資料中 <span id="nN">24</span> 個節點和 <span id="nR">27</span> 條有類型的關係畫成力導向圖：圓點按連結數放大，懸停時亮起鄰居，點選就開啟一則「筆記」，內有 [[wikilink]] 與反向連結。這是給團隊比較的對照組，刻意不作改良。</p>
+  <p>正式版的資料可以直接來自研究團隊的 Obsidian vault；若用作公眾入口，還要另備一個不靠圖形的清單版本。　<a class="alt" href="c8.html">看 V2 多維度版 →</a></p>
+  <p class="how"><b>Webflow 做法：</b>節點和關係各為一個 CMS Collection（關係以兩個 Reference 欄位連到節點，動詞、時期、來源、狀態為欄位）。每則筆記用 CMS Template page 原生生成，Links 與 Backlinks 是按 Reference 篩選的 Collection List。關係圖本身必須放在 Code Embed：隱藏的 Collection List 輸出 data 屬性，由 d3-force 讀取繪製。</p>
+</section>
+
+<section class="ws" aria-label="關係圖與筆記">
+  <div class="gwin">
+    <div class="tabbar">
+      <span class="tab"><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><g stroke="#9AA79F" stroke-width="1" fill="none"><path d="M3 4 L10 3 M3 4 L6 11 M10 3 L6 11"/></g><g fill="#E2E7E1"><circle cx="3" cy="4" r="2"/><circle cx="10" cy="3" r="1.6"/><circle cx="6" cy="11" r="2.2"/></g></svg>關係圖 · 水口</span>
+      <span class="count" id="count" aria-live="polite"></span>
+    </div>
+    <div class="stage" id="stage">
+      <svg id="graph" role="group" aria-label="關係圖。用 Tab 鍵逐一選取節點，按 Enter 開啟筆記。"></svg>
+      <p class="empty" id="empty">沒有符合條件的筆記</p>
+      <a class="jump" id="jump" href="#note"></a>
+      <p class="hint" aria-hidden="true">拖曳節點 · 捲動或雙指縮放 · 點選開啟筆記</p>
+      <div class="zc"><button type="button" id="zin" aria-label="放大">+</button><button type="button" id="zout" aria-label="縮小">−</button><button type="button" id="zfit" aria-label="縮放至適合畫面" style="font-size:.7rem">[ ]</button></div>
+    </div>
+    <details class="drawer" id="drawer">
+      <summary>圖表設定</summary>
+      <div class="dwrap">
+      <details class="dsec" open><summary>篩選</summary>
+        <div class="dbody">
+          <label><span class="vh">搜尋筆記名稱</span><input type="search" id="q" placeholder="搜尋筆記名稱…" autocomplete="off"></label>
+          <div class="row"><label for="orph">孤立筆記</label><input type="checkbox" class="sw" id="orph" role="switch" checked></div>
+        </div>
+      </details>
+      <details class="dsec" open><summary>群組</summary>
+        <div class="dbody"><ul class="grp" id="groups"></ul><p class="dnote">顏色按節點種類分組，關掉即隱藏該組。</p></div>
+      </details>
+      <details class="dsec" open><summary>局部圖</summary>
+        <div class="dbody">
+          <div class="row"><label for="local">只顯示所選筆記附近</label><input type="checkbox" class="sw" id="local" role="switch"></div>
+          <div class="row"><span>深度</span>
+            <div class="seg" role="radiogroup" aria-label="局部圖深度"><label><input type="radio" name="depth" value="1" checked><span>1</span></label><label><input type="radio" name="depth" value="2"><span>2</span></label></div></div>
+          <p class="dnote" id="localNote">先在圖上點選一則筆記。</p>
+        </div>
+      </details>
+      <details class="dsec"><summary>顯示</summary>
+        <div class="dbody">
+          <div class="row"><label for="arrows">箭頭</label><input type="checkbox" class="sw" id="arrows" role="switch"></div>
+          <div><div class="slab"><label for="fade">文字淡出門檻</label><output id="fadeO" for="fade"></output></div><input type="range" id="fade" min="0.3" max="2.5" step="0.1" value="0.9"></div>
+        </div>
+      </details>
+      <details class="dsec"><summary>力</summary>
+        <div class="dbody">
+          <div><div class="slab"><label for="dist">連結距離</label><output id="distO" for="dist"></output></div><input type="range" id="dist" min="20" max="180" step="5" value="70"></div>
+          <div><div class="slab"><label for="repel">斥力</label><output id="repelO" for="repel"></output></div><input type="range" id="repel" min="20" max="500" step="10" value="220"></div>
+          <button type="button" class="btnd" id="reshuffle">重新排列</button>
+        </div>
+      </details>
+      </div>
+    </details>
+  </div>
+
+  <article class="note" id="note" aria-live="polite" aria-label="筆記"></article>
+</section>
+
+<section class="cmp" aria-labelledby="cmpH">
+  <h2 id="cmpH">這種圖擅長甚麼、不擅長甚麼</h2>
+  <p class="lede">以下是把水口資料原樣放進 Obsidian 關係圖後的觀察，供團隊討論。</p>
+  <div class="cols">
+    <div class="good">
+      <h3>擅長 <small>STRENGTHS</small></h3>
+      <ol>
+        <li><b>看到樞紐。</b>圓點按連結數放大，一眼可見 <span id="hubs">村民、黃牛、水稻</span> 是連結最多的筆記。</li>
+        <li><b>漫遊。</b>沿 [[wikilink]] 與反向連結一則一則跳，容易遇上意料之外的連接，例如柴草、蔥、水稻和沙白都指向「瀨鑊邊」。</li>
+        <li><b>與研究工作吻合。</b>每個節點就是一則筆記，關係可以寫成 Dataview 欄位（<span class="mono" style="font-size:.84em">造棲地:: [[牛打滾的水氹]]</span>），研究員在 Obsidian 內整理，網站讀同一份資料。</li>
+        <li><b>暴露缺口。</b>孤立筆記（<span id="orphans">海膽</span>）浮在外圍，提醒資料還沒有連上。</li>
+      </ol>
+    </div>
+    <div class="weak">
+      <h3>不擅長 <small>WEAKNESSES</small></h3>
+      <ol>
+        <li><b>沒有地方。</b>位置由物理模擬決定，每次打開都不同；泥灘與林在圖上的距離沒有意義，檢查點完全看不到。</li>
+        <li><b>沒有時間。</b>1960 年代的截水與今天水牛佔路畫成同一種灰線，容易讀成同時發生；「曾經」與「現在」無從分辨，也看不到節氣與潮汐。</li>
+        <li><b>沒有衝突，也沒有可信程度。</b>「衝突」只是另一條灰線；村民口述與研究員觀察看起來一樣肯定，要點進筆記才見到狀態標籤。</li>
+        <li><b>圓點大小突出人類。</b>按連結數放大，<span id="topHub">村民</span>成為最大的圓點，與「人只是其中一條物種路線」的原則相反。</li>
+        <li><b>對公眾門檻高。</b>要先明白點和線代表甚麼；手機上拖曳圖形與捲動頁面互相干擾；螢幕閱讀器只能逐點讀出名字。</li>
+      </ol>
+    </div>
+  </div>
+  <div class="next">
+    <div>
+      <h3>可以怎樣改善</h3>
+      <p>方案 08 嘗試補上地方、時間與衝突：關係按類型畫線，有檢查點的節點拉向地圖位置，加入年代與節氣的時間軸、地點選擇，以及每一步的變化紀錄。　<a class="alt" href="c8.html">看 V2 多維度版 →</a></p>
+    </div>
+    <div>
+      <h3>討論</h3>
+      <ol>
+        <li>關係圖應作為公眾入口，還是研究團隊內部的整理工具，再把資料供給其他方案？</li>
+        <li>如果保留，應放在哪一層？例如物種頁底部的局部圖（深度 1）。</li>
+        <li>節點大小應按連結數，還是由團隊決定？</li>
+      </ol>
+    </div>
+  </div>
+</section>
+</main>
+
+<script>
+(function () {
+"use strict";
+var D = window.SHUIHAU;
+var $ = function (s) { return document.querySelector(s); };
+var esc = function (s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); };
+var RM = window.matchMedia("(prefers-reduced-motion: reduce)");
+var WIDE = window.matchMedia("(min-width: 1000px)");
+var ST = {observed:"研究員觀察", oral:"村民口述・未核實", consensus:"多人口述一致", check:"待科學核實", conflict:"爭議", pending:"待補"};
+/* 群組顏色：取自 shared.css 深色主題的物種色，因為圖面固定是深色 */
+var KINDS = [
+  {id:"species", zh:"物種", c:"#79C488"}, {id:"human", zh:"人", c:"#B3A2DA"},
+  {id:"org", zh:"組織", c:"#DDB04A"}, {id:"infrastructure", zh:"設施", c:"#9FB0C0"},
+  {id:"material", zh:"物料", c:"#D08A55"}, {id:"place", zh:"地方", c:"#62B8AE"},
+  {id:"practice", zh:"做法", c:"#E4A0AC"}, {id:"instrument", zh:"儀器", c:"#8E9A93"}
+];
+var KC = {}; KINDS.forEach(function (k) { KC[k.id] = k; });
+var PLACE = {}; D.places.forEach(function (p) { PLACE[p.id] = p; });
+var CP = {}; D.checkpoints.forEach(function (c) { CP[c.id] = c; });
+var SPECIES_CP = {clam:"clam", cattle:"cattle", buffalo:"buffalo", rice:"rice", villager:"human"};
+
+/* 節點與關係 */
+var nodes = D.nodes.map(function (n) { return Object.assign({}, n, {out:[], inc:[], nb:new Set()}); });
+var N = {}; nodes.forEach(function (n) { N[n.id] = n; });
+var rels = D.relations.filter(function (r) { return N[r.from] && N[r.to]; });
+rels.forEach(function (r) { N[r.from].out.push(r); N[r.to].inc.push(r); N[r.from].nb.add(r.to); N[r.to].nb.add(r.from); });
+nodes.forEach(function (n) { n.deg = n.out.length + n.inc.length; n.r = 3.2 + 1.9 * Math.sqrt(n.deg); });
+/* Obsidian 兩則筆記之間只畫一條線 */
+var pairs = new Map(), links = [];
+rels.forEach(function (r) {
+  var k = [r.from, r.to].sort().join("|");
+  if (pairs.has(k)) { pairs.get(k).rels.push(r); return; }
+  var l = {id:k, s:r.from, t:r.to, source:r.from, target:r.to, rels:[r]};
+  pairs.set(k, l); links.push(l);
+});
+$("#nN").textContent = nodes.length; $("#nR").textContent = rels.length;
+var byDeg = nodes.slice().sort(function (a, b) { return b.deg - a.deg; });
+$("#hubs").textContent = byDeg.slice(0, 3).map(function (n) { return n.zh + "（" + n.deg + " 條）"; }).join("、");
+$("#topHub").textContent = byDeg[0].zh + "（" + byDeg[0].deg + " 條連結）";
+var orphanList = nodes.filter(function (n) { return n.deg === 0; });
+$("#orphans").textContent = orphanList.length ? orphanList.map(function (n) { return n.zh; }).join("、") : "暫無";
+
+/* 狀態 */
+var S = {hover:null, sel:null, q:"", kinds:new Set(KINDS.map(function (k) { return k.id; })), orphans:true,
+  local:false, depth:1, arrows:false, fade:0.9, dist:70, repel:220, k:1};
+var W = 600, H = 480;
+
+/* SVG */
+var svg = d3.select("#graph");
+var root = svg.append("g");
+var gL = root.append("g"), gA = root.append("g"), gN = root.append("g");
+var linkSel = gL.selectAll("path"), arrowSel = gA.selectAll("path"), nodeSel = gN.selectAll("g");
+
+var sim = d3.forceSimulation().velocityDecay(0.42).alphaDecay(0.022)
+  .force("link", d3.forceLink().id(function (d) { return d.id; }).distance(function () { return S.dist; }))
+  .force("charge", d3.forceManyBody().strength(function () { return -S.repel; }).distanceMax(420))
+  .force("x", d3.forceX().strength(0.06))
+  .force("y", d3.forceY().strength(0.06))
+  .force("collide", d3.forceCollide().radius(function (d) { return d.r + 2; }))
+  .on("tick", ticked);
+sim.stop();
+
+function measure() {
+  var st = $("#stage"); W = st.clientWidth || 600; H = st.clientHeight || 480;
+  sim.force("x").x(W / 2); sim.force("y").y(H / 2);
+}
+function seed() {
+  nodes.forEach(function (n, i) {
+    var a = i * 2.39996, rr = 14 * Math.sqrt(i + 0.5);
+    n.x = W / 2 + rr * Math.cos(a); n.y = H / 2 + rr * Math.sin(a); n.vx = n.vy = 0;
+  });
+}
+
+function localSet() {
+  if (!S.local || !S.sel) return null;
+  var seen = new Set([S.sel]), frontier = [S.sel];
+  for (var d = 0; d < S.depth; d++) {
+    var nx = [];
+    frontier.forEach(function (id) { N[id].nb.forEach(function (m) { if (!seen.has(m)) { seen.add(m); nx.push(m); } }); });
+    frontier = nx;
+  }
+  return seen;
+}
+
+function refresh(heat) {
+  var q = S.q.trim().toLowerCase(), loc = localSet();
+  var vis = nodes.filter(function (n) {
+    return S.kinds.has(n.kind) && (!q || (n.zh + " " + (n.en || "")).toLowerCase().indexOf(q) >= 0) &&
+      (!loc || loc.has(n.id)) && (S.orphans || n.deg > 0);
+  });
+  var vs = new Set(vis.map(function (n) { return n.id; }));
+  var vl = links.filter(function (l) { return vs.has(l.s) && vs.has(l.t); });
+  sim.nodes(vis); sim.force("link").links(vl);
+
+  linkSel = gL.selectAll("path").data(vl, function (l) { return l.id; }).join("path").attr("class", "lk");
+  arrowSel = gA.selectAll("path").data(S.arrows ? vl : [], function (l) { return l.id; }).join("path").attr("class", "ar");
+  nodeSel = gN.selectAll("g.nd").data(vis, function (d) { return d.id; }).join(function (enter) {
+    var g = enter.append("g").attr("class", "nd").attr("tabindex", 0).attr("role", "button")
+      .attr("aria-label", function (d) { return d.zh + "，" + KC[d.kind].zh + "，" + d.deg + " 條連結"; });
+    g.append("circle").attr("class", "ring");
+    g.append("circle").attr("class", "dot");
+    g.append("text");
+    g.call(drag)
+      .on("pointerenter", function (e, d) { if (e.pointerType === "mouse") { S.hover = d.id; paint(); } })
+      .on("pointerleave", function (e) { if (e.pointerType === "mouse") { S.hover = null; paint(); } })
+      .on("focus", function (e, d) { S.hover = d.id; paint(); })
+      .on("blur", function () { S.hover = null; paint(); })
+      .on("keydown", function (e, d) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); select(d.id); } });
+    return g;
+  });
+  nodeSel.select(".dot").attr("r", function (d) { return d.r; }).attr("fill", function (d) { return KC[d.kind].c; });
+  nodeSel.select(".ring").attr("r", function (d) { return d.r + 3.5; });
+  nodeSel.select("text").attr("y", function (d) { return d.r + 12; }).text(function (d) { return d.zh; });
+
+  $("#count").textContent = vis.length + " 則筆記 · " + vl.length + " 條連結";
+  $("#empty").classList.toggle("on", vis.length === 0);
+  $("#localNote").textContent = S.local ? (S.sel ? "以「" + N[S.sel].zh + "」為中心，深度 " + S.depth + "。" : "先在圖上點選一則筆記。") : "開啟後只顯示所選筆記附近的筆記。";
+  ticked(); paint();
+  if (heat !== false) {
+    if (RM.matches) { for (var i = 0; i < 200; i++) sim.tick(); ticked(); }
+    else sim.alpha(Math.max(sim.alpha(), heat || 0.5)).restart();
+  }
+}
+
+function ticked() {
+  linkSel.attr("d", function (l) {
+    var s = l.source, t = l.target;
+    if (S.arrows) {
+      var dx = t.x - s.x, dy = t.y - s.y, d = Math.hypot(dx, dy) || 1;
+      return "M" + s.x + "," + s.y + "L" + (t.x - dx / d * (t.r + 1.5)) + "," + (t.y - dy / d * (t.r + 1.5));
+    }
+    return "M" + s.x + "," + s.y + "L" + t.x + "," + t.y;
+  });
+  arrowSel.attr("d", function (l) {
+    var s = l.source, t = l.target, dx = t.x - s.x, dy = t.y - s.y, d = Math.hypot(dx, dy) || 1, ux = dx / d, uy = dy / d;
+    var tx = t.x - ux * (t.r + 1.5), ty = t.y - uy * (t.r + 1.5), bx = tx - ux * 6, by = ty - uy * 6;
+    return "M" + tx + "," + ty + "L" + (bx - uy * 2.8) + "," + (by + ux * 2.8) + "L" + (bx + uy * 2.8) + "," + (by - ux * 2.8) + "Z";
+  });
+  nodeSel.attr("transform", function (d) { return "translate(" + d.x + "," + d.y + ")"; });
+}
+
+function focusId() { return S.hover || S.sel; }
+function paint() {
+  var f = focusId(), nb = f && N[f] ? N[f].nb : null;
+  nodeSel.classed("hl", function (d) { return d.id === f; })
+    .classed("dim", function (d) { return !!f && d.id !== f && !nb.has(d.id); })
+    .classed("sel", function (d) { return d.id === S.sel; });
+  var on = function (l) { return !!f && (l.s === f || l.t === f); };
+  linkSel.classed("hl", on).classed("dim", function (l) { return !!f && !on(l); });
+  arrowSel.classed("hl", on).classed("dim", function (l) { return !!f && !on(l); });
+  labels();
+}
+/* 文字隨縮放淡入：跟 Obsidian 一樣，縮得愈遠愈看不到名字 */
+function labels() {
+  var base = Math.max(0, Math.min(1, (S.k - S.fade) / 0.5)), f = focusId();
+  nodeSel.select("text").attr("opacity", function (d) {
+    if (f) return (d.id === f || N[f].nb.has(d.id)) ? 1 : base * 0.2;
+    return base;
+  });
+}
+
+/* 拖曳：沒有移動就當作點選 */
+var drag = d3.drag()
+  .on("start", function (e, d) {
+    if (!e.active && !RM.matches) sim.alphaTarget(0.25).restart();
+    d.fx = d.x; d.fy = d.y; d._sx = e.x; d._sy = e.y; d._mv = false;
+  })
+  .on("drag", function (e, d) {
+    d.fx = e.x; d.fy = e.y;
+    if (Math.hypot(e.x - d._sx, e.y - d._sy) > 3 / S.k) d._mv = true;
+    if (RM.matches) { d.x = e.x; d.y = e.y; ticked(); }
+  })
+  .on("end", function (e, d) {
+    if (!e.active) sim.alphaTarget(0);
+    d.fx = null; d.fy = null;
+    if (!d._mv) select(d.id);
+  });
+
+/* 縮放與平移 */
+var zoom = d3.zoom().scaleExtent([0.25, 6]).on("zoom", function (e) {
+  root.attr("transform", e.transform); S.k = e.transform.k; labels();
+});
+svg.call(zoom).on("dblclick.zoom", null);
+svg.on("click", function (e) { if (e.target === svg.node()) select(null); });
+function tz() { return RM.matches ? svg : svg.transition().duration(550); }
+function fit(animate) {
+  var vis = sim.nodes(); if (!vis.length) return;
+  var x0 = d3.min(vis, function (d) { return d.x - d.r; }), x1 = d3.max(vis, function (d) { return d.x + d.r; });
+  var y0 = d3.min(vis, function (d) { return d.y - d.r; }), y1 = d3.max(vis, function (d) { return d.y + d.r + 14; });
+  var k = Math.max(0.35, Math.min(1.6, Math.min(W / (x1 - x0 + 60), H / (y1 - y0 + 70))));
+  var t = d3.zoomIdentity.translate(W / 2 - k * (x0 + x1) / 2, H / 2 - k * (y0 + y1) / 2).scale(k);
+  (animate ? tz() : svg).call(zoom.transform, t);
+}
+$("#zin").onclick = function () { tz().call(zoom.scaleBy, 1.35); };
+$("#zout").onclick = function () { tz().call(zoom.scaleBy, 1 / 1.35); };
+$("#zfit").onclick = function () { fit(true); };
+
+/* 選取與聚焦 */
+function select(id) {
+  S.sel = id;
+  if (S.local) refresh(0.4); else paint();
+  renderNote();
+  var j = $("#jump");
+  if (id) { j.textContent = "開啟筆記：" + N[id].zh + " ↓"; j.classList.add("on"); } else j.classList.remove("on");
+}
+function ensureVisible(id) {
+  var n = N[id], changed = false;
+  if (!S.kinds.has(n.kind)) { S.kinds.add(n.kind); var cb = document.querySelector('#groups input[value="' + n.kind + '"]'); if (cb) cb.checked = true; changed = true; }
+  if (S.q && (n.zh + " " + (n.en || "")).toLowerCase().indexOf(S.q.trim().toLowerCase()) < 0) { S.q = ""; $("#q").value = ""; changed = true; }
+  if (!S.orphans && n.deg === 0) { S.orphans = true; $("#orph").checked = true; changed = true; }
+  return changed;
+}
+function focusNode(id) {
+  var changed = ensureVisible(id);
+  S.hover = null;
+  if (changed && !S.local) refresh(0.3);
+  select(id);
+  var n = N[id];
+  setTimeout(function () {
+    var k = Math.max(S.k, 1.3);
+    tz().call(zoom.transform, d3.zoomIdentity.translate(W / 2 - k * n.x, H / 2 - k * n.y).scale(k));
+  }, S.local || changed ? 250 : 0);
+  if (!WIDE.matches) $("#stage").scrollIntoView({behavior: RM.matches ? "auto" : "smooth", block: "center"});
+}
+
+/* 筆記面板 */
+function chip(s) { return '<span class="st ' + esc(s) + '">' + esc(ST[s] || s) + "</span>"; }
+function cpLabel(id) { var c = CP[id]; return c ? id + " " + (c.label || PLACE[c.place].zh) : id; }
+function wl(id) { return '<button type="button" class="wl" data-id="' + esc(id) + '"><span class="br" aria-hidden="true">[[</span>' + esc(N[id].zh) + '<span class="br" aria-hidden="true">]]</span></button>'; }
+function relMeta(r) {
+  return '<div class="mt"><span class="mono">' + esc(r.period) + "</span><span>檢查點 " + esc(cpLabel(r.cp)) + "</span>" + chip(r.status) + "</div>" +
+    '<p class="src">來源：' + esc(r.source) + "</p>" + (r.note ? '<p class="nq">' + esc(r.note) + "</p>" : "");
+}
+function renderNote() {
+  var el = $("#note"), h = "";
+  if (!S.sel) {
+    var max = byDeg[0].deg;
+    h = '<p class="nt-crumb">水口 vault /</p><h2 class="nt-title">未開啟筆記</h2>' +
+      '<p class="blurb">在圖上點選一個圓點，這裡就會開啟對應的筆記：上面是性質，下面是向外的連結（Links）與指向它的反向連結（Backlinks）。點筆記內的 [[連結]] 會跳到圖上那一點。</p>' +
+      '<section class="nt-sec"><h3><span>連結最多的筆記</span><span class="ct">連結數</span></h3><ul class="hubs">' +
+      byDeg.slice(0, 6).map(function (n) { return "<li>" + wl(n.id) + '<span class="bar"><i style="width:' + (n.deg / max * 100) + '%"></i></span><span class="n">' + n.deg + "</span></li>"; }).join("") +
+      "</ul></section>" +
+      '<section class="nt-sec"><h3><span>孤立筆記</span><span class="ct">' + orphanList.length + "</span></h3>" +
+      (orphanList.length ? '<p class="blurb">' + orphanList.map(function (n) { return wl(n.id); }).join("、") + "：資料中沒有任何關係連到這則筆記。</p>" : '<p class="none">沒有。</p>') + "</section>";
+  } else {
+    var n = N[S.sel], k = KC[n.kind];
+    var cps = SPECIES_CP[n.id] ? D.checkpoints.filter(function (c) { return c.species === SPECIES_CP[n.id]; }) : [];
+    h = '<div class="nt-top"><p class="nt-crumb">水口 vault / ' + esc(k.zh) + ' /</p><button type="button" class="nt-x" id="ntClose">關閉</button></div>' +
+      '<h2 class="nt-title" id="ntTitle" tabindex="-1">' + esc(n.zh) + "</h2>" +
+      '<dl class="props"><div><dt>kind</dt><dd><span class="kd" style="--kc:' + k.c + '"></span>' + esc(k.zh) + "</dd></div>" +
+      (n.en ? "<div><dt>en</dt><dd>" + esc(n.en) + "</dd></div>" : "") +
+      (n.sci ? "<div><dt>學名</dt><dd><i>" + esc(n.sci) + "</i></dd></div>" : "") +
+      (cps.length ? "<div><dt>檢查點</dt><dd>" + cps.map(function (c) { return '<span class="cpx">' + esc(c.id + " " + (c.label || PLACE[c.place].zh)) + "</span>"; }).join("") + "</dd></div>" : "") +
+      '<div><dt>tags</dt><dd><span class="tagx">#' + esc(k.zh) + "</span>" + (n.main ? '<span class="tagx">#主角</span>' : "") + "</dd></div></dl>" +
+      '<p class="blurb">' + esc(n.blurb) + "</p>" +
+      '<section class="nt-sec"><h3><span>Links</span><span class="ct">' + n.out.length + "</span></h3>" +
+      (n.out.length ? '<ul class="rl">' + n.out.map(function (r) {
+        return '<li><div class="ln"><span class="fld">' + esc(r.verb) + "::</span> " + wl(r.to) + "</div>" + relMeta(r) + "</li>";
+      }).join("") + "</ul>" : '<p class="none">這則筆記沒有向外的連結。</p>') + "</section>" +
+      '<section class="nt-sec"><h3><span>Backlinks</span><span class="ct">' + n.inc.length + "</span></h3>" +
+      (n.inc.length ? '<ul class="rl">' + n.inc.map(function (r) {
+        return '<li><div class="ln">' + wl(r.from) + '</div><p class="ctx"><span class="fld">' + esc(r.verb) + "::</span> [[" + esc(n.zh) + "]]</p>" + relMeta(r) + "</li>";
+      }).join("") + "</ul>" : '<p class="none">沒有其他筆記連到這裡。</p>') + "</section>";
+  }
+  el.innerHTML = h;
+  var x = $("#ntClose"); if (x) x.onclick = function () { select(null); };
+}
+$("#note").addEventListener("click", function (e) {
+  var b = e.target.closest(".wl"); if (b) focusNode(b.dataset.id);
+});
+
+/* 設定抽屜 */
+$("#groups").innerHTML = KINDS.map(function (k) {
+  var c = nodes.filter(function (n) { return n.kind === k.id; }).length;
+  return '<li class="row"><span class="k"><i style="background:' + k.c + '"></i><label for="g_' + k.id + '">' + k.zh + "</label> <small>" + c + '</small></span><input type="checkbox" class="sw" role="switch" id="g_' + k.id + '" value="' + k.id + '" checked></li>';
+}).join("");
+$("#groups").addEventListener("change", function (e) {
+  if (e.target.checked) S.kinds.add(e.target.value); else S.kinds.delete(e.target.value);
+  refresh(0.4);
+});
+$("#q").addEventListener("input", function (e) { S.q = e.target.value; refresh(0.4); });
+$("#orph").addEventListener("change", function (e) { S.orphans = e.target.checked; refresh(0.3); });
+$("#local").addEventListener("change", function (e) { S.local = e.target.checked; refresh(0.5); });
+document.querySelectorAll('input[name="depth"]').forEach(function (r) { r.addEventListener("change", function () { S.depth = +r.value; refresh(0.5); }); });
+$("#arrows").addEventListener("change", function (e) { S.arrows = e.target.checked; refresh(false); });
+function bindRange(id, key, fmt, after) {
+  var el = $("#" + id), o = $("#" + id + "O");
+  var set = function () { S[key] = +el.value; o.textContent = fmt(S[key]); };
+  set(); el.addEventListener("input", function () { set(); after(); });
+}
+bindRange("fade", "fade", function (v) { return v.toFixed(1); }, labels);
+bindRange("dist", "dist", function (v) { return v; }, function () { sim.force("link").distance(S.dist); refresh(0.4); });
+bindRange("repel", "repel", function (v) { return v; }, function () { sim.force("charge").strength(-S.repel); refresh(0.4); });
+$("#reshuffle").onclick = function () {
+  nodes.forEach(function (n) { n.x = W / 2 + (Math.random() - 0.5) * W * 0.8; n.y = H / 2 + (Math.random() - 0.5) * H * 0.8; });
+  refresh(1); setTimeout(function () { fit(true); }, RM.matches ? 0 : 1400);
+};
+if (WIDE.matches) $("#drawer").open = true;
+
+/* 啟動 */
+measure(); seed(); refresh(false);
+for (var i = 0; i < (RM.matches ? 300 : 90); i++) sim.tick();
+ticked(); fit(false);
+if (!RM.matches) sim.alpha(0.3).restart();
+renderNote();
+
+var lastW = W;
+new ResizeObserver(function () {
+  measure();
+  if (Math.abs(W - lastW) > 40) { lastW = W; refresh(0.3); setTimeout(function () { fit(true); }, RM.matches ? 0 : 700); }
+}).observe($("#stage"));
+})();
+</script>
+</body>
+</html>

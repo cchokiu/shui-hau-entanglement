@@ -1,0 +1,742 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>線的相遇：物種故事線圖</title>
+<link rel="stylesheet" href="shared.css">
+<script src="data.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<style>
+/* 版面：說明欄一行閱讀寬度；圖與相遇面板並排（桌面）或面板變成底部抽屜（窄螢幕）。
+   地帶底紋取自地景本身：山脊線、田基方格、村的點陣、泥灘水紋。 */
+main{padding-bottom:64px}
+.intro{max-width:46rem;margin:0 auto;padding:32px 16px 12px}
+.eyebrow{font-family:var(--f-mono);font-size:.76rem;letter-spacing:.06em;color:var(--muted);margin:0 0 .4rem}
+.intro h1{font-size:clamp(1.75rem,6vw,2.6rem);font-weight:800;letter-spacing:.02em}
+.lede{font-size:1.08rem;margin:.9rem 0 .5rem}
+.intro p{margin:.6rem 0}
+.webflow{font-size:.9rem;color:var(--muted);border-left:3px solid var(--c-visitor);padding:.15rem 0 .15rem .8rem}
+.webflow b{color:var(--fg)}
+
+.stage{max-width:1280px;margin:0 auto;padding:12px 16px 0;display:grid;gap:24px;grid-template-columns:minmax(0,1fr)}
+@media (min-width:1024px){.stage{grid-template-columns:minmax(0,1fr) 340px;align-items:start}}
+
+/* 控制列 */
+.controls{display:flex;flex-wrap:wrap;align-items:center;gap:10px 18px;padding:10px 0 12px;border-top:2px solid var(--fg)}
+.seg{display:flex;align-items:center;gap:0;flex-wrap:wrap}
+.ctl-label{font-size:.82rem;color:var(--muted);margin-right:8px}
+.seg button{border:1px solid var(--line);background:var(--surface);padding:3px 12px;font-size:.88rem;cursor:pointer;margin-left:-1px;min-height:34px}
+.seg button:first-of-type{border-radius:3px 0 0 3px;margin-left:0}
+.seg button:last-of-type{border-radius:0 3px 3px 0}
+.seg button[aria-pressed="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg);position:relative;z-index:1}
+.switch{display:inline-flex;align-items:center;gap:8px;border:0;background:none;padding:4px 0;cursor:pointer;font-size:.9rem;min-height:34px}
+.switch .track{width:34px;height:18px;border-radius:9px;border:1.5px solid var(--conflict);position:relative;flex:none}
+.switch .track::after{content:"";position:absolute;top:2px;left:2px;width:11px;height:11px;border-radius:50%;background:var(--conflict);transition:transform .18s}
+.switch[aria-checked="true"] .track{background:var(--conflict-soft)}
+.switch[aria-checked="true"] .track::after{transform:translateX(15px)}
+.switch[aria-checked="true"]{color:var(--conflict);font-weight:700}
+
+/* 圖 */
+.chart{margin:0}
+.chart-head{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center;margin-bottom:8px;font-size:.82rem;color:var(--muted)}
+.chart-wrap{position:relative;overflow-x:auto;overflow-y:hidden;background:var(--surface);border:1px solid var(--line);border-radius:3px;-webkit-overflow-scrolling:touch}
+.chart-wrap svg{display:block}
+.scroll-hint{display:none;font-size:.8rem;color:var(--tide);font-family:var(--f-mono)}
+.scroll-hint.on{display:inline}
+
+svg .pat{fill:none;stroke:var(--line);stroke-width:1}
+svg .pat-dot{fill:var(--line)}
+svg .band-bg{fill:transparent}
+svg .sea{fill:var(--tide-soft);opacity:.6}
+svg .guide{stroke:var(--line);stroke-dasharray:2 5}
+svg .band-sep{stroke:var(--line)}
+svg .band-name{font-family:var(--f-display);font-weight:600;font-size:15px;fill:var(--fg)}
+svg .band-cp{font-family:var(--f-mono);font-size:9.5px;fill:var(--muted)}
+svg .era-name{font-family:var(--f-body);font-weight:700;font-size:12.5px;fill:var(--fg)}
+svg .era-sub{font-family:var(--f-mono);font-size:10px;fill:var(--muted)}
+svg .knot{fill:var(--tide-soft);stroke:none;transition:opacity .2s,fill .2s}
+svg .knot.solo{fill:none;stroke:var(--line);stroke-dasharray:3 3;stroke-width:1.2}
+svg .knot.hot{fill:var(--conflict-soft)}
+svg .knot.sel{stroke:var(--fg);stroke-width:1.6;stroke-dasharray:none}
+svg .line{fill:none;stroke-width:3.2;stroke-linecap:round;stroke-linejoin:round}
+svg .actor{transition:opacity .2s}
+svg .fade{fill:none;stroke-width:3.2;stroke-dasharray:3 5;stroke-linecap:round}
+svg .strand{fill:none;stroke-width:4;stroke-linecap:round;opacity:0;transition:opacity .2s}
+svg .hit{fill:none;stroke:transparent;stroke-width:18;pointer-events:stroke;cursor:pointer}
+svg .knot-hit{fill:transparent;cursor:pointer;pointer-events:all}
+svg .knot-hit:focus{outline:none}
+svg .knot-hit:focus-visible{stroke:var(--tide);stroke-width:2.5;fill:transparent}
+svg .lbl{font-family:var(--f-body);font-size:12px;font-weight:700;paint-order:stroke;stroke:var(--surface);stroke-width:4px;stroke-linejoin:round;transition:opacity .2s}
+svg .lbl.sub{font-weight:500;font-size:11px}
+svg .vt{writing-mode:vertical-rl;text-orientation:upright;font-size:11px;letter-spacing:.5px}
+svg .mark{transition:opacity .2s}
+svg .mark path{fill:none;stroke:var(--conflict);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+svg .mark text{font-family:var(--f-body);font-size:11px;font-weight:700;fill:var(--conflict);paint-order:stroke;stroke:var(--surface);stroke-width:4px;stroke-linejoin:round}
+svg .dot{stroke:var(--surface);stroke-width:1.5}
+
+.tip{position:absolute;z-index:5;pointer-events:none;background:var(--fg);color:var(--bg);font-size:.8rem;line-height:1.45;padding:6px 9px;border-radius:3px;max-width:240px}
+.tip b{display:block;font-size:.86rem}
+.tip .mono{font-size:.74rem;opacity:.85}
+.readout{min-height:1.6em;margin:.6rem 0 0;font-size:.88rem;color:var(--muted)}
+.readout b{color:var(--fg)}
+
+/* 圖例 */
+.legend{display:flex;flex-wrap:wrap;gap:4px 6px;margin-top:10px;padding-top:10px;border-top:1px solid var(--line)}
+.legend button{display:inline-flex;align-items:center;gap:7px;border:1px solid transparent;background:none;padding:2px 8px;border-radius:3px;font-size:.86rem;cursor:pointer;min-height:32px}
+.legend button:hover,.legend button[aria-pressed="true"]{border-color:var(--line);background:var(--surface)}
+.legend button[aria-pressed="true"]{border-color:var(--fg)}
+.legend .sw{width:20px;height:3.5px;border-radius:2px;flex:none}
+.legend .k{font-size:.72rem;color:var(--muted)}
+.legend button.off{opacity:.35}
+.keys{display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:8px;font-size:.8rem;color:var(--muted)}
+.keys span{display:inline-flex;align-items:center;gap:6px}
+.keys svg{flex:none}
+.chart figcaption{font-size:.84rem;color:var(--muted);margin-top:12px;max-width:44rem}
+
+/* 相遇索引 */
+.index{margin-top:28px}
+.index h2{font-size:1.2rem;font-weight:800;margin-bottom:.3rem}
+.index p{font-size:.88rem;color:var(--muted);margin:0 0 .6rem}
+.index ol{list-style:none;margin:0;padding:0;border-top:1px solid var(--line)}
+.index li{border-bottom:1px solid var(--line)}
+.index button{width:100%;text-align:left;display:grid;grid-template-columns:5.6rem 1fr auto;gap:4px 12px;align-items:baseline;border:0;background:none;padding:9px 4px;cursor:pointer;font-size:.9rem}
+.index button:hover{background:var(--surface)}
+.index button[aria-current="true"]{background:var(--tide-soft)}
+.index .when{font-family:var(--f-mono);font-size:.76rem;color:var(--muted)}
+.index .who{color:var(--muted);font-size:.84rem;grid-column:2}
+.index .where{font-weight:700}
+.index .flag{grid-row:1/3;grid-column:3;align-self:center}
+@media (max-width:420px){.index button{grid-template-columns:4.6rem 1fr auto}}
+
+/* 面板：桌面為側欄，窄螢幕為底部抽屜 */
+.panel{background:var(--surface);border:1px solid var(--line);border-top:3px solid var(--tide);border-radius:3px}
+.panel-inner{padding:14px 18px 20px}
+.panel-top{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px}
+.grab{display:none}
+.close{border:1px solid var(--line);background:none;border-radius:3px;padding:2px 10px;font-size:.82rem;cursor:pointer;min-height:32px}
+.p-eyebrow{font-size:.74rem;color:var(--muted);margin:0;letter-spacing:.04em}
+.panel h2{font-size:1.32rem;font-weight:800;margin:.1rem 0 .8rem}
+.panel h2 span{color:var(--muted);font-weight:600}
+.panel h2:focus{outline:none}
+.panel h3{font-family:var(--f-body);font-size:.8rem;font-weight:700;color:var(--muted);letter-spacing:.06em;margin:1.1rem 0 .4rem;padding-bottom:3px;border-bottom:1px solid var(--line)}
+.p-conflict{display:grid;grid-template-columns:auto 1fr;gap:2px 8px;align-items:center;background:var(--conflict-soft);color:var(--conflict);padding:8px 10px;border-radius:3px;font-size:.86rem}
+.p-conflict span{grid-column:2;color:var(--fg);font-size:.82rem}
+.present{list-style:none;margin:0;padding:0}
+.present li{display:grid;grid-template-columns:20px auto 1fr;gap:0 8px;align-items:baseline;padding:4px 0;font-size:.9rem}
+.present i{width:16px;height:3.5px;border-radius:2px;align-self:center}
+.present .k{font-size:.72rem;color:var(--muted)}
+.present .mv{grid-column:2/4;font-size:.8rem;color:var(--muted)}
+.others{display:flex;flex-wrap:wrap;gap:5px;margin:0}
+.others span{font-size:.8rem;border:1px solid var(--line);border-radius:20px;padding:0 9px}
+.rels{list-style:none;margin:0;padding:0}
+.rel{padding:9px 0;border-bottom:1px dashed var(--line)}
+.rel:last-child{border-bottom:0}
+.rel-line{display:flex;flex-wrap:wrap;align-items:center;gap:4px 6px;font-weight:700;font-size:.92rem}
+.rel-line .nd{display:inline-flex;align-items:center;gap:5px}
+.rel-line .nd i{width:8px;height:8px;border-radius:50%;flex:none}
+.verb{font-weight:500;font-size:.78rem;color:var(--muted);display:inline-flex;align-items:center;gap:3px}
+.verb::before{content:"";width:14px;height:1px;background:currentColor}
+.verb::after{content:"→";font-family:var(--f-mono)}
+.verb.v-conflict{color:var(--conflict);font-weight:700}
+.rel-note{margin:.2rem 0 .3rem;font-size:.86rem}
+.rel-meta{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:center;font-size:.76rem;color:var(--muted)}
+.rel-meta .mono{font-size:.72rem}
+details.ext{margin-top:.8rem}
+details.ext summary{cursor:pointer;font-size:.86rem;color:var(--tide);font-weight:700}
+.voices{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.voices li{border-left:3px solid var(--line);padding:2px 0 2px 10px;font-size:.86rem}
+.voices .who{font-weight:700;margin-right:6px}
+.voices .role{font-size:.74rem;color:var(--muted);margin-right:6px}
+.voices p{margin:.15rem 0 0}
+.p-foot{font-size:.76rem;color:var(--muted);margin-top:1rem}
+.empty p{font-size:.9rem;margin:.5rem 0}
+.empty ol{margin:.4rem 0 0;padding-left:1.2rem;font-size:.88rem}
+.empty ol li{margin:.25rem 0}
+.none{font-size:.86rem;color:var(--muted)}
+
+@media (min-width:1024px){
+  .panel{position:sticky;top:52px;max-height:calc(100vh - 68px);overflow:auto}
+  .close{display:none}
+  .panel.has-sel .close{display:inline-block}
+}
+@media (max-width:1023px){
+  .panel{position:fixed;left:0;right:0;bottom:0;z-index:60;max-width:640px;margin:0 auto;max-height:72vh;overflow:auto;
+    border-radius:10px 10px 0 0;border:1px solid var(--line);border-top:3px solid var(--tide);
+    box-shadow:0 -6px 24px rgba(0,0,0,.18);transform:translateY(105%);visibility:hidden;transition:transform .25s ease,visibility 0s linear .25s;
+    padding-bottom:env(safe-area-inset-bottom,0px)}
+  .panel.open{transform:none;visibility:visible;transition:transform .25s ease}
+  .panel .empty{display:none}
+  .grab{display:block;width:40px;height:4px;border-radius:2px;background:var(--line);margin:0 auto}
+  .panel-top{position:sticky;top:-14px;background:var(--surface);padding:6px 0 6px;margin-top:-6px}
+}
+</style>
+</head>
+<body>
+<header class="sample-bar"><a href="../index.html">← 回到參考頁</a><span class="tag">方案 02 · 示意 sample</span><span class="sp"></span>
+<nav aria-label="其他方案"><a href="c1.html">01</a><a href="c2.html" aria-current="page">02</a><a href="c3.html">03</a><a href="c4.html">04</a><a href="c5.html">05</a><a href="c6.html">06</a><a href="c7.html">07</a><a href="c8.html">08</a></nav></header>
+
+<main>
+<section class="intro">
+  <p class="eyebrow">方案 02 · 標誌圖像 · Code Embed（D3）</p>
+  <h1>線的相遇：物種故事線圖</h1>
+  <p class="lede">時間由左至右，每條線是一個物種、一群人或一個團體；在同一地帶出現時線就靠攏，靠攏之處便是「結」。人只是其中幾條線。</p>
+  <p>這個示意版把五個年代、四個地帶粗略排列：可以追蹤單一條線，也可以點開一個結，看誰在場、資料庫中有哪些相應的關係紀錄及其來源與核實狀態。正式版會把時間細分至節氣與潮汐，並讓每個結連到檢查點、訪談片段與影像。</p>
+  <p class="webflow"><b>Webflow 做法：</b>以 Code Embed 放入（D3 約 90 KB），讀取由 CMS 的節點表與關係表匯出的 graph.json；各線在每個年代的位置可作為 CMS 欄位，由團隊自行修訂，毋須改程式。</p>
+</section>
+
+<div class="stage">
+  <div class="main-col">
+    <div class="controls">
+      <div class="seg" role="group" aria-label="顯示哪類線" id="kindSeg">
+        <span class="ctl-label">顯示</span>
+        <button type="button" data-kind="all" aria-pressed="true">全部</button>
+        <button type="button" data-kind="species" aria-pressed="false">物種</button>
+        <button type="button" data-kind="human" aria-pressed="false">人</button>
+        <button type="button" data-kind="org" aria-pressed="false">機構</button>
+      </div>
+      <button type="button" class="switch" role="switch" aria-checked="false" id="conflictOnly"><span class="track" aria-hidden="true"></span>只看有爭議的相遇</button>
+    </div>
+
+    <figure class="chart">
+      <div class="chart-head">
+        <span class="simulated">示意 · 年代未核實</span>
+        <span>點線看路徑，點淡色的結看誰在場</span>
+        <span class="scroll-hint" id="scrollHint">← 圖可左右捲動 →</span>
+      </div>
+      <div class="chart-wrap" id="chartWrap">
+        <svg id="story" role="group" aria-label="水口物種故事線圖：五個年代中，七條線在山林、田／濕地、村、泥灘／海四個地帶之間移動與相遇。結可用鍵盤逐一選取。"></svg>
+        <div class="tip" id="tip" hidden></div>
+      </div>
+      <p class="readout" id="readout" aria-live="polite">把游標移到線上（或輕點一條線），會顯示它在五個年代的位置。</p>
+      <div class="legend" id="legend" role="group" aria-label="圖例：選取一條線以突出顯示"></div>
+      <div class="keys" aria-label="符號說明">
+        <span><svg width="30" height="16" aria-hidden="true"><rect x="1" y="1" width="28" height="14" rx="7" style="fill:var(--tide-soft)"/><path d="M4 6H26M4 10H26" style="stroke:var(--muted);stroke-width:2"/></svg>結：兩條或以上的線同在一處</span>
+        <span><svg width="26" height="16" aria-hidden="true"><rect x="1" y="2" width="24" height="12" rx="6" style="fill:none;stroke:var(--line);stroke-dasharray:3 3"/><path d="M4 8H22" style="stroke:var(--muted);stroke-width:2"/></svg>單獨停留（也可點開）</span>
+        <span><svg width="16" height="16" aria-hidden="true"><path d="M2 12 L5 4 L8 12 L11 4 L14 12" style="fill:none;stroke:var(--conflict);stroke-width:1.8;stroke-linejoin:round"/></svg>爭議所在</span>
+        <span><svg width="30" height="10" aria-hidden="true"><path d="M2 5H28" style="stroke:var(--c-rice);stroke-width:3;stroke-dasharray:3 5"/></svg>虛線淡出／淡入：消失或重現</span>
+      </div>
+      <figcaption>各線在每個年代的位置是本頁為示意而設，按現有訪談及物種編碼文件粗略整理，年代未經核實。結內的關係紀錄則直接取自共用資料庫（data.js），按年代、檢查點所屬地帶及在場的線自動配對。</figcaption>
+    </figure>
+
+    <section class="index" aria-labelledby="idxTitle">
+      <h2 id="idxTitle">所有相遇</h2>
+      <p>不用圖也可以從這裡逐一打開。</p>
+      <ol id="knotIndex"></ol>
+    </section>
+  </div>
+
+  <aside class="panel" id="panel" aria-labelledby="panelTitle">
+    <div class="panel-inner">
+      <div class="panel-top"><span class="grab" aria-hidden="true"></span><button type="button" class="close" id="panelClose">關閉</button></div>
+      <div id="panelBody"></div>
+    </div>
+  </aside>
+</div>
+</main>
+
+<script>
+(function(){
+  "use strict";
+  var D = window.SHUIHAU;
+  var NODE = {}; D.nodes.forEach(function(n){ NODE[n.id] = n; });
+
+  /* ---------- 本頁示意資料：年代、地帶、各線位置（年代未核實） ---------- */
+  var ERAS = [
+    {zh:"耕作期", sub:"1960年代前"},
+    {zh:"截水", sub:"1960年代"},
+    {zh:"棄耕", sub:"1970–90年代"},
+    {zh:"牛群野化、濕地形成", sub:"2000年代"},
+    {zh:"復耕與旅遊", sub:"2020年代"}
+  ];
+  var BANDS = [
+    {id:"forest", zh:"山林", short:"山林", places:["forest"]},
+    {id:"field", zh:"田／濕地", short:"田", places:["field","marsh"]},
+    {id:"village", zh:"村", short:"村", places:["village","road"]},
+    {id:"flat", zh:"泥灘／海", short:"泥灘", places:["flat","sea"]}
+  ];
+  var ACTORS = [
+    {id:"rice", short:"水稻", pos:["field","field",null,null,"field"], gone:{after:1, label:"棄耕"}, back:{at:4, label:"水稻・復耕"}},
+    {id:"cattle", short:"黃牛", pos:["field","field","forest","field","village"]},
+    {id:"buffalo", short:"水牛", pos:[null,null,null,"field","field"]},
+    {id:"villager", short:"村民", pos:["field","field","flat","village","flat"]},
+    {id:"clam", short:"沙白", pos:["flat","flat","flat","flat","flat"]},
+    {id:"birdclub", short:"觀鳥團體", pos:[null,null,null,null,"field"]},
+    {id:"visitor", short:"遊客", pos:[null,null,null,"flat","flat"]}
+  ];
+  var MARKS = [
+    {e:1, b:"field", label:"截山水"},
+    {e:4, b:"field", label:"用水爭議", voices:true},
+    {e:4, b:"flat", label:"過度採集"}
+  ];
+  /* 資料庫 period 字串對應的年代（示意） */
+  var PERIOD = {"耕作期":[0], "1960 年代":[1], "過去":[0,1,2], "過去至今":[0,1,2,3,4], "現在":[3,4], "近數十年":[3,4], "近年":[4]};
+  var KIND = {species:"物種", human:"人", org:"機構"};
+  var STATUS = {observed:"研究員觀察", oral:"村民口述・未核實", consensus:"多人口述一致", check:"待科學核實", conflict:"爭議", pending:"待補充"};
+
+  /* ---------- 衍生 ---------- */
+  var placeBand = {}; BANDS.forEach(function(b){ b.places.forEach(function(p){ placeBand[p] = b.id; }); });
+  var BAND = {}; BANDS.forEach(function(b, i){ b.i = i; BAND[b.id] = b; });
+  var cpBand = {}; D.checkpoints.forEach(function(c){ cpBand[c.id] = placeBand[c.place]; });
+  BANDS.forEach(function(b){
+    var s = {}; D.checkpoints.forEach(function(c){ if (placeBand[c.place] === b.id) s[c.id] = 1; });
+    b.cps = Object.keys(s).sort(function(x, y){ return parseFloat(x) - parseFloat(y); });
+  });
+  var A = {}; ACTORS.forEach(function(a, i){ var n = NODE[a.id]; a.rank = i; a.color = n.color; a.kind = n.kind; A[a.id] = a; });
+  var actorSet = {}; ACTORS.forEach(function(a){ actorSet[a.id] = 1; });
+
+  function relHere(r, e, b){ var es = PERIOD[r.period]; return !!es && es.indexOf(e) >= 0 && cpBand[r.cp] === b; }
+
+  var CELLS = [], CELL = {};
+  ERAS.forEach(function(_, e){
+    BANDS.forEach(function(b){
+      var present = ACTORS.filter(function(a){ return a.pos[e] === b.id; }).map(function(a){ return a.id; });
+      if (!present.length) return;
+      var c = {key:e + "-" + b.id, e:e, b:b.id, actors:present, n:present.length};
+      c.mark = MARKS.filter(function(m){ return m.e === e && m.b === b.id; })[0] || null;
+      c.direct = D.relations.filter(function(r){ return relHere(r, e, b.id) && (present.indexOf(r.from) >= 0 || present.indexOf(r.to) >= 0); });
+      var ext = {}, absent = {}, others = {};
+      c.direct.forEach(function(r){ [r.from, r.to].forEach(function(id){
+        if (present.indexOf(id) >= 0) return;
+        if (actorSet[id]) absent[id] = 1; else { ext[id] = 1; others[id] = 1; }
+      }); });
+      c.ext = D.relations.filter(function(r){ return c.direct.indexOf(r) < 0 && relHere(r, e, b.id) && !actorSet[r.from] && !actorSet[r.to] && (ext[r.from] || ext[r.to]); });
+      c.absent = Object.keys(absent); c.others = Object.keys(others);
+      c.conflict = !!c.mark || c.direct.some(function(r){ return r.verb === "衝突" || r.status === "conflict"; });
+      CELLS.push(c); CELL[c.key] = c;
+    });
+  });
+
+  /* 帶內排序：以前後年代的位置作重心，反覆數次，減少交叉 */
+  var SLOT_UNIT = 12, BAND_UNIT = 100;
+  function coordOf(id, e){ var c = CELL[e + "-" + A[id].pos[e]]; var j = c.actors.indexOf(id); return BAND[c.b].i * BAND_UNIT + (j - (c.n - 1) / 2) * SLOT_UNIT; }
+  CELLS.forEach(function(c){ c.actors.sort(function(x, y){ return A[x].rank - A[y].rank; }); });
+  for (var sweep = 0; sweep < 3; sweep++) {
+    CELLS.forEach(function(c){
+      var key = {};
+      c.actors.forEach(function(id){
+        var s = 0, k = 0;
+        [c.e - 1, c.e + 1].forEach(function(e2){ if (e2 >= 0 && e2 < 5 && A[id].pos[e2]) { s += coordOf(id, e2); k++; } });
+        key[id] = k ? s / k : coordOf(id, c.e);
+      });
+      c.actors.sort(function(x, y){ return (key[x] - key[y]) || (A[x].rank - A[y].rank); });
+    });
+  }
+
+  /* ---------- 狀態 ---------- */
+  var state = {kind:"all", conflictOnly:false, hover:null, pinned:null, hoverCell:null, sel:null};
+  var mqV = window.matchMedia("(max-width: 599px)");
+  var mqSheet = window.matchMedia("(max-width: 1023px)");
+  var wrap = document.getElementById("chartWrap");
+  var svg = d3.select("#story");
+  var tip = document.getElementById("tip");
+  var readout = document.getElementById("readout");
+  var G = {};
+
+  function cvar(name){ return "var(" + name + ")"; }
+  function vis(a){ return state.kind === "all" || a.kind === state.kind; }
+  function traj(a){
+    return a.pos.map(function(p, e){
+      if (p) return BAND[p].short;
+      if (a.gone && e === a.gone.after + 1) return a.gone.label;
+      return "—";
+    }).join(" → ");
+  }
+
+  /* ---------- 繪圖 ---------- */
+  var lastW = 0, lastV = null;
+  function render(){
+    var V = mqV.matches;
+    var cw = wrap.clientWidth;
+    lastW = cw; lastV = V;
+    svg.selectAll("*").remove();
+
+    var L, W, H, tE, pC, h, sp, xy, endExt, fadeLen, leadLen;
+    if (!V) {
+      W = Math.max(cw, 760);
+      L = W < 860 ? 150 : 172;
+      var R = 100, top = 60, bandH = 100;
+      H = top + BANDS.length * bandH + 14;
+      sp = 12; h = 22; endExt = 12; fadeLen = 64; leadLen = 34;
+      var step = (W - L - R) / 4;
+      tE = function(e){ return L + e * step; };
+      pC = function(bi){ return top + (bi + 0.5) * bandH; };
+      xy = function(t, p){ return [t, p]; };
+      G.geom = {top:top, bandH:bandH, step:step};
+    } else {
+      W = cw;
+      var gut = 64, rp = 8, topV = 46, row = 140;
+      var colW = (W - gut - rp) / 4;
+      H = topV + 5 * row + 58;
+      sp = 12; h = 14; endExt = 6; fadeLen = 46; leadLen = 26;
+      tE = function(e){ return topV + (e + 0.5) * row; };
+      pC = function(bi){ return gut + (bi + 0.5) * colW; };
+      xy = function(t, p){ return [p, t]; };
+      G.geom = {top:topV, gut:gut, colW:colW, row:row};
+    }
+    svg.attr("width", W).attr("height", H).attr("viewBox", "0 0 " + W + " " + H);
+    function slotP(id, e){ var c = CELL[e + "-" + A[id].pos[e]]; var j = c.actors.indexOf(id); return pC(BAND[c.b].i) + (j - (c.n - 1) / 2) * sp; }
+    function pt(t, p){ var q = xy(t, p); return q[0].toFixed(1) + " " + q[1].toFixed(1); }
+    function rectTP(t0, t1, p0, p1){ var a = xy(t0, p0), b = xy(t1, p1); return {x:Math.min(a[0], b[0]), y:Math.min(a[1], b[1]), w:Math.abs(b[0] - a[0]), h:Math.abs(b[1] - a[1])}; }
+
+    /* defs：地景底紋 */
+    var defs = svg.append("defs");
+    var pf = defs.append("pattern").attr("id", "pat-forest").attr("patternUnits", "userSpaceOnUse").attr("width", 34).attr("height", 16);
+    pf.append("path").attr("class", "pat").attr("d", "M0 13 Q8.5 4 17 13 T34 13");
+    var pd = defs.append("pattern").attr("id", "pat-field").attr("patternUnits", "userSpaceOnUse").attr("width", 30).attr("height", 15);
+    pd.append("path").attr("class", "pat").attr("d", "M0 0.5H30M0.5 0V15");
+    var pv = defs.append("pattern").attr("id", "pat-village").attr("patternUnits", "userSpaceOnUse").attr("width", 14).attr("height", 14);
+    pv.append("circle").attr("class", "pat-dot").attr("cx", 7).attr("cy", 7).attr("r", 1);
+    var pw = defs.append("pattern").attr("id", "pat-flat").attr("patternUnits", "userSpaceOnUse").attr("width", 24).attr("height", 9);
+    pw.append("path").attr("class", "pat").attr("d", "M0 5 Q6 1.5 12 5 T24 5");
+
+    /* 底：地帶 */
+    var gBg = svg.append("g").attr("aria-hidden", "true");
+    BANDS.forEach(function(b){
+      var r;
+      if (!V) {
+        var y0 = G.geom.top + b.i * G.geom.bandH;
+        r = {x:0, y:y0, w:W, h:G.geom.bandH};
+        gBg.append("rect").attr("x", r.x).attr("y", r.y).attr("width", r.w).attr("height", r.h).style("fill", "url(#pat-" + b.id + ")").style("opacity", .7);
+        if (b.id === "flat") gBg.append("rect").attr("class", "sea").attr("x", 0).attr("y", y0 + G.geom.bandH * .68).attr("width", W).attr("height", G.geom.bandH * .32);
+        if (b.i > 0) gBg.append("line").attr("class", "band-sep").attr("x1", 0).attr("x2", W).attr("y1", y0).attr("y2", y0);
+        gBg.append("text").attr("class", "band-name").attr("x", 14).attr("y", y0 + 30).text(b.zh);
+        gBg.append("text").attr("class", "band-cp").attr("x", 14).attr("y", y0 + 46).text("檢查點");
+        for (var ci = 0; ci < b.cps.length; ci += 3) gBg.append("text").attr("class", "band-cp").attr("x", 14).attr("y", y0 + 59 + (ci / 3) * 12).text(b.cps.slice(ci, ci + 3).join(" · "));
+      } else {
+        var x0 = G.geom.gut + b.i * G.geom.colW;
+        gBg.append("rect").attr("x", x0).attr("y", G.geom.top).attr("width", G.geom.colW).attr("height", H - G.geom.top).style("fill", "url(#pat-" + b.id + ")").style("opacity", .7);
+        if (b.id === "flat") gBg.append("rect").attr("class", "sea").attr("x", x0 + G.geom.colW * .7).attr("y", G.geom.top).attr("width", G.geom.colW * .3 + 8).attr("height", H - G.geom.top);
+        gBg.append("line").attr("class", "band-sep").attr("x1", x0).attr("x2", x0).attr("y1", 0).attr("y2", H);
+        gBg.append("text").attr("class", "band-name").attr("x", x0 + G.geom.colW / 2).attr("y", 22).attr("text-anchor", "middle").style("font-size", "13px").text(b.zh);
+        gBg.append("text").attr("class", "band-cp").attr("x", x0 + G.geom.colW / 2).attr("y", 36).attr("text-anchor", "middle").style("font-size", "8.5px").text(b.cps.slice(0, 3).join("·") + (b.cps.length > 3 ? "…" : ""));
+      }
+    });
+    if (V) gBg.append("line").attr("class", "band-sep").attr("x1", 0).attr("x2", W).attr("y1", G.geom.top).attr("y2", G.geom.top);
+    /* 年代 */
+    ERAS.forEach(function(er, e){
+      var t = tE(e);
+      if (!V) {
+        gBg.append("line").attr("class", "guide").attr("x1", t).attr("x2", t).attr("y1", G.geom.top - 4).attr("y2", H - 6);
+        var parts = (G.geom.step < 150 && er.zh.indexOf("、") > 0) ? [er.zh.split("、")[0] + "、", er.zh.split("、")[1]] : [er.zh];
+        var tx = gBg.append("text").attr("class", "era-name").attr("text-anchor", "middle");
+        parts.forEach(function(s, i){ tx.append("tspan").attr("x", t).attr("y", (parts.length > 1 ? 14 : 24) + i * 15).text(s); });
+        gBg.append("text").attr("class", "era-sub").attr("x", t).attr("y", parts.length > 1 ? 48 : 40).attr("text-anchor", "middle").text(er.sub);
+      } else {
+        gBg.append("line").attr("class", "guide").attr("x1", G.geom.gut - 4).attr("x2", W).attr("y1", t).attr("y2", t);
+        var lines = er.zh === "牛群野化、濕地形成" ? ["牛群野化、", "濕地形成"] : er.zh === "復耕與旅遊" ? ["復耕與", "旅遊"] : [er.zh];
+        var y0 = t - 16;
+        var tv = gBg.append("text").attr("class", "era-name").style("font-size", "12px");
+        lines.forEach(function(s, i){ tv.append("tspan").attr("x", 8).attr("y", y0 + i * 15).text(s); });
+        gBg.append("text").attr("class", "era-sub").attr("x", 8).attr("y", y0 + lines.length * 15).style("font-size", "9px").text(er.sub);
+      }
+    });
+
+    /* 結（視覺） */
+    var gKnots = svg.append("g").attr("aria-hidden", "true");
+    CELLS.forEach(function(c){
+      var t = tE(c.e), b = BAND[c.b];
+      var p0 = pC(b.i) - (c.n - 1) / 2 * sp, p1 = pC(b.i) + (c.n - 1) / 2 * sp;
+      var padT = c.n > 1 ? 9 : 5, padP = c.n > 1 ? 10 : 8;
+      var r = rectTP(t - h - padT, t + h + padT, p0 - padP, p1 + padP);
+      c.rect = r;
+      gKnots.append("rect").attr("class", "knot" + (c.n > 1 ? "" : " solo")).attr("data-key", c.key)
+        .attr("x", r.x).attr("y", r.y).attr("width", r.w).attr("height", r.h).attr("rx", Math.min(r.w, r.h) / 2);
+    });
+
+    /* 線 */
+    var gLines = svg.append("g").attr("aria-hidden", "true");
+    var gStrands = svg.append("g").attr("aria-hidden", "true");
+    var gLabels = svg.append("g").attr("aria-hidden", "true");
+    var gHit = svg.append("g");
+    ACTORS.forEach(function(a){
+      var col = cvar(a.color);
+      var runs = [], cur = null;
+      a.pos.forEach(function(p, e){ if (p) { if (!cur) { cur = []; runs.push(cur); } cur.push(e); } else cur = null; });
+      var g = gLines.append("g").attr("class", "actor").attr("data-id", a.id);
+      var gl = gLabels.append("g").attr("class", "actor-lbl").attr("data-id", a.id);
+      var fullD = "";
+      runs.forEach(function(run){
+        var d = "";
+        run.forEach(function(e, i){
+          var p = slotP(a.id, e), t = tE(e);
+          if (i === 0) d += "M" + pt(t - h, p);
+          else {
+            var pe = run[i - 1], pp = slotP(a.id, pe), t0 = tE(pe) + h, t1 = t - h, tm = (t0 + t1) / 2;
+            d += " C" + pt(tm, pp) + " " + pt(tm, p) + " " + pt(t1, p);
+          }
+          d += " L" + pt(t + h + (e === 4 ? endExt : 0), p);
+        });
+        fullD += d + " ";
+        g.append("path").attr("class", "line").attr("d", d).style("stroke", col);
+
+        var s = run[0], ps = slotP(a.id, s), ts = tE(s) - h;
+        var isBack = a.back && a.back.at === s;
+        if (isBack) {
+          for (var k = 0; k < 4; k++) {
+            g.append("path").attr("class", "fade").style("stroke", col).style("opacity", .25 + k * .22)
+              .attr("d", "M" + pt(ts - leadLen + k * leadLen / 4, ps) + " L" + pt(ts - leadLen + (k + 1) * leadLen / 4, ps));
+          }
+        }
+        var ls = ts - (isBack ? leadLen : 0);
+        g.append("circle").attr("class", "dot").attr("r", 4).style("fill", col)
+          .attr("cx", xy(ls, ps)[0]).attr("cy", xy(ls, ps)[1]);
+        var name = isBack ? a.back.label : a.short;
+        if (!V) gl.append("text").attr("class", "lbl").attr("x", ls - 8).attr("y", ps + 4).attr("text-anchor", "end").style("fill", col).text(name);
+        else gl.append("text").attr("class", "lbl vt").attr("x", ps).attr("y", ls - 7).attr("text-anchor", "end").style("fill", col).text(name);
+
+        var last = run[run.length - 1], pl = slotP(a.id, last);
+        if (last === 4) {
+          var te = tE(4) + h + endExt;
+          if (!V) gl.append("text").attr("class", "lbl").attr("x", te + 6).attr("y", pl + 4).style("fill", col).text(a.short);
+          else gl.append("text").attr("class", "lbl vt").attr("x", pl).attr("y", te + 6).style("fill", col).text(a.short);
+        } else if (a.gone && a.gone.after === last) {
+          var tf = tE(last) + h;
+          for (var k2 = 0; k2 < 4; k2++) {
+            g.append("path").attr("class", "fade").style("stroke", col).style("opacity", .9 - k2 * .22)
+              .attr("d", "M" + pt(tf + k2 * fadeLen / 4, pl) + " L" + pt(tf + (k2 + 1) * fadeLen / 4, pl));
+          }
+          if (!V) gl.append("text").attr("class", "lbl sub").attr("x", tf + fadeLen + 6).attr("y", pl + 4).style("fill", col).text(a.gone.label);
+          else gl.append("text").attr("class", "lbl sub vt").attr("x", pl).attr("y", tf + fadeLen + 5).style("fill", col).text(a.gone.label);
+        }
+      });
+      /* 爭議結內的一小段，供「只看有爭議」時突出 */
+      CELLS.forEach(function(c){
+        if (!c.conflict || c.actors.indexOf(a.id) < 0) return;
+        var p = slotP(a.id, c.e), t = tE(c.e);
+        gStrands.append("path").attr("class", "strand").attr("data-id", a.id).attr("data-cell", c.key).style("stroke", col).attr("d", "M" + pt(t - h, p) + " L" + pt(t + h, p));
+      });
+      gHit.append("path").attr("class", "hit").attr("data-id", a.id).attr("d", fullD)
+        .on("pointerenter", function(ev){ if (ev.pointerType !== "touch") { state.hover = a.id; apply(); } })
+        .on("pointermove", function(ev){ if (ev.pointerType !== "touch") showTip(a, ev); })
+        .on("pointerleave", function(ev){ if (ev.pointerType !== "touch") { state.hover = null; hideTip(); apply(); } })
+        .on("click", function(ev){ ev.stopPropagation(); state.pinned = state.pinned === a.id ? null : a.id; if (state.pinned) showTip(a, ev); else hideTip(); apply(); });
+    });
+
+    /* 爭議記號 */
+    var gMarks = svg.append("g").attr("aria-hidden", "true");
+    MARKS.forEach(function(m){
+      var c = CELL[m.e + "-" + m.b], r = c.rect;
+      var g = gMarks.append("g").attr("class", "mark").attr("data-cell", c.key);
+      if (!V) {
+        var cx = r.x + r.w / 2, y = r.y - 7;
+        var tw = m.label.length * 11;
+        var zx = cx - (tw + 16) / 2;
+        g.append("path").attr("d", "M" + zx + " " + (y - 1) + " l3 -7 l3 7 l3 -7 l3 7");
+        g.append("text").attr("x", zx + 16).attr("y", y).text(m.label);
+      } else {
+        var x = r.x + r.w + 7, y0 = r.y + 2;
+        g.append("path").attr("d", "M" + (x - 5) + " " + y0 + " l5 3 l-5 3 l5 3");
+        g.append("text").attr("class", "vt").attr("x", x - 1).attr("y", y0 + 14).style("font-size", "10px").text(m.label);
+      }
+    });
+
+    /* 結（可點擊層，置頂） */
+    var gKH = svg.append("g");
+    CELLS.forEach(function(c){
+      var r = c.rect, er = ERAS[c.e], b = BAND[c.b];
+      var names = c.actors.map(function(id){ return A[id].short; }).join("、");
+      var label = er.zh + "（" + er.sub + "），" + b.zh + "：" + (c.n > 1 ? names + "相遇" : names + "單獨停留") + (c.mark ? "；爭議：" + c.mark.label : "") + "。開啟詳情";
+      gKH.append("rect").attr("class", "knot-hit").attr("data-key", c.key)
+        .attr("x", r.x - 2).attr("y", r.y - 2).attr("width", r.w + 4).attr("height", r.h + 4).attr("rx", Math.min(r.w, r.h) / 2 + 2)
+        .attr("tabindex", 0).attr("role", "button").attr("aria-label", label)
+        .on("pointerenter", function(){ state.hoverCell = c.key; apply(); })
+        .on("pointerleave", function(){ state.hoverCell = null; apply(); })
+        .on("focus", function(){ state.hoverCell = c.key; apply(); })
+        .on("blur", function(){ state.hoverCell = null; apply(); })
+        .on("click", function(ev){ ev.stopPropagation(); openCell(c.key, this); })
+        .on("keydown", function(ev){ if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); openCell(c.key, this); } });
+    });
+
+    svg.on("click", function(){ if (state.pinned) { state.pinned = null; hideTip(); apply(); } });
+    document.getElementById("scrollHint").classList.toggle("on", wrap.scrollWidth > wrap.clientWidth + 2);
+    apply();
+  }
+
+  /* ---------- 狀態套用 ---------- */
+  function apply(){
+    var focus = state.hover || state.pinned;
+    var hc = state.hoverCell ? CELL[state.hoverCell] : null;
+    ACTORS.forEach(function(a){
+      var o;
+      if (!vis(a)) o = .06;
+      else if (focus) o = a.id === focus ? 1 : .13;
+      else if (hc) o = hc.actors.indexOf(a.id) >= 0 ? 1 : .15;
+      else if (state.conflictOnly) o = .2;
+      else o = 1;
+      svg.selectAll('.actor[data-id="' + a.id + '"]').style("opacity", o);
+      svg.selectAll('.actor-lbl[data-id="' + a.id + '"]').style("opacity", !vis(a) ? .1 : (focus && a.id !== focus) || (hc && hc.actors.indexOf(a.id) < 0) ? .25 : state.conflictOnly ? .55 : 1);
+      svg.selectAll('.hit[data-id="' + a.id + '"]').style("pointer-events", vis(a) ? null : "none");
+      svg.selectAll('.strand[data-id="' + a.id + '"]').style("opacity", state.conflictOnly && vis(a) && (!focus || focus === a.id) ? 1 : 0);
+    });
+    CELLS.forEach(function(c){
+      var vc = c.actors.filter(function(id){ return vis(A[id]); }).length;
+      var o = c.n > 1 ? (vc >= 2 ? 1 : .25) : (vc >= 1 ? 1 : .25);
+      if (state.conflictOnly && !c.conflict) o = Math.min(o, .18);
+      if (focus && c.actors.indexOf(focus) < 0) o = Math.min(o, .35);
+      svg.selectAll('.knot[data-key="' + c.key + '"]').style("opacity", o)
+        .classed("hot", state.conflictOnly && c.conflict && c.n > 1)
+        .classed("sel", state.sel === c.key);
+    });
+    svg.selectAll(".mark").style("opacity", function(){ var c = CELL[this.getAttribute("data-cell")]; return focus && c.actors.indexOf(focus) < 0 ? .35 : 1; });
+    /* 圖例 */
+    d3.selectAll("#legend button").each(function(){
+      var id = this.getAttribute("data-id"), a = A[id];
+      this.setAttribute("aria-pressed", state.pinned === id ? "true" : "false");
+      this.classList.toggle("off", !vis(a));
+    });
+    var show = focus ? A[focus] : null;
+    if (show) readout.innerHTML = "<b>" + show.short + "</b>（" + KIND[show.kind] + "）：" + traj(show);
+    else if (hc) readout.innerHTML = "<b>" + ERAS[hc.e].zh + " · " + BAND[hc.b].zh + "</b>：" + hc.actors.map(function(id){ return A[id].short; }).join("、") + (hc.n > 1 ? " 在此相遇" : " 單獨停留") + (hc.mark ? "；爭議：" + hc.mark.label : "");
+    else if (state.conflictOnly) readout.textContent = "只顯示有爭議的結：" + CELLS.filter(function(c){ return c.conflict; }).map(function(c){ return ERAS[c.e].sub + " " + BAND[c.b].short + (c.mark ? "（" + c.mark.label + "）" : ""); }).join("、") + "。";
+    else readout.textContent = "把游標移到線上（或輕點一條線），會顯示它在五個年代的位置。";
+    d3.selectAll("#knotIndex button").attr("aria-current", function(){ return this.getAttribute("data-key") === state.sel ? "true" : null; });
+  }
+
+  function showTip(a, ev){
+    var r = wrap.getBoundingClientRect();
+    var x = ev.clientX - r.left + wrap.scrollLeft, y = ev.clientY - r.top;
+    tip.innerHTML = "<b>" + a.short + "</b><span class=\"mono\">" + traj(a) + "</span>";
+    tip.hidden = false;
+    var tw = tip.offsetWidth, th = tip.offsetHeight;
+    var maxX = wrap.scrollLeft + wrap.clientWidth - tw - 6;
+    tip.style.left = Math.max(wrap.scrollLeft + 6, Math.min(maxX, x + 12)) + "px";
+    tip.style.top = (y - th - 12 < 4 ? y + 16 : y - th - 12) + "px";
+  }
+  function hideTip(){ tip.hidden = true; }
+
+  /* ---------- 面板 ---------- */
+  var panel = document.getElementById("panel");
+  var body = document.getElementById("panelBody");
+  var lastTrigger = null;
+  var ZIG = '<svg width="16" height="14" aria-hidden="true"><path d="M2 11 L5 3 L8 11 L11 3 L14 11" style="fill:none;stroke:var(--conflict);stroke-width:1.8;stroke-linejoin:round"/></svg>';
+
+  function nodeChip(id){
+    var n = NODE[id]; var a = A[id];
+    var name = a ? a.short : n.zh;
+    return '<span class="nd"><i style="background:var(' + n.color + ')"></i>' + name + "</span>";
+  }
+  function relHTML(r){
+    var vcls = r.verb === "衝突" ? " v-conflict" : "";
+    return '<li class="rel"><div class="rel-line">' + nodeChip(r.from) + '<span class="verb' + vcls + '">' + r.verb + "</span>" + nodeChip(r.to) + "</div>" +
+      (r.note ? '<p class="rel-note">' + r.note + "</p>" : "") +
+      '<div class="rel-meta"><span class="st ' + r.status + '">' + STATUS[r.status] + "</span><span>" + r.source + '</span><span class="mono">' + r.period + " · 檢查點 " + r.cp + "</span></div></li>";
+  }
+  function moveText(a, c){
+    var e = c.e, prev = e > 0 ? a.pos[e - 1] : undefined, next = e < 4 ? a.pos[e + 1] : undefined, out = [];
+    if (e > 0) out.push(prev === c.b ? "上一期已在此" : prev ? "由" + BAND[prev].short + "來" : (a.back && a.back.at === e ? "棄耕後重現" : "此期首次出現在圖上"));
+    if (e < 4) out.push(next === c.b ? "下一期仍在" : next ? "其後往" + BAND[next].short : (a.gone && a.gone.after === e ? "其後棄耕" : "其後不在圖上"));
+    else out.push("延續至今");
+    return out.join("，");
+  }
+  function cellHTML(c){
+    var er = ERAS[c.e], b = BAND[c.b];
+    var h = '<p class="p-eyebrow mono">' + (c.n > 1 ? "相遇" : "單獨停留") + " · " + er.sub + " · 示意</p>" +
+      '<h2 id="panelTitle" tabindex="-1">' + er.zh + "<span> · " + b.zh + "</span></h2>";
+    if (c.mark) h += '<div class="p-conflict">' + ZIG + "<b>" + c.mark.label + "</b><span>這裡標示爭議所在。本頁只並列各方說法與其來源，不作裁決。</span></div>";
+    h += "<h3>在場的線（" + c.n + "）</h3><ul class=\"present\">" + c.actors.map(function(id){
+      var a = A[id];
+      return '<li><i style="background:var(' + a.color + ')"></i><b>' + a.short + '</b><span class="k">' + KIND[a.kind] + '</span><span class="mv">' + moveText(a, c) + "</span></li>";
+    }).join("") + "</ul>";
+    if (c.absent.length || c.others.length) {
+      h += "<h3>也牽涉</h3><p class=\"others\">" +
+        c.absent.map(function(id){ return "<span>" + A[id].short + "（此期在" + BAND[A[id].pos[c.e]] .short + "）</span>"; }).join("") +
+        c.others.map(function(id){ return "<span>" + NODE[id].zh + "</span>"; }).join("") + "</p>";
+    }
+    h += "<h3>資料庫中的關係（" + c.direct.length + "）</h3>";
+    h += c.direct.length ? '<ul class="rels">' + c.direct.map(relHTML).join("") + "</ul>" : '<p class="none">資料庫暫時沒有對應這個年代與地帶的關係紀錄。這本身也是一個待補的缺口。</p>';
+    if (c.ext.length) h += '<details class="ext"><summary>再深入一層：由這些關係延伸出去（' + c.ext.length + "）</summary><ul class=\"rels\">" + c.ext.map(relHTML).join("") + "</ul></details>";
+    if (c.mark && c.mark.voices) {
+      var ch = D.chain.filter(function(x){ return x.voices; })[0];
+      h += "<h3>並列的說法" + (ch ? "：" + ch.title : "") + "</h3><ul class=\"voices\">" + D.voices.map(function(v){
+        return '<li><span class="who">' + v.who + '</span><span class="role">' + v.role + '</span><span class="st ' + v.status + '">' + STATUS[v.status] + "</span><p>" + v.text + "</p></li>";
+      }).join("") + "</ul>";
+    }
+    h += '<p class="p-foot">配對規則：關係的時期落在此年代、檢查點屬於此地帶，且至少一端是在場的線。規則本身是示意。</p>';
+    return h;
+  }
+  function emptyHTML(){
+    return '<div class="empty"><p class="p-eyebrow mono">相遇面板</p><h2 id="panelTitle" tabindex="-1">點一個結</h2>' +
+      "<p>淡色的膠囊是「結」：兩條或以上的線在同一年代、同一地帶出現。點開可看：</p><ol><li>誰在場，從哪裡來、往哪裡去</li><li>資料庫中相應的關係，連同來源與核實狀態</li><li>爭議所在時，並列各方說法</li></ol>" +
+      '<p class="none">也可以用 Tab 鍵逐一選取圖上的結，或使用下方的「所有相遇」列表。</p></div>';
+  }
+  function openCell(key, trigger){
+    state.sel = key; lastTrigger = trigger || null;
+    body.innerHTML = cellHTML(CELL[key]);
+    panel.classList.add("has-sel");
+    if (mqSheet.matches) { panel.classList.add("open"); panel.scrollTop = 0; }
+    apply();
+    var t = document.getElementById("panelTitle");
+    if (t && (mqSheet.matches || (trigger && trigger.tagName === "BUTTON"))) t.focus({preventScroll:!mqSheet.matches});
+  }
+  function closePanel(){
+    state.sel = null;
+    panel.classList.remove("open", "has-sel");
+    body.innerHTML = emptyHTML();
+    apply();
+    if (lastTrigger && document.contains(lastTrigger)) lastTrigger.focus();
+    else if (lastTrigger) { var k = lastTrigger.getAttribute && lastTrigger.getAttribute("data-key"); var el = k && document.querySelector('.knot-hit[data-key="' + k + '"]'); if (el) el.focus(); }
+  }
+  document.getElementById("panelClose").addEventListener("click", closePanel);
+  document.addEventListener("keydown", function(ev){
+    if (ev.key !== "Escape") return;
+    if (state.sel) closePanel();
+    else if (state.pinned) { state.pinned = null; hideTip(); apply(); }
+  });
+
+  /* ---------- 圖例、索引、控制 ---------- */
+  var lg = document.getElementById("legend");
+  ACTORS.forEach(function(a){
+    var b = document.createElement("button");
+    b.type = "button"; b.setAttribute("data-id", a.id); b.setAttribute("aria-pressed", "false");
+    b.innerHTML = '<span class="sw" style="background:var(' + a.color + ')"></span>' + a.short + '<span class="k">' + KIND[a.kind] + "</span>";
+    b.addEventListener("mouseenter", function(){ state.hover = a.id; apply(); });
+    b.addEventListener("mouseleave", function(){ state.hover = null; apply(); });
+    b.addEventListener("focus", function(){ state.hover = a.id; apply(); });
+    b.addEventListener("blur", function(){ state.hover = null; apply(); });
+    b.addEventListener("click", function(){ state.pinned = state.pinned === a.id ? null : a.id; hideTip(); apply(); });
+    lg.appendChild(b);
+  });
+
+  var idx = document.getElementById("knotIndex");
+  var knots = CELLS.filter(function(c){ return c.n > 1; });
+  document.getElementById("idxTitle").textContent = "所有相遇（" + knots.length + " 個結）";
+  knots.forEach(function(c){
+    var li = document.createElement("li"), b = document.createElement("button");
+    b.type = "button"; b.setAttribute("data-key", c.key);
+    b.innerHTML = '<span class="when">' + ERAS[c.e].sub + '</span><span class="where">' + BAND[c.b].zh + "</span>" +
+      (c.conflict ? '<span class="flag st conflict">' + (c.mark ? c.mark.label : "爭議") + "</span>" : '<span class="flag"></span>') +
+      '<span class="when" aria-hidden="true"></span><span class="who">' + c.actors.map(function(id){ return A[id].short; }).join("、") + "</span>";
+    b.addEventListener("click", function(){ openCell(c.key, b); });
+    li.appendChild(b); idx.appendChild(li);
+  });
+
+  d3.selectAll("#kindSeg button").on("click", function(){
+    state.kind = this.getAttribute("data-kind");
+    d3.selectAll("#kindSeg button").attr("aria-pressed", function(){ return this.getAttribute("data-kind") === state.kind ? "true" : "false"; });
+    if (state.pinned && !vis(A[state.pinned])) { state.pinned = null; hideTip(); }
+    apply();
+  });
+  var sw = document.getElementById("conflictOnly");
+  sw.addEventListener("click", function(){
+    state.conflictOnly = !state.conflictOnly;
+    sw.setAttribute("aria-checked", state.conflictOnly ? "true" : "false");
+    apply();
+  });
+
+  body.innerHTML = emptyHTML();
+  render();
+  var rt = null;
+  new ResizeObserver(function(){
+    clearTimeout(rt);
+    rt = setTimeout(function(){
+      if (Math.abs(wrap.clientWidth - lastW) > 2 || mqV.matches !== lastV) { hideTip(); render(); }
+      if (!mqSheet.matches) panel.classList.remove("open");
+      else if (state.sel) panel.classList.add("open");
+    }, 120);
+  }).observe(wrap);
+})();
+</script>
+</body>
+</html>

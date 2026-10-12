@@ -116,6 +116,7 @@ footer{margin-top:4rem;font-size:.8rem;color:var(--muted);font-family:var(--f-mo
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
 <style>
+.sample-link{font-weight:700;text-decoration:none;border-bottom:2px solid var(--tide)}
 .cm-open{font:inherit;font-size:.78rem;margin-left:.6rem;padding:1px 10px;border:1px solid var(--tide);color:var(--tide);background:transparent;border-radius:20px;cursor:pointer;vertical-align:middle;font-family:var(--f-body)}
 .cm-open .n{font-family:var(--f-mono)}
 #cm-fab{position:fixed;right:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:20;font:inherit;font-weight:700;padding:10px 18px;border-radius:24px;border:none;background:var(--tide);color:var(--bg);cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.18)}
@@ -172,7 +173,7 @@ footer{margin-top:4rem;font-size:.8rem;color:var(--muted);font-family:var(--f-mo
 <div class="fit small"><span class="chip cms">Webflow CMS 原生可做</span><span class="chip code">需要 Code Embed（我可寫原型）</span><span class="chip ext">需外部託管再嵌入</span></div>
 
 <section class="concept" id="c1">
-  <div class="concept-head"><span class="rank">01 骨幹</span><h3>物種頁加關係標籤</h3></div>
+  <div class="concept-head"><span class="rank">01 骨幹</span><h3>物種頁加關係標籤</h3></div><p style="margin:.4rem 0 0"><a class="sample-link" href="samples/c1.html">打開方案 01 的互動 sample →</a></p>
   <div class="fit"><span class="chip cms">CMS 原生</span><span class="chip">兔子洞</span><span class="chip">尺度分層</span></div>
   <p>每個物種、地點、人、節氣都是一頁。頁面不畫整個網絡，只列出「我的鄰居」：每條關係是一個可按的標籤，例如「打滾造池 → 蛙類」「被絕育（村民口述）」「曾經：耕作夥伴」。按下去就跳到對方的頁面，一路追下去就是兔子洞。</p>
   <div class="example"><b>水口例子：</b>水牛頁列出 <span class="mono">3.1–3.5</span> 五個檢查點，以及標籤「打滾 → 蜻蜓、蛙類、小魚小蟹」「佔路 → 一對母子避牛」「腳步聲 → AudioMoth」。按「蛙類」便去到蛙的頁面，再見到黃牛也連到同一個水氹。</div>
@@ -180,7 +181,7 @@ footer{margin-top:4rem;font-size:.8rem;color:var(--muted);font-family:var(--f-mo
 </section>
 
 <section class="concept" id="c2">
-  <div class="concept-head"><span class="rank">02 標誌圖像</span><h3>線的相遇：物種故事線圖</h3></div>
+  <div class="concept-head"><span class="rank">02 標誌圖像</span><h3>線的相遇：物種故事線圖</h3></div><p style="margin:.4rem 0 0"><a class="sample-link" href="samples/c2.html">打開方案 02 的互動 sample →</a></p>
   <div class="fit"><span class="chip code">Code Embed（D3）</span><span class="chip">靜態版可由 MC 手繪</span></div>
   <p>借用 xkcd〈Movie Narrative Charts〉的做法：橫軸是時間，每個物種是一條線，在同一地點出現時線就靠攏，分開時就散開。糾纏不再是抽象的連線，而是看得見的「同行」與「分離」。人類只是其中一條線。衝突在線交會處標紅。</p>
 </section>
@@ -198,7 +199,7 @@ footer{margin-top:4rem;font-size:.8rem;color:var(--muted);font-family:var(--f-mo
   <p class="refs">參考：xkcd 657、iStoryline.js（故事線排版演算法）、MIT Loom（把線織成布的隱喻）。</p>
 
 <section class="concept" id="c3">
-  <div class="concept-head"><span class="rank">03 骨幹</span><h3>路徑，或者自由漫遊</h3></div>
+  <div class="concept-head"><span class="rank">03 骨幹</span><h3>路徑，或者自由漫遊</h3></div><p style="margin:.4rem 0 0"><a class="sample-link" href="samples/c3.html">打開方案 03 的互動 sample →</a></p>
   <div class="fit"><span class="chip cms">CMS 原生</span><span class="chip">軌跡與檢查點</span><span class="chip">導賞團</span></div>
   <p>Fiona 提過的山區鹿地圖，最可能是 University of Idaho 的 <a href="https://cdil.lib.uidaho.edu/storying-extinction/map.html" target="_blank" rel="noopener">Storying Extinction</a>（山地馴鹿）。它有一份「Trails」清單：每條路徑按次序展示紅外線相機片段和訪談影片，用左右箭咀逐頁揭示；另有一個按鈕讓人跳過路徑，直接進入自由地圖。這正好回應「軌跡 vs 檢查點」：物種路徑是導覽，地圖上的點是自由探索。</p>
   <div class="example"><b>水口例子：</b>「瀨鑊邊」人類路徑：泥灘採沙白 <span class="mono">4.4</span> → 田摘蔥摘菜 <span class="mono">4.2</span> → 林斬柴 <span class="mono">4.3</span> → 村內舂米、煮成瀨鑊邊 <span class="mono">4.1</span>。沿途順帶遇見未列為重點的物種（蔥、柴草、山林草藥）。同一套頁面亦可直接用於生態導賞。</div>
@@ -206,7 +207,7 @@ footer{margin-top:4rem;font-size:.8rem;color:var(--muted);font-family:var(--f-mo
 </section>
 
 <section class="concept" id="c4">
-  <div class="concept-head"><span class="rank">04 裝置</span><h3>節氣潮汐輪</h3></div>
+  <div class="concept-head"><span class="rank">04 裝置</span><h3>節氣潮汐輪</h3></div><p style="margin:.4rem 0 0"><a class="sample-link" href="samples/c4.html">打開方案 04 的互動 sample →</a></p>
   <div class="fit"><span class="chip cms">靜態可按版：CMS</span><span class="chip code">按真實日期轉動：Code Embed</span><span class="chip">節氣與潮汐</span></div>
   <p>首頁或導航用一個圓形曆：外圈二十四節氣，內圈是農曆月份，再往內是各物種與勞動的時段。指針停在今天，按某一段就看到「這兩星期水口在發生甚麼」。進一步可做「低潮閘門」：沙白內容只在退潮時段完整顯示，其他時間只顯示水面，但保留「仍然想看」的入口。</p>
   <div class="note"><b>空白值得一提：</b>研究線搜尋了中英文資料，找不到任何在線的中文節氣物候輪。日本有 72 Seasons 應用程式（只顯示當下的微季節），澳洲氣象局有原住民以物種現象定義季節的曆。水口做這件事是新的。</div>
@@ -225,7 +226,7 @@ footer{margin-top:4rem;font-size:.8rem;color:var(--muted);font-family:var(--f-mo
   <p class="refs">參考：72 Seasons、Ed Hawkins 氣候螺旋（一圈一年，看出長期變化）、Australian BoM Indigenous seasonal calendars、Fruiting Bodies（網頁隨月相與時辰改變）。</p>
 
 <section class="concept" id="c5">
-  <div class="concept-head"><span class="rank">05 裝置</span><h3>夜班：聲譜與紅外線</h3></div>
+  <div class="concept-head"><span class="rank">05 裝置</span><h3>夜班：聲譜與紅外線</h3></div><p style="margin:.4rem 0 0"><a class="sample-link" href="samples/c5.html">打開方案 05 的互動 sample →</a></p>
   <div class="fit"><span class="chip code">Code Embed</span><span class="chip">物種導向尺度</span><span class="chip">不代物種發聲</span></div>
   <p>一條 21:00 至 04:00 的時間軸（正是紅外線相機的定時拍攝時段）。上方是 AudioMoth 聲譜，按頻率分層，昆蟲、蛙、鳥各佔一段；下方是相機在觸發時間拍到的單格畫面。拖動時間軸即播放該時刻的聲音。敘述者是儀器，不是動物：「這部相機在 02:14 拍到」，而不是「水牛在想」。另設一個按鈕列出儀器聽不到、拍不到甚麼。</p>
   <div class="example"><b>水口例子：</b>Data Catalogue 已有濕地 <span class="mono">3.4</span> 的聲景試錄，備註正好寫著「Show 光譜圖 (Spectrogram) instead of waveform?」。Mapping draft 亦列出想錄的牛叫聲、踏步聲、赤麂叫聲。</div>
@@ -233,13 +234,16 @@ footer{margin-top:4rem;font-size:.8rem;color:var(--muted);font-family:var(--f-mo
 </section>
 
 <section class="concept" id="c6">
-  <div class="concept-head"><span class="rank">06 裝置</span><h3>因果鏈與多聲道</h3></div>
+  <div class="concept-head"><span class="rank">06 裝置</span><h3>因果鏈與多聲道</h3></div><p style="margin:.4rem 0 0"><a class="sample-link" href="samples/c6.html">打開方案 06 的互動 sample →</a></p>
   <div class="fit"><span class="chip cms">基本版：CMS＋捲動動畫</span><span class="chip code">精細版：Scrollama</span><span class="chip">呈現衝突</span><span class="chip">避免二元今昔</span></div>
   <p>Scrollytelling：一幅插圖固定在畫面上，文字逐段捲過，每一段點亮多一條關係。適合講一條因果鏈，並在鏈的分岔處放入多張「聲音卡」，讓村民、觀鳥會、科學家、遊客的說法並列，不作平均。今昔對比可以作為鏈中的一步，採用 Helen 提議的三階段，而不是單一滑桿。</p>
   <div class="example"><b>水口例子：</b>1960 年代石壁水塘截山水 → 稻田灌溉失效、棄耕 → 紅樹林與濕地形成（約 30 至 40 年）→ 水牛進駐、打滾造池 → 觀鳥會復耕種稻吸引白鶴 → 村民指觀鳥會截走農田用水的爭議。鏈的最後一格是並列的聲音卡，而不是結論。</div>
   <p class="refs">參考：The Pudding 的 sticky scrollytelling 寫法、Scrollama、Sciences Po 的爭議製圖（controversy mapping）、夏威夷大學 Haleakalā 口述歷史 StoryMap（把圍捕野化有蹄類的爭議交由當事人說，不作裁決）、JuxtaposeJS、地政總署歷史航空照片。</p>
 </section>
 
+<section class="concept" id="c78"><div class="concept-head"><span class="rank">07–08 對照</span><h3>Obsidian 式關係圖</h3></div>
+<p>同一份資料用 Obsidian 的 Graph view 方式呈現，方便團隊比較。V1 照足 Obsidian 原樣；V2 加入時間軸與地點，可看到關係如何出現、消失與持續。</p>
+<p><a class="sample-link" href="samples/c7.html">打開 07 · V1 簡單版 →</a>　<a class="sample-link" href="samples/c8.html">打開 08 · V2 多維度版 →</a></p></section>
 <h3 style="margin-top:2.4rem">其他可作小品的角度裝置</h3>
 <ul class="small">
   <li><b>小朋友高度的水牛小路：</b>鏡頭放在約 1.1 米高仰望，水牛佔路時捲動暫停，直至牠離開或使用者改路。說明這是人的尺度感，不是水牛的視角。來自 9 月 6 日會議中小朋友遇見水牛的例子。參考 B-EYE（蜜蜂視覺模擬，並清楚註明只模擬光學）、The Deep Sea。</li>
@@ -501,7 +505,7 @@ footer{margin-top:4rem;font-size:.8rem;color:var(--muted);font-family:var(--f-mo
 </div>
 <script>
 (function(){
-  var API = "";
+  var API = "https://script.google.com/macros/s/AKfycbwIi-gujYliTB5kGwyk7klnrloxiNWmZo6AsyLiedmjw74VjAgNUR3FeLcZrkcoRfQoIg/exec";
   var fab=document.getElementById("cm-fab"),panel=document.getElementById("cm-panel"),sel=document.getElementById("cm-section"),
       nm=document.getElementById("cm-name"),tx=document.getElementById("cm-text"),send=document.getElementById("cm-send"),
       st=document.getElementById("cm-status"),list=document.getElementById("cm-list"),all=[];

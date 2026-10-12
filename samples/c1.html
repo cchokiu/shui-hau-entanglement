@@ -1,0 +1,686 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>物種頁加關係標籤</title>
+<link rel="stylesheet" href="shared.css">
+<style>
+/* 版面：一張「標本標籤」式節點頁。頁頭像標本卡（類別、學名、檢查點），關係以受控動詞分組成標籤，下接三個尺度分頁。
+   全部顏色取自 shared.css 的 token；只在此補一個半透明線色。 */
+:root{ --hair:color-mix(in srgb,var(--line) 70%,transparent); --gut:16px }
+.wrap{max-width:46rem;margin:0 auto;padding-inline:var(--gut)}
+.wide{max-width:70rem;margin:0 auto;padding-inline:var(--gut)}
+p{margin:.6rem 0}
+.eyebrow{font-family:var(--f-mono);font-size:.74rem;letter-spacing:.08em;color:var(--muted);text-transform:uppercase}
+.muted{color:var(--muted)}
+.small{font-size:.88rem}
+
+/* 導言 */
+.intro{padding-block:32px 8px}
+.intro h1{font-size:clamp(1.9rem,6vw,2.6rem);font-weight:800;letter-spacing:.02em;margin-top:.3rem}
+.intro .lede{font-size:1.05rem;max-width:40rem}
+.intro .how{display:flex;flex-wrap:wrap;align-items:flex-start;gap:6px;margin-top:.8rem}
+.pill{font-size:.76rem;padding:1px 9px;border:1px solid var(--line);border-radius:20px;color:var(--muted);white-space:nowrap}
+.pill.cms{border-color:var(--tide);color:var(--tide)}
+.pill.code{border-color:var(--c-visitor);color:var(--c-visitor)}
+
+/* 模板頁外框 */
+.app{padding-block:20px 8px}
+.urlbar{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 12px;font-family:var(--f-mono);font-size:.78rem;color:var(--muted);border-bottom:1px solid var(--line);padding-bottom:8px}
+.urlbar b{color:var(--fg);font-weight:500}
+.nav-row{display:grid;gap:10px;margin-top:12px}
+.switch{display:flex;flex-wrap:wrap;gap:6px}
+.switch a{display:inline-flex;align-items:center;gap:7px;padding:4px 12px 4px 10px;border:1px solid var(--line);border-radius:2px;text-decoration:none;color:var(--fg);font-family:var(--f-display);font-weight:600;font-size:.98rem;background:var(--surface)}
+.switch a i{width:9px;height:9px;border-radius:50%;background:var(--nc);flex:none}
+.switch a[aria-current="page"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.switch a[aria-current="page"] i{outline:2px solid var(--bg)}
+.switch a:hover{border-color:var(--fg)}
+.idx{font-size:.84rem}
+.idx summary{cursor:pointer;color:var(--muted);font-family:var(--f-mono);font-size:.76rem;letter-spacing:.04em;width:max-content}
+.idx ul{list-style:none;padding:0;margin:.5rem 0 0;display:flex;flex-wrap:wrap;gap:4px 12px}
+.idx li span{font-family:var(--f-mono);font-size:.7rem;color:var(--muted);margin-right:4px}
+
+/* 你走過的路 */
+.path{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;padding:8px 12px;border:1px dashed var(--line);border-radius:3px;font-size:.88rem}
+.path .lbl{font-family:var(--f-mono);font-size:.72rem;color:var(--muted);letter-spacing:.06em}
+.path ol{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;align-items:center;gap:4px 0;flex:1;min-width:0}
+.path li{display:inline-flex;align-items:center}
+.path li+li::before{content:"→";color:var(--muted);margin:0 7px;font-family:var(--f-mono);font-size:.8rem}
+.path a{text-decoration:none;color:var(--fg);border-bottom:1px solid var(--line)}
+.path a:hover{border-color:var(--fg)}
+.path [aria-current]{font-weight:700;color:var(--tide)}
+.path .depth{font-family:var(--f-mono);font-size:.72rem;color:var(--muted)}
+.btn-text{border:1px solid var(--line);background:transparent;border-radius:2px;padding:0 8px;font-size:.78rem;cursor:pointer;color:var(--muted)}
+.btn-text:hover{color:var(--fg);border-color:var(--fg)}
+
+/* 節點頁頭：標本卡 */
+#node{margin-top:18px;scroll-margin-top:56px}
+.head{display:grid;grid-template-columns:minmax(0,1fr);gap:18px;border-top:4px solid var(--nc);padding-top:14px}
+@media (min-width:860px){.head{grid-template-columns:minmax(0,1fr) minmax(0,26rem);gap:32px}}
+.specimen{min-width:0}
+.specimen .kind{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:baseline}
+.specimen h2{font-size:clamp(2.1rem,8vw,3.3rem);font-weight:800;letter-spacing:.03em;margin:.35rem 0 .1rem;outline:none}
+.specimen .names{font-size:.95rem;color:var(--muted)}
+.specimen .names i{font-family:var(--f-display);font-style:italic}
+.specimen .blurb{font-size:1.02rem;max-width:36rem}
+.ledger{display:grid;grid-template-columns:repeat(3,auto);justify-content:start;gap:0;margin-top:12px;border:1px solid var(--line);border-radius:2px;width:max-content;max-width:100%}
+.ledger div{padding:6px 14px;border-right:1px solid var(--line)}
+.ledger div:last-child{border-right:none}
+.ledger b{display:block;font-family:var(--f-mono);font-size:1.15rem;font-weight:500;font-variant-numeric:tabular-nums}
+.ledger span{font-size:.74rem;color:var(--muted)}
+
+/* 定位圖 */
+.locator{margin:0;min-width:0}
+.locator .frame{border:1px solid var(--line);background:var(--surface);border-radius:2px;padding:8px 8px 4px}
+.locator svg{display:block;width:100%;height:auto}
+.locator figcaption{font-size:.78rem;color:var(--muted);margin-top:6px;line-height:1.55}
+.loc-key{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:.76rem;color:var(--muted);margin-top:4px}
+.loc-key i{display:inline-block;width:10px;height:10px;border-radius:50%;vertical-align:-1px;margin-right:5px}
+.loc-key .k-own i{background:var(--nc)}
+.loc-key .k-rel i{border:1.5px solid var(--nc)}
+.cplist{list-style:none;padding:0;margin:8px 0 0;display:flex;flex-wrap:wrap;gap:4px}
+.cplist li{font-size:.78rem;padding:1px 8px;border:1px solid var(--line);border-radius:2px;cursor:default}
+.cplist li b{font-family:var(--f-mono);font-weight:500;margin-right:5px}
+.cplist li.own{border-color:var(--nc)}
+.cplist li.hot{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+svg .pt-all{fill:var(--muted);opacity:.5}
+svg .pt-own{fill:var(--nc)}
+svg .pt-rel{fill:none;stroke:var(--nc);stroke-width:1.6}
+svg .hot-ring{fill:none;stroke:var(--conflict);stroke-width:2;opacity:0}
+svg g.hot .hot-ring{opacity:1}
+svg .lab-code{font-family:var(--f-mono);font-size:11px;font-weight:500;fill:var(--fg)}
+svg .lab-place{font-family:var(--f-body);font-size:10.5px;fill:var(--muted)}
+svg .grid{stroke:var(--line);stroke-width:.7;stroke-dasharray:2 3}
+svg .brk{stroke:var(--muted);stroke-width:1;fill:none}
+svg .wave{stroke:var(--tide);stroke-width:1;fill:none;opacity:.35}
+svg .axis{font-family:var(--f-mono);font-size:9.5px;fill:var(--muted)}
+svg .bar{stroke:var(--fg);stroke-width:1.5}
+svg .leader{stroke:var(--muted);stroke-width:.7}
+
+/* 關係標籤 */
+.rels{display:grid;grid-template-columns:minmax(0,1fr);gap:8px 32px;margin-top:30px}
+@media (min-width:860px){.rels{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}}
+.col h3{font-size:1.15rem;display:flex;align-items:baseline;gap:10px;border-bottom:1px solid var(--fg);padding-bottom:6px}
+.col h3 small{font-family:var(--f-mono);font-size:.74rem;font-weight:400;color:var(--muted)}
+.vgroup{margin-top:14px}
+.vh{display:flex;align-items:center;gap:8px;margin:0 0 8px;font-weight:400}
+.verb{font-family:var(--f-display);font-weight:600;font-size:.92rem;padding:1px 10px;border:1px solid var(--fg);border-radius:2px;white-space:nowrap;background:var(--bg)}
+.verb.past{border-style:dotted}
+.verb.conf{border-color:var(--conflict);color:var(--conflict)}
+.vh .n{font-family:var(--f-mono);font-size:.74rem;color:var(--muted)}
+.rlist{list-style:none;padding:0;margin:0;display:grid;gap:8px}
+.rel{border:1px solid var(--line);border-left:3px solid var(--nc-o);border-radius:2px;padding:9px 12px 8px;background:var(--surface)}
+.rel.past{border-style:dotted;border-left-style:dotted;border-left-width:3px;background:transparent}
+.rel.conf{border-color:var(--conflict);background:var(--conflict-soft)}
+.rel.hot{outline:2px solid var(--fg);outline-offset:1px}
+.triple{display:flex;flex-wrap:wrap;align-items:center;gap:4px 7px;margin:0;font-size:.95rem}
+.triple .self{color:var(--muted)}
+.triple .arr{font-family:var(--f-mono);color:var(--muted);font-size:.8rem}
+.triple .verb{font-size:.82rem;padding:0 7px}
+.other{font-weight:700;color:var(--fg);text-decoration:none;border-bottom:2px solid var(--nc-o);padding-bottom:1px}
+.other:hover{background:color-mix(in srgb,var(--nc-o) 18%,transparent)}
+.other::after{content:" ↗";font-family:var(--f-mono);font-weight:400;font-size:.75em;color:var(--muted)}
+.rel .note{margin:.35rem 0 .3rem;font-size:.92rem}
+.rel .meta{display:flex;flex-wrap:wrap;align-items:center;gap:3px 12px;margin:0;font-size:.76rem;color:var(--muted)}
+.rel .meta .cp{font-family:var(--f-mono);color:var(--fg)}
+.rel .meta .src::before{content:"來源 ";opacity:.7}
+.empty-rel{font-size:.88rem;color:var(--muted);border:1px dashed var(--line);border-radius:2px;padding:10px 12px;margin-top:14px}
+
+/* 尺度分頁 */
+.scales{margin-top:36px}
+.scales>h3{font-size:1.15rem}
+.scales>p{margin:.2rem 0 .8rem}
+.tabs{display:flex;gap:0;border-bottom:1px solid var(--fg);overflow-x:auto;scrollbar-width:none}
+.tabs button{flex:none;border:1px solid transparent;border-bottom:none;background:transparent;padding:8px 14px 7px;cursor:pointer;font-size:.92rem;color:var(--muted);border-radius:2px 2px 0 0;margin-bottom:-1px}
+.tabs button .c{font-family:var(--f-mono);font-size:.72rem;margin-left:6px}
+.tabs button[aria-selected="true"]{color:var(--fg);font-weight:700;border-color:var(--fg);background:var(--bg);border-bottom:1px solid var(--bg)}
+.panel{padding:16px 0 4px}
+.items{list-style:none;padding:0;margin:0;display:grid;gap:14px}
+@media (min-width:860px){.items.two{grid-template-columns:repeat(2,minmax(0,1fr));gap:18px 28px}}
+.item{border-top:1px solid var(--line);padding-top:10px;min-width:0}
+.item .who{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline;font-size:.8rem;color:var(--muted)}
+.item .who b{font-weight:700;color:var(--fg);font-size:.86rem}
+.item .who .cp{font-family:var(--f-mono)}
+.item p{margin:.35rem 0}
+.item q{quotes:"「" "」"}
+.ph{position:relative;margin-top:8px;border:1px solid var(--line);background:var(--bg);padding:16px 14px;display:flex;gap:10px;align-items:center;font-size:.84rem;color:var(--muted);min-height:6.5rem;max-width:100%}
+.ph::before,.ph::after{content:"";position:absolute;width:10px;height:10px;border:solid var(--muted)}
+.ph::before{top:5px;left:5px;border-width:1px 0 0 1px}
+.ph::after{bottom:5px;right:5px;border-width:0 1px 1px 0}
+.ph .k{font-family:var(--f-mono);font-size:.7rem;padding:0 6px;border:1px solid currentColor;border-radius:2px;flex:none}
+.fact{display:grid;grid-template-columns:7rem minmax(0,1fr);gap:4px 12px;font-size:.9rem;margin:0 0 14px;padding:10px 12px;border:1px solid var(--line);border-radius:2px}
+.fact dt{color:var(--muted);font-size:.8rem}
+.fact dd{margin:0}
+.fact dd i{font-family:var(--f-display)}
+.empty{border:1px dashed var(--unverified);border-radius:2px;padding:14px 16px;display:grid;gap:6px;max-width:40rem}
+.empty .t{font-family:var(--f-display);font-weight:600;font-size:1.05rem;color:var(--unverified)}
+.empty ul{margin:0;padding-left:1.2rem;font-size:.88rem}
+.empty p{margin:0;font-size:.88rem;color:var(--muted)}
+.subh{font-family:var(--f-mono);font-size:.72rem;letter-spacing:.08em;color:var(--muted);margin:18px 0 8px;text-transform:uppercase}
+.subh:first-child{margin-top:0}
+
+/* 節氣條 */
+.terms{display:grid;grid-template-columns:repeat(24,minmax(0,1fr));gap:2px;margin-top:6px}
+.terms span{height:14px;background:var(--hair);border-radius:1px}
+.terms span.on{background:var(--nc)}
+.terms span.mk{background:transparent;border-left:3px solid var(--conflict)}
+.terms .tl{height:auto;background:none;font-size:.68rem;color:var(--muted);white-space:nowrap;grid-row:2}
+.season .range{font-family:var(--f-mono);font-size:.76rem;color:var(--muted)}
+/* 夜間 */
+.cam{list-style:none;padding:0;margin:0;font-size:.88rem}
+.cam li{display:grid;grid-template-columns:3.4rem minmax(0,1fr) auto;gap:10px;padding:5px 0;border-bottom:1px dashed var(--line);align-items:baseline}
+.cam time{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.cam .cf{font-size:.74rem;color:var(--muted);white-space:nowrap}
+.spark{max-width:22rem}
+.spark svg{width:100%;height:auto;display:block}
+.spark .ln{fill:none;stroke:var(--nc);stroke-width:2}
+.spark .ar{fill:var(--nc);opacity:.15}
+
+/* CMS 說明 */
+.cms-note{padding-block:48px 72px}
+.cms-note h2{font-size:1.5rem;padding-top:1rem;border-top:1px solid var(--line)}
+.schema{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;margin:1.2rem 0;align-items:start}
+@media (min-width:640px){.schema{grid-template-columns:minmax(0,1fr) 4.5rem minmax(0,1fr)}}
+.coll{border:1px solid var(--fg);border-radius:2px;background:var(--surface)}
+.coll header{padding:6px 12px;border-bottom:1px solid var(--fg);display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+.coll header b{font-family:var(--f-display)}
+.coll header span{font-family:var(--f-mono);font-size:.72rem;color:var(--muted)}
+.coll ul{list-style:none;margin:0;padding:6px 12px 8px;font-size:.84rem}
+.coll li{display:flex;justify-content:space-between;gap:10px;padding:3px 0;border-bottom:1px dashed var(--line)}
+.coll li:last-child{border-bottom:none}
+.coll li span:last-child{font-family:var(--f-mono);font-size:.72rem;color:var(--muted);text-align:right}
+.coll li.ref span:first-child{color:var(--tide);font-weight:700}
+.link-arrows{display:flex;flex-direction:column;justify-content:center;gap:8px;font-family:var(--f-mono);font-size:.72rem;color:var(--tide);text-align:center;padding-top:3.2rem}
+@media (max-width:639px){.link-arrows{flex-direction:row;padding:0;justify-content:flex-start;gap:16px}}
+.bind{list-style:none;padding:0;margin:1rem 0;display:grid;gap:0}
+.bind li{display:grid;grid-template-columns:8.5rem minmax(0,1fr);gap:4px 14px;padding:10px 0;border-bottom:1px solid var(--line);font-size:.92rem}
+.bind li>b{font-weight:700}
+.bind code{font-family:var(--f-mono);font-size:.82rem;background:var(--surface);border:1px solid var(--line);padding:0 4px;border-radius:2px}
+@media (max-width:520px){.bind li{grid-template-columns:1fr;gap:2px}}
+.caveat{border:1px dashed var(--unverified);padding:.8rem 1rem;font-size:.88rem;margin-top:1.2rem}
+.caveat b{color:var(--unverified)}
+footer.fn{font-family:var(--f-mono);font-size:.74rem;color:var(--muted);margin-top:2.4rem}
+@media (prefers-reduced-motion:no-preference){.rel,.cplist li{transition:outline-color .15s,background-color .15s}}
+</style>
+</head>
+<body>
+<header class="sample-bar"><a href="../index.html">← 回到參考頁</a><span class="tag">方案 01 · 示意 sample</span><span class="sp"></span>
+<nav aria-label="其他方案"><a href="c1.html" aria-current="page">01</a><a href="c2.html">02</a><a href="c3.html">03</a><a href="c4.html">04</a><a href="c5.html">05</a><a href="c6.html">06</a><a href="c7.html">07</a><a href="c8.html">08</a></nav></header>
+
+<main>
+<section class="intro wrap" aria-labelledby="t">
+  <p class="eyebrow">方案 01 · 網站的 CMS 骨幹</p>
+  <h1 id="t">物種頁加關係標籤</h1>
+  <p class="lede">每個節點（物種、人、地方、做法、儀器）各自是一頁，只展示自己的鄰里，不展示整張網絡。關係以受控動詞分組成標籤；點擊標籤另一端，便走進下一頁，挖多深由訪客決定。</p>
+  <p class="small muted">本示範只用共用示意資料，以 <span class="mono">#buffalo</span> 之類的錨點代替正式網址。正式版會加入相片、錄音與影片，並由研究團隊在 CMS 逐條輸入關係。</p>
+  <div class="how" aria-label="Webflow 做法">
+    <span class="pill cms">節點頁、關係清單、空白狀態：CMS 原生</span>
+    <span class="pill code">定位圖、你走過的路、動詞分組標題：Code Embed</span>
+  </div>
+</section>
+
+<section class="app wide" aria-label="節點頁模板示範">
+  <div class="urlbar"><span>Nodes 模板頁</span><span>/nodes/<b id="slug">buffalo</b></span><span>（示範以 #<span id="slug2">buffalo</span> 代替）</span></div>
+  <div class="nav-row">
+    <nav class="switch" id="switch" aria-label="主要節點"></nav>
+    <div class="path" id="path" aria-label="你走過的路"></div>
+    <details class="idx" id="idx"><summary>全部節點索引</summary><ul id="idxlist"></ul></details>
+  </div>
+
+  <article id="node" aria-live="polite">
+    <div class="head">
+      <div class="specimen">
+        <div class="kind"><span class="eyebrow" id="kind"></span><span class="eyebrow" id="mainflag"></span></div>
+        <h2 id="name" tabindex="-1"></h2>
+        <div class="names" id="names"></div>
+        <p class="blurb" id="blurb"></p>
+        <div class="ledger" id="ledger"></div>
+      </div>
+      <figure class="locator" id="loc">
+        <div class="frame" id="locframe"></div>
+        <div class="loc-key"><span class="k-own"><i></i>本節點路線上的檢查點</span><span class="k-rel"><i></i>關係發生的檢查點</span></div>
+        <ul class="cplist" id="cplist" aria-label="本頁相關檢查點"></ul>
+        <figcaption>示意定位圖：按 Data Catalogue 的大約 GPS 位置投影，不含地圖底圖。海上檢查點在東面約 <span id="seakm"></span> 外，圖中以斷開比例收窄。滑過下方關係標籤，會在圖上標出其檢查點。</figcaption>
+      </figure>
+    </div>
+
+    <div class="rels" id="rels">
+      <section class="col" aria-labelledby="h-out"><h3 id="h-out">向外的關係 <small id="n-out"></small></h3><div id="out"></div></section>
+      <section class="col" aria-labelledby="h-in"><h3 id="h-in">向內的關係 <small id="n-in"></small></h3><div id="in"></div></section>
+    </div>
+
+    <section class="scales" aria-labelledby="h-sc">
+      <h3 id="h-sc">三個尺度</h3>
+      <p class="small muted">同一個節點，從村民、科學、物種自身的時間（聲音與季節）三個尺度閱讀。內容由關係的來源與狀態、以及日曆資料自動歸類。</p>
+      <div class="tabs" role="tablist" aria-label="尺度" id="tabs">
+        <button role="tab" id="tab-v" aria-controls="p-v" data-k="v">村民敘事<span class="c"></span></button>
+        <button role="tab" id="tab-s" aria-controls="p-s" data-k="s">科學資料<span class="c"></span></button>
+        <button role="tab" id="tab-o" aria-controls="p-o" data-k="o">物種導向（聲音、季節）<span class="c"></span></button>
+      </div>
+      <div class="panel" role="tabpanel" id="p-v" aria-labelledby="tab-v" tabindex="0"></div>
+      <div class="panel" role="tabpanel" id="p-s" aria-labelledby="tab-s" tabindex="0" hidden></div>
+      <div class="panel" role="tabpanel" id="p-o" aria-labelledby="tab-o" tabindex="0" hidden></div>
+    </section>
+  </article>
+</section>
+
+<section class="cms-note wrap" aria-labelledby="h-cms">
+  <h2 id="h-cms">在 Webflow CMS 怎樣做</h2>
+  <p>這一頁就是 Nodes collection 的模板頁。每個節點一個 CMS item，每條關係也是一個 CMS item；關係用兩個 Reference 欄位指向兩端的節點。模板頁放兩個 Relations 清單，按「目前這個節點」篩選，便只顯示自己的鄰里。</p>
+  <div class="schema" role="img" aria-label="兩個 collection 的關係：Relations 的 From 與 To 兩個 Reference 欄位都指向 Nodes">
+    <div class="coll">
+      <header><b>Nodes 節點</b><span>24 items</span></header>
+      <ul>
+        <li><span>Name 中文名</span><span>Plain text</span></li>
+        <li><span>Slug</span><span>buffalo</span></li>
+        <li><span>English / Scientific name</span><span>Plain text</span></li>
+        <li><span>Kind 類別</span><span>Option</span></li>
+        <li><span>Blurb 簡介</span><span>Plain text</span></li>
+        <li><span>Colour token</span><span>Plain text</span></li>
+        <li><span>Main 主要節點</span><span>Switch</span></li>
+      </ul>
+    </div>
+    <div class="link-arrows" aria-hidden="true"><span>◀ From</span><span>◀ To</span></div>
+    <div class="coll">
+      <header><b>Relations 關係</b><span>27 items</span></header>
+      <ul>
+        <li class="ref"><span>From</span><span>Reference → Nodes</span></li>
+        <li class="ref"><span>To</span><span>Reference → Nodes</span></li>
+        <li><span>Verb 動詞（12 個受控詞彙）</span><span>Option</span></li>
+        <li><span>Period 時期</span><span>Plain text</span></li>
+        <li><span>Checkpoint 檢查點</span><span>Reference</span></li>
+        <li><span>Source 來源 / Note 備註</span><span>Plain text</span></li>
+        <li><span>Status 狀態</span><span>Option</span></li>
+        <li><span>村民 / 科學 / 物種 三個尺度</span><span>3 × Switch</span></li>
+      </ul>
+    </div>
+  </div>
+  <ol class="bind">
+    <li><b>頁頭</b><span>直接綁定 Nodes 模板頁的欄位。顏色以 Colour token 寫入 <code>style="--nc:…"</code>。</span></li>
+    <li><b>向外清單</b><span>Collection List（Relations），Filter：<code>From equals Current Nodes</code>，Sort：Verb。</span></li>
+    <li><b>向內清單</b><span>同上，Filter 改為 <code>To equals Current Nodes</code>。</span></li>
+    <li><b>按動詞分組</b><span>Webflow 不能原生 group by。每個動詞各放一個清單會超出每頁 Collection List 的數量上限，所以建議單一清單按 Verb 排序，再用一小段 Code Embed 插入分組標題、套上「曾經」的虛線與「衝突」的顏色。</span></li>
+    <li><b>三個尺度</b><span>Webflow Tabs 元件，每個分頁放一個 Relations 清單，按對應的 Switch 欄位篩選。沒有內容時用清單內建的 Empty State，寫上「待補：科學家訪談」等。</span></li>
+    <li><b>定位圖、你走過的路</b><span>Code Embed。定位圖讀取頁內一個隱藏清單的 <code>data-lat</code> / <code>data-lng</code>；路徑只存在瀏覽器的 sessionStorage，不需要帳戶或後台。</span></li>
+  </ol>
+  <p class="caveat"><b>示意說明</b>　本頁所有關係、來源與狀態都取自共用示意資料（data.js），未經核實的村民口述保留並標示狀態。夜間相機與蛙聲曲線為模擬資料，只為示範介面。</p>
+  <footer class="fn">水口生物多樣性數碼地圖 · 方案 01 示意 · 資料：data.js</footer>
+</section>
+</main>
+
+<script src="data.js"></script>
+<script>
+(function(){
+"use strict";
+const D = window.SHUIHAU;
+const $ = s => document.querySelector(s);
+const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const NODE = Object.fromEntries(D.nodes.map(n => [n.id, n]));
+const CP = Object.fromEntries(D.checkpoints.map(c => [c.id, c]));
+const PLACE = Object.fromEntries(D.places.map(p => [p.id, p]));
+const MAIN = ["clam","buffalo","cattle","rice","villager"];
+const KIND = {species:"物種 species", human:"人 human", org:"機構 organisation", infrastructure:"基建 infrastructure", place:"地方 place", practice:"做法 practice", instrument:"儀器 instrument", material:"物料 material"};
+const ST = {observed:"研究員觀察", oral:"村民口述・未核實", consensus:"多人口述一致", check:"待科學核實", conflict:"爭議", pending:"待補"};
+const CP_SPECIES = {villager:"human"};
+const reduceMotion = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+const short = n => n.zh.split("（")[0];
+const col = n => "var(" + (n.color || "--c-human") + ")";
+const cpName = id => { const c = CP[id]; if (!c) return ""; return c.label || (PLACE[c.place] ? PLACE[c.place].zh : c.place); };
+
+let current = "buffalo";
+let tab = "v";
+
+/* ---------- 你走過的路（sessionStorage，失敗時只存記憶體） ---------- */
+const KEY = "shuihau-c1-path";
+let path = [];
+try { path = JSON.parse(sessionStorage.getItem(KEY) || "[]").filter(id => NODE[id]); } catch (e) { path = []; }
+function savePath(){ try { sessionStorage.setItem(KEY, JSON.stringify(path)); } catch (e) {} }
+function visit(id){
+  const i = path.indexOf(id);
+  if (i >= 0) path = path.slice(0, i + 1); else path.push(id);
+  if (path.length > 14) path = path.slice(-14);
+  savePath();
+}
+function renderPath(){
+  const el = $("#path");
+  const items = path.map((id, i) => {
+    const n = NODE[id];
+    return i === path.length - 1
+      ? `<li><span aria-current="page">${esc(short(n))}</span></li>`
+      : `<li><a href="#${id}">${esc(short(n))}</a></li>`;
+  }).join("");
+  el.innerHTML = `<span class="lbl">你走過的路</span><ol>${items}</ol><span class="depth">第 ${path.length} 層</span><button type="button" class="btn-text" id="reset">重新開始</button>`;
+  $("#reset").addEventListener("click", () => { path = [current]; savePath(); renderPath(); });
+}
+
+/* ---------- 切換器與索引 ---------- */
+function renderSwitch(){
+  $("#switch").innerHTML = MAIN.map(id => {
+    const n = NODE[id];
+    return `<a href="#${id}" style="--nc:${col(n)}"${id === current ? ' aria-current="page"' : ""}><i></i>${esc(short(n))}</a>`;
+  }).join("");
+}
+function renderIndex(){
+  const order = ["species","human","org","place","practice","material","infrastructure","instrument"];
+  const list = D.nodes.slice().sort((a, b) => order.indexOf(a.kind) - order.indexOf(b.kind));
+  $("#idxlist").innerHTML = list.map(n => `<li><span>${esc(KIND[n.kind].split(" ")[0])}</span><a href="#${n.id}">${esc(n.zh)}</a></li>`).join("");
+}
+
+/* ---------- 關係 ---------- */
+const outOf = id => D.relations.filter(r => r.from === id);
+const inOf = id => D.relations.filter(r => r.to === id);
+const relsOf = id => D.relations.filter(r => r.from === id || r.to === id);
+const isPast = r => r.verb === "曾經";
+const isConf = r => r.verb === "衝突" || r.status === "conflict";
+function relItem(r, dir){
+  const self = NODE[current], other = NODE[dir === "out" ? r.to : r.from];
+  const verbCls = "verb" + (isPast(r) ? " past" : "") + (isConf(r) ? " conf" : "");
+  const otherHtml = `<a class="other" href="#${other.id}" style="--nc-o:${col(other)}">${esc(other.zh)}</a>`;
+  const selfHtml = `<span class="self">${esc(short(self))}</span>`;
+  const triple = dir === "out"
+    ? `${selfHtml}<span class="arr">→</span><span class="${verbCls}">${esc(r.verb)}</span><span class="arr">→</span>${otherHtml}`
+    : `${otherHtml}<span class="arr">→</span><span class="${verbCls}">${esc(r.verb)}</span><span class="arr">→</span>${selfHtml}`;
+  const cls = "rel" + (isPast(r) ? " past" : "") + (isConf(r) ? " conf" : "");
+  return `<li class="${cls}" data-cp="${esc(r.cp || "")}" style="--nc-o:${col(other)}">
+    <p class="triple">${triple}</p>
+    ${r.note ? `<p class="note">${esc(r.note)}</p>` : ""}
+    <p class="meta"><span>${esc(r.period || "")}</span>${r.cp ? `<span class="cp">${esc(r.cp)} ${esc(cpName(r.cp))}</span>` : ""}<span class="src">${esc(r.source)}</span><span class="st ${esc(r.status)}">${esc(ST[r.status] || r.status)}</span></p>
+  </li>`;
+}
+function renderRelCol(list, dir, el, countEl){
+  countEl.textContent = list.length + " 條";
+  if (!list.length){
+    const n = short(NODE[current]);
+    el.innerHTML = `<p class="empty-rel">${dir === "out"
+      ? `資料中未有以「${esc(n)}」為主語的關係。研究團隊在 CMS 加入後，會自動出現在這裡。`
+      : `資料中未有其他節點指向「${esc(n)}」的關係。例如管理、採集或記錄${esc(n)}的紀錄，加入後會出現在這裡。`}</p>`;
+    return;
+  }
+  const groups = {};
+  list.forEach(r => (groups[r.verb] = groups[r.verb] || []).push(r));
+  el.innerHTML = D.verbs.filter(v => groups[v]).map(v => {
+    const g = groups[v];
+    const vc = "verb" + (v === "曾經" ? " past" : "") + (v === "衝突" ? " conf" : "");
+    return `<div class="vgroup"><h4 class="vh"><span class="${vc}">${esc(v)}</span><span class="n">${g.length}</span></h4><ul class="rlist">${g.map(r => relItem(r, dir)).join("")}</ul></div>`;
+  }).join("");
+}
+
+/* ---------- 定位圖 ---------- */
+function cpsFor(id){
+  const own = new Set(D.checkpoints.filter(c => c.species === (CP_SPECIES[id] || id)).map(c => c.id));
+  const rel = new Set(relsOf(id).map(r => r.cp).filter(c => c && CP[c]));
+  return {own, rel};
+}
+const LAT0 = 22.2205, MX = 111320 * Math.cos(LAT0 * Math.PI / 180), MY = 110574;
+const SEA_LNG = 113.922;
+function textW(s, fs){ let w = 0; for (const ch of s) w += /[\x00-\x7f]/.test(ch) ? fs * 0.62 : fs * 1.02; return w; }
+function drawLocator(){
+  const frame = $("#locframe");
+  const W = Math.max(280, Math.round(frame.clientWidth - 16));
+  const {own, rel} = cpsFor(current);
+  const n = NODE[current];
+  // 依座標合併重疊的檢查點
+  const gmap = {};
+  D.checkpoints.forEach(c => {
+    const k = c.lat.toFixed(5) + "," + c.lng.toFixed(5);
+    (gmap[k] = gmap[k] || {lat: c.lat, lng: c.lng, ids: [], place: c.place, label: c.label}).ids.push(c.id);
+  });
+  const groups = Object.values(gmap);
+  const land = groups.filter(g => g.lng < SEA_LNG), sea = groups.filter(g => g.lng >= SEA_LNG);
+  const mx = g => (g.lng - 113.9) * MX, my = g => (g.lat - LAT0) * MY;
+  const PAD = 38;
+  const x0 = Math.min(...land.map(mx)) - PAD, x1 = Math.max(...land.map(mx)) + PAD;
+  const y0 = Math.min(...land.map(my)) - PAD, y1 = Math.max(...land.map(my)) + PAD;
+  const seaW = 62, gap = 24;
+  const mainW = W - seaW - gap;
+  const k = mainW / (x1 - x0);
+  const top = 6, H = Math.round((y1 - y0) * k) + top + 26;
+  const P = g => g.lng >= SEA_LNG
+    ? [mainW + gap + seaW / 2, top + (y1 - my(g)) * k]
+    : [(mx(g) - x0) * k, top + (y1 - my(g)) * k];
+  // 海上距離（由泥灘 1.2 到海 1.1）
+  const a = CP["1.2"], b = CP["1.1"];
+  const dkm = Math.hypot((b.lng - a.lng) * MX, (b.lat - a.lat) * MY) / 1000;
+  $("#seakm").textContent = dkm.toFixed(1) + " 公里";
+
+  let s = "";
+  // 100 m 格線
+  for (let m = Math.ceil(x0 / 100) * 100; m < x1; m += 100){ const x = (m - x0) * k; s += `<line class="grid" x1="${x}" y1="${top}" x2="${x}" y2="${H - 22}"/>`; }
+  for (let m = Math.ceil(y0 / 100) * 100; m < y1; m += 100){ const y = top + (y1 - m) * k; s += `<line class="grid" x1="0" y1="${y}" x2="${mainW}" y2="${y}"/>`; }
+  // 比例中斷
+  const bx = mainW + gap / 2;
+  let zz = `M${bx - 4},${top}`; for (let y = top; y < H - 22; y += 10) zz += ` L${bx + 4},${y + 5} L${bx - 4},${y + 10}`;
+  s += `<path class="brk" d="${zz}"/><path class="brk" d="${zz}" transform="translate(5,0)"/>`;
+  // 海：潮線
+  for (let y = top + 14; y < H - 28; y += 13){
+    const x = mainW + gap + 6;
+    s += `<path class="wave" d="M${x},${y} q6,-4 12,0 t12,0 t12,0 t12,0"/>`;
+  }
+  s += `<text class="axis" x="${mainW + gap + seaW / 2}" y="${H - 10}" text-anchor="middle">≈${dkm.toFixed(1)} km →</text>`;
+  // 比例尺與北
+  const sb = 100 * k;
+  s += `<line class="bar" x1="2" y1="${H - 12}" x2="${2 + sb}" y2="${H - 12}"/><line class="bar" x1="2" y1="${H - 16}" x2="2" y2="${H - 8}"/><line class="bar" x1="${2 + sb}" y1="${H - 16}" x2="${2 + sb}" y2="${H - 8}"/>`;
+  s += `<text class="axis" x="${sb + 8}" y="${H - 9}">100 m</text>`;
+  s += `<text class="axis" x="${mainW - 4}" y="${top + 10}" text-anchor="end">N ↑</text>`;
+
+  // 標籤避讓
+  const boxes = [];
+  const pts = groups.map(g => { const [x, y] = P(g); const hi = g.ids.some(i => own.has(i) || rel.has(i)); return {g, x, y, hi}; });
+  pts.forEach(p => { const r = p.hi ? 8 : 3.5; boxes.push([p.x - r, p.y - r, p.x + r, p.y + r]); });
+  const overlap = (b1, b2) => Math.max(0, Math.min(b1[2], b2[2]) - Math.max(b1[0], b2[0])) * Math.max(0, Math.min(b1[3], b2[3]) - Math.max(b1[1], b2[1]));
+  function place(x, y, txt, fs, r, maxX){
+    const w = textW(txt, fs), h = fs + 2;
+    const cand = [];
+    [r + 3, r + 16].forEach(d => {
+      cand.push([x + d, y - h / 2], [x - d - w, y - h / 2], [x - w / 2, y - d - h], [x - w / 2, y + d],
+                [x + d * .75, y - d * .75 - h], [x - d * .75 - w, y - d * .75 - h], [x + d * .75, y + d * .75], [x - d * .75 - w, y + d * .75]);
+    });
+    let best = null, bestScore = Infinity;
+    for (const [lx, ly] of cand){
+      const bx2 = [lx, ly, lx + w, ly + h];
+      let sc = 0;
+      if (lx < 0 || lx + w > maxX || ly < 0 || ly + h > H - 24) sc += 1e6;
+      boxes.forEach(b2 => sc += overlap(bx2, b2));
+      if (sc < bestScore){ bestScore = sc; best = bx2; if (sc === 0) break; }
+    }
+    boxes.push(best);
+    return {x: best[0], y: best[1] + fs * 0.85, box: best, clean: bestScore === 0};
+  }
+  // 點
+  let dots = "", labels = "";
+  pts.forEach(p => {
+    const ids = p.g.ids;
+    const isOwn = ids.some(i => own.has(i)), isRel = ids.some(i => rel.has(i));
+    dots += `<g data-cps="${ids.join(" ")}"><circle class="hot-ring" cx="${p.x}" cy="${p.y}" r="11"/>`;
+    dots += `<circle class="pt-all" cx="${p.x}" cy="${p.y}" r="2.6"/>`;
+    if (isRel) dots += `<circle class="pt-rel" cx="${p.x}" cy="${p.y}" r="7.5"/>`;
+    if (isOwn) dots += `<circle class="pt-own" cx="${p.x}" cy="${p.y}" r="4.8"/>`;
+    dots += `</g>`;
+  });
+  // 先放代號，再放地名
+  pts.filter(p => p.hi).forEach(p => {
+    const txt = p.g.ids.filter(i => own.has(i) || rel.has(i)).join("·");
+    const maxX = p.g.lng >= SEA_LNG ? W : mainW;
+    const L = place(p.x, p.y, txt, 11, 8, maxX);
+    labels += `<text class="lab-code" x="${L.x.toFixed(1)}" y="${L.y.toFixed(1)}">${esc(txt)}</text>`;
+  });
+  // 地名：同一地方、相距 90 m 內的點合為一個標籤
+  const clusters = [];
+  groups.forEach(g => {
+    const name = g.label || PLACE[g.place].zh;
+    const c = clusters.find(c => c.name === name && Math.hypot((mx(c) - mx(g)), (my(c) - my(g))) < 90);
+    if (c){ c.n++; c.lat = (c.lat * (c.n - 1) + g.lat) / c.n; c.lng = (c.lng * (c.n - 1) + g.lng) / c.n; }
+    else clusters.push({name, lat: g.lat, lng: g.lng, n: 1});
+  });
+  clusters.forEach(c => {
+    const [x, y] = P(c);
+    const maxX = c.lng >= SEA_LNG ? W : mainW;
+    const L = place(x, y, c.name, 10.5, 4, maxX);
+    labels += `<text class="lab-place" x="${L.x.toFixed(1)}" y="${L.y.toFixed(1)}"${L.clean ? "" : ' opacity=".6"'}>${esc(c.name)}</text>`;
+  });
+  frame.innerHTML = `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="${esc(short(n))}的檢查點定位圖：${[...new Set([...own, ...rel])].sort().map(i => i + " " + cpName(i)).join("、") || "未有檢查點"}" style="--nc:${col(n)}">${s}${dots}${labels}</svg>`;
+
+  // 檢查點清單
+  const all = [...new Set([...own, ...rel])].sort((a, b) => parseFloat(a) - parseFloat(b) || a.localeCompare(b));
+  $("#cplist").innerHTML = all.length
+    ? all.map(i => `<li class="${own.has(i) ? "own" : ""}" data-cp="${i}"><b>${i}</b>${esc(cpName(i))}</li>`).join("")
+    : `<li>此節點未有檢查點</li>`;
+}
+function setHot(cp){
+  document.querySelectorAll("#locframe g.hot, #cplist li.hot, .rel.hot").forEach(e => e.classList.remove("hot"));
+  if (!cp) return;
+  document.querySelectorAll(`#locframe g[data-cps~="${CSS.escape(cp)}"], #cplist li[data-cp="${CSS.escape(cp)}"]`).forEach(e => e.classList.add("hot"));
+}
+function bindHot(container, sel){
+  const on = e => { const r = e.target.closest(sel); setHot(r ? r.dataset.cp : null); if (r && r.classList.contains("rel")) r.classList.add("hot"); };
+  container.addEventListener("mouseover", on);
+  container.addEventListener("focusin", on);
+  container.addEventListener("mouseleave", () => setHot(null));
+  container.addEventListener("focusout", e => { if (!container.contains(e.relatedTarget)) setHot(null); });
+}
+
+/* ---------- 三個尺度 ---------- */
+function stopsFor(id){
+  const out = [];
+  D.trails.forEach(t => t.stops.forEach(s => { if (t.lead === id || (s.meet || []).includes(id)) out.push({t, s}); }));
+  return out;
+}
+function phMedia(text){
+  const kind = (text.split("：")[0] || "素材");
+  return `<div class="ph" role="img" aria-label="${esc(text)}（待上載）"><span class="k">${esc(kind)}</span><span>${esc(text.split("：").slice(1).join("：") || text)}<br><span class="mono" style="font-size:.7rem">待上載</span></span></div>`;
+}
+function emptyBox(title, why, need){
+  return `<div class="empty"><span class="t">${esc(title)}</span><p>${why}</p><ul>${need.map(x => `<li>${esc(x)}</li>`).join("")}</ul></div>`;
+}
+function sentence(r){
+  return `${esc(NODE[r.from].zh)} <span class="verb${isPast(r) ? " past" : ""}${isConf(r) ? " conf" : ""}" style="font-size:.78rem;padding:0 6px">${esc(r.verb)}</span> ${esc(NODE[r.to].zh)}`;
+}
+function relEntry(r){
+  const other = r.from === current ? r.to : r.from;
+  return `<li class="item"><div class="who"><b>${esc(r.source)}</b><span class="cp">${esc(r.cp || "")} ${esc(cpName(r.cp))}</span><span>${esc(r.period || "")}</span><span class="st ${esc(r.status)}">${esc(ST[r.status])}</span></div>
+    <p>${sentence(r)}</p>${r.note ? `<p><q>${esc(r.note)}</q>（轉述）</p>` : ""}<p class="small"><a href="#${other}">去「${esc(NODE[other].zh)}」頁</a></p></li>`;
+}
+function fmtDate(md){ const [m, d] = md.split("-").map(Number); return `${m} 月 ${d} 日`; }
+function seasonStrip(c){
+  const n = NODE[c.node] || NODE[current];
+  let cells = "";
+  for (let i = 0; i < 24; i++){
+    const on = i + 1 > c.start && i < c.end;
+    const cls = c.marker ? (i === Math.floor(c.start) ? "mk" : "") : (on ? "on" : "");
+    cells += `<span class="${cls}" title="${D.solarTerms[i]}"></span>`;
+  }
+  const labs = [0, 6, 12, 18].map(i => `<span class="tl" style="grid-column:${i + 1} / span 6">${D.solarTerms[i]}</span>`).join("");
+  const s = Math.floor(c.start), e = Math.ceil(c.end) % 24;
+  const range = c.marker
+    ? `${D.solarTerms[s]}（2026 年約 ${fmtDate(D.solarTermDates2026[s])}）`
+    : `${D.solarTerms[s]}（約 ${fmtDate(D.solarTermDates2026[s])}）至${D.solarTerms[e]}（約 ${fmtDate(D.solarTermDates2026[e])}）前`;
+  return `<li class="item season" style="--nc:${col(n)}"><div class="who"><b>${esc(c.zh)}</b><span>${esc(c.source)}</span></div>
+    <div class="terms" aria-hidden="true">${cells}${labs}</div>
+    <p class="range">${range} · 2026 日期為約數</p><p>村民的說法：<q>${esc(c.lunar)}</q></p></li>`;
+}
+function renderScales(){
+  const id = current, n = NODE[id], rels = relsOf(id);
+  /* 村民敘事 */
+  const vRels = rels.filter(r => r.source.includes("村民"));
+  const vStops = stopsFor(id).filter(({t, s}) => s.text.includes("村民") || t.lead === "villager");
+  let v = "";
+  if (vRels.length || vStops.length){
+    if (vRels.length) v += `<p class="subh">訪談中的關係</p><ul class="items two">${vRels.map(relEntry).join("")}</ul>`;
+    if (vStops.length) v += `<p class="subh">路線片段</p><ul class="items two">${vStops.map(({t, s}) => `<li class="item"><div class="who"><b>${esc(s.title)}</b><span class="cp">${esc(s.cp)}</span><span>${esc(t.zh)}</span></div><p>${esc(s.text)}</p>${phMedia(s.media)}</li>`).join("")}</ul>`;
+  } else {
+    v = emptyBox("待補：村民訪談", `資料中未有村民談及「${esc(short(n))}」的片段。這裡會放村民的口述，保留原本的說法，並標示是否已核實。`, ["訪談錄音或影片片段（附受訪者同意）", "轉述稿與訪問日期", "村民對地點與季節的原本叫法"]);
+  }
+  /* 科學資料 */
+  const sRels = rels.filter(r => r.status === "observed" || r.status === "check");
+  let sHtml = "";
+  if (n.sci || n.en) sHtml += `<dl class="fact"><dt>英文名稱</dt><dd>${esc(n.en || "—")}</dd>${n.sci ? `<dt>學名</dt><dd><i>${esc(n.sci)}</i></dd>` : ""}<dt>類別</dt><dd>${esc(KIND[n.kind])}</dd></dl>`;
+  if (sRels.length){
+    sHtml += `<p class="subh">觀察與記錄</p><ul class="items two">${sRels.map(relEntry).join("")}</ul>`;
+    if (!sRels.some(r => /科學家|文獻/.test(r.source))) sHtml += `<p class="small muted" style="margin-top:14px">以上是研究員現場觀察或儀器紀錄，尚未有科學家訪談或文獻。</p>`;
+  } else {
+    sHtml += emptyBox("待補：科學家訪談", `資料中未有關於「${esc(short(n))}」的研究員觀察或儀器紀錄。這裡會放可核實的資料，並註明方法與限制。`, ["科學家或本地專家訪談", "物種調查或文獻（附出處）", "紅外線相機、AudioMoth 的原始紀錄與鑑定結果"]);
+  }
+  /* 物種導向 */
+  const cal = D.calendar.filter(c => c.node === id);
+  const instr = rels.filter(r => r.verb === "記錄");
+  const nm = short(n);
+  const cam = (n.kind === "species" && nm.length >= 2) ? D.night.cameraEvents.filter(e => e.what.includes(nm)) : [];
+  const band = D.night.bands.find(b => b.id === id);
+  let o = "";
+  if (cal.length) o += `<p class="subh">季節（節氣）</p><ul class="items">${cal.map(seasonStrip).join("")}</ul>`;
+  if (instr.length) o += `<p class="subh">儀器</p><ul class="items two">${instr.map(r => `<li class="item"><div class="who"><b>${esc(NODE[r.from].zh)}</b><span class="cp">${esc(r.cp)} ${esc(cpName(r.cp))}</span><span class="st ${r.status}">${ST[r.status]}</span></div><p>${esc(NODE[r.from].blurb)}</p></li>`).join("")}</ul>`;
+  if (cam.length) o += `<p class="subh">一夜的紅外線相機（${esc(D.night.window.join("–"))}）</p><span class="simulated">模擬資料</span><ul class="cam" style="margin-top:8px">${cam.map(e => `<li><time>${esc(e.t)}</time><span>${esc(e.what)}<span class="mono muted" style="font-size:.72rem"> · ${esc(e.cp)}</span></span><span class="cf">辨認信心：${esc(e.conf)}</span></li>`).join("")}</ul><p class="small muted">物種辨認只是候選答案，需本地專家核實。</p>`;
+  if (band){
+    const X = h => ((h < 21 ? h + 24 : h) - 21) / 7 * 280, Y = a => 52 - a * 44;
+    const pts = band.activity.map(([h, a]) => `${X(h).toFixed(1)},${Y(a).toFixed(1)}`).join(" ");
+    o += `<p class="subh">聲音：${esc(band.zh)}（${band.khz[0]}–${band.khz[1]} kHz）</p><span class="simulated">模擬資料</span>
+      <div class="spark" style="--nc:${col(n)}"><svg viewBox="0 -4 280 72" role="img" aria-label="${esc(band.zh)}聲音活躍度，21:00 至 04:00，模擬資料"><polygon class="ar" points="0,52 ${pts} 280,52"/><polyline class="ln" points="${pts}"/><line x1="0" y1="52" x2="280" y2="52" stroke="var(--line)"/><text class="axis" x="0" y="66" font-family="var(--f-mono)" font-size="10" fill="var(--muted)">21:00</text><text x="280" y="66" text-anchor="end" font-family="var(--f-mono)" font-size="10" fill="var(--muted)">04:00</text></svg></div>`;
+  }
+  if (!o) o = emptyBox("待補：聲音與季節", `資料中未有「${esc(short(n))}」自身的時間：叫聲、活動時段、物候或潮汐。這裡會以節氣、農曆和潮汐來排列。`, ["AudioMoth 聲景片段（附錄音地點與時段）", "節氣物候觀察（何時出現、何時繁殖）", "與潮汐或晝夜相關的活動紀錄"]);
+  else if (!cal.length) o += `<div style="margin-top:16px">${emptyBox("待補：季節", `「${esc(short(n))}」未有節氣或農曆的季節資料。`, ["村民對季節的說法", "節氣物候觀察"])}</div>`;
+
+  $("#p-v").innerHTML = v; $("#p-s").innerHTML = sHtml; $("#p-o").innerHTML = o;
+  const counts = {v: vRels.length + vStops.length, s: sRels.length, o: cal.length + instr.length + cam.length + (band ? 1 : 0)};
+  document.querySelectorAll("#tabs button").forEach(b => { const c = counts[b.dataset.k]; b.querySelector(".c").textContent = c ? c : "待補"; });
+}
+function selectTab(k, focus){
+  tab = k;
+  document.querySelectorAll("#tabs button").forEach(b => {
+    const on = b.dataset.k === k;
+    b.setAttribute("aria-selected", on); b.tabIndex = on ? 0 : -1;
+    $("#p-" + b.dataset.k).hidden = !on;
+    if (on && focus) b.focus();
+  });
+}
+$("#tabs").addEventListener("click", e => { const b = e.target.closest("button"); if (b) selectTab(b.dataset.k); });
+$("#tabs").addEventListener("keydown", e => {
+  const ks = ["v","s","o"]; let i = ks.indexOf(tab);
+  if (e.key === "ArrowRight") i = (i + 1) % 3; else if (e.key === "ArrowLeft") i = (i + 2) % 3;
+  else if (e.key === "Home") i = 0; else if (e.key === "End") i = 2; else return;
+  e.preventDefault(); selectTab(ks[i], true);
+});
+
+/* ---------- 主渲染 ---------- */
+function render(id, fromNav){
+  current = id;
+  const n = NODE[id];
+  document.documentElement.style.setProperty("--nc", col(n));
+  $("#slug").textContent = id; $("#slug2").textContent = id;
+  $("#kind").textContent = KIND[n.kind] || n.kind;
+  $("#mainflag").textContent = n.main ? "· 主要節點" : "";
+  $("#name").textContent = n.zh;
+  $("#names").innerHTML = [n.en ? esc(n.en) : "", n.sci ? `<i>${esc(n.sci)}</i>` : ""].filter(Boolean).join(" · ");
+  $("#blurb").textContent = n.blurb;
+  const out = outOf(id), inn = inOf(id), {own, rel} = cpsFor(id);
+  $("#ledger").innerHTML = `<div><b>${out.length}</b><span>向外關係</span></div><div><b>${inn.length}</b><span>向內關係</span></div><div><b>${new Set([...own, ...rel]).size}</b><span>檢查點</span></div>`;
+  renderRelCol(out, "out", $("#out"), $("#n-out"));
+  renderRelCol(inn, "in", $("#in"), $("#n-in"));
+  renderSwitch();
+  drawLocator();
+  renderScales();
+  selectTab(tab);
+  if (!path.length || path[path.length - 1] !== id) visit(id);
+  renderPath();
+  document.title = `${short(n)} · 物種頁加關係標籤`;
+  if (fromNav){
+    const h = $("#node");
+    if (h.getBoundingClientRect().top < 0 || h.getBoundingClientRect().top > innerHeight * .5) h.scrollIntoView({behavior: reduceMotion ? "auto" : "smooth", block: "start"});
+    $("#name").focus({preventScroll: true});
+  }
+}
+function route(fromNav){
+  const id = decodeURIComponent(location.hash.slice(1));
+  render(NODE[id] ? id : "buffalo", fromNav);
+}
+bindHot($("#rels"), ".rel");
+bindHot($("#cplist"), "li[data-cp]");
+renderIndex();
+window.addEventListener("hashchange", () => route(true));
+let rt; window.addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(drawLocator, 150); });
+route(false);
+})();
+</script>
+</body>
+</html>

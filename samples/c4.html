@@ -1,0 +1,600 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>節氣潮汐輪</title>
+<link rel="stylesheet" href="shared.css">
+<style>
+main{overflow-x:clip}
+.wrap{max-width:1200px;margin:0 auto;padding-inline:16px}
+.intro{padding-block:28px 6px}
+.eyebrow{font-family:var(--f-mono);font-size:.76rem;color:var(--muted);letter-spacing:.04em;margin:0}
+.intro h1{font-size:clamp(2.2rem,7.5vw,3.5rem);font-weight:800;letter-spacing:.03em;margin:.15rem 0 .6rem}
+.intro p{max-width:46rem;margin:.45rem 0}
+.intro .build{font-size:.9rem;color:var(--muted)}
+.fit{display:flex;flex-wrap:wrap;gap:6px;margin:.8rem 0 0}
+.chip{font-size:.76rem;padding:1px 9px;border:1px solid var(--line);border-radius:20px;color:var(--muted);white-space:nowrap}
+.chip.cms{border-color:var(--tide);color:var(--tide)}
+.chip.code{border-color:var(--fg);color:var(--fg)}
+
+.part-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 14px;border-top:2px solid var(--fg);padding-top:10px;margin-top:30px}
+.part-head .k{font-family:var(--f-mono);font-size:.78rem;color:var(--muted)}
+.part-head h2{font-size:1.45rem;font-weight:800}
+.part-head p{flex-basis:100%;margin:.2rem 0 0;color:var(--muted);font-size:.92rem;max-width:46rem}
+
+/* ---------- A 節氣輪 ---------- */
+.wheel-grid{display:grid;gap:22px;margin-top:10px}
+@media (min-width:920px){.wheel-grid{grid-template-columns:minmax(0,1.22fr) minmax(320px,1fr);gap:44px;align-items:start}}
+.wheelfig{margin:0}
+#wheel{display:block;width:100%;height:auto;max-width:700px;margin:0 auto;touch-action:pan-y;cursor:pointer;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
+#wheel:focus{outline:none}
+#wheel:focus-visible .rim{stroke:var(--tide);stroke-width:3}
+.rim{fill:none;stroke:var(--fg);stroke-width:1.2}
+.seg{fill:var(--surface);stroke:var(--line);stroke-width:.8}
+.seg.alt{fill:var(--bg)}
+.seg.on{fill:var(--tide);stroke:var(--tide)}
+.tl{font-family:var(--f-display);font-size:23px;font-weight:600;fill:var(--fg);pointer-events:none}
+.tl.on{fill:var(--bg)}
+.mseg{fill:none;stroke:var(--line);stroke-width:.8}
+.mseg.on{fill:var(--tide-soft)}
+.ml{font-family:var(--f-body);font-size:16px;fill:var(--muted);pointer-events:none}
+.ml.on{fill:var(--tide);font-weight:700}
+.guide{fill:none;stroke:var(--line);stroke-width:1;stroke-dasharray:1 5;stroke-linecap:round}
+.act{opacity:.3;transition:opacity .35s}
+.act.on{opacity:1}
+.al{font-family:var(--f-body);font-size:11px;font-weight:700;fill:#1D2420;pointer-events:none}
+.al.inv{fill:var(--bg)}
+@media (max-width:560px){.al{display:none}}
+.hub{fill:var(--surface);stroke:var(--fg);stroke-width:1.2}
+.hub-k{font-family:var(--f-mono);font-size:13px;fill:var(--muted)}
+.hub-n{font-family:var(--f-display);font-weight:800;font-size:46px;fill:var(--fg)}
+.hub-d{font-family:var(--f-mono);font-size:14px;fill:var(--fg)}
+.hub-l{font-family:var(--f-body);font-size:13px;fill:var(--muted)}
+.mark{stroke:var(--conflict);stroke-width:1.8;stroke-dasharray:6 4;fill:none}
+.mark-t{font-family:var(--f-display);fill:var(--conflict);font-size:19px;font-weight:600}
+.mark-s{font-family:var(--f-body);fill:var(--muted);font-size:12px}
+.today-dot{fill:var(--fg)}
+.today-t{font-family:var(--f-body);font-size:14px;font-weight:700;fill:var(--fg)}
+#needle{transform-origin:320px 320px;transition:transform .6s cubic-bezier(.3,.7,.2,1)}
+#needle.drag{transition:none}
+.needle-l{stroke:var(--fg);stroke-width:2;stroke-linecap:round}
+.knob{fill:var(--tide);stroke:var(--bg);stroke-width:2}
+.hit{fill:transparent;touch-action:none;cursor:grab}
+
+.wheel-ctl{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin-top:6px}
+.btn{border:1px solid var(--fg);background:transparent;border-radius:999px;padding:3px 14px;font-size:.88rem;cursor:pointer;line-height:1.6}
+.btn:hover{background:var(--fg);color:var(--bg)}
+.btn.tide{border-color:var(--tide);color:var(--tide)}
+.btn.tide:hover{background:var(--tide);color:var(--bg)}
+.hint{text-align:center;font-size:.8rem;color:var(--muted);margin:.45rem 0 0}
+.legend{list-style:none;padding:0;margin:14px auto 0;max-width:640px;display:flex;flex-wrap:wrap;justify-content:center;gap:2px 14px;font-size:.8rem;color:var(--muted)}
+.legend li{white-space:nowrap}
+.legend i{display:inline-block;width:16px;height:7px;border-radius:2px;margin-right:6px;vertical-align:middle}
+.legend i.o{border:1px solid var(--fg);background:var(--surface)}
+.legend i.m{border:1px solid var(--line)}
+.legend i.x{height:0;border-top:2px dashed var(--conflict);border-radius:0}
+.figcap{font-size:.8rem;color:var(--muted);max-width:640px;margin:.7rem auto 0;text-align:center}
+
+.panel{border-top:4px solid var(--tide);padding-top:10px}
+.panel .k{font-family:var(--f-mono);font-size:.76rem;color:var(--muted);margin:0}
+.panel>h2{font-size:1.05rem;font-weight:600;margin:.1rem 0 0}
+.term{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 14px;margin:.1rem 0 .1rem}
+.term b{font-family:var(--f-display);font-size:3.1rem;font-weight:800;line-height:1.15;letter-spacing:.04em}
+.term .rng{font-family:var(--f-mono);font-size:.92rem}
+.term .lun{font-size:.85rem;color:var(--muted)}
+.sel{font-size:.86rem;color:var(--muted);margin:0 0 .4rem}
+.panel h3{font-family:var(--f-body);font-size:.78rem;font-weight:700;letter-spacing:.08em;color:var(--muted);margin:1.1rem 0 0;border-bottom:1px solid var(--line);padding-bottom:4px}
+.acts{list-style:none;margin:0;padding:0}
+.acts li{position:relative;padding:.6rem 0 .75rem 18px;border-bottom:1px solid var(--line)}
+.acts li::before{content:"";position:absolute;left:0;top:.8rem;bottom:.9rem;width:5px;border-radius:2px;background:var(--c)}
+.acts li.mk::before{width:0;border-left:2px dashed var(--conflict);background:none}
+.acts .nm{font-weight:700}
+.acts .ph{font-size:.72rem;font-family:var(--f-mono);color:var(--muted);margin-left:8px;white-space:nowrap}
+.acts q{display:block;font-family:var(--f-display);font-weight:600;font-size:1.03rem;line-height:1.55;quotes:"「" "」";margin:.2rem 0 .25rem}
+.src{font-size:.78rem;color:var(--muted);display:flex;flex-wrap:wrap;gap:3px 8px;align-items:center}
+.nodes{display:flex;flex-wrap:wrap;gap:2px 12px;margin-top:.35rem;font-size:.86rem}
+.nodes a{white-space:nowrap}
+.nodes a::before{content:"→ ";color:var(--muted)}
+.empty{color:var(--muted);font-size:.9rem;margin:.6rem 0}
+.to-gate{display:inline-block;margin-top:1rem;font-size:.9rem}
+.nodecard{margin-top:1rem;border:1px solid var(--fg);background:var(--surface);padding:12px 14px 14px;border-radius:3px}
+.nodecard:focus{outline:none}
+.nodecard:focus-visible{outline:2px solid var(--tide);outline-offset:2px}
+.nc-h{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 10px}
+.nc-h b{font-family:var(--f-display);font-size:1.3rem}
+.nc-h .en{font-size:.82rem;color:var(--muted)}
+.nc-h .x{margin-left:auto;font-size:.8rem;padding:0 10px}
+.nodecard p{margin:.4rem 0;font-size:.92rem}
+.rels{list-style:none;margin:.3rem 0 0;padding:0;font-size:.88rem}
+.rels li{padding:.4rem 0;border-top:1px dotted var(--line)}
+.rels .rv{font-weight:700}
+.rels .rv em{font-style:normal;font-weight:500;color:var(--tide);padding:0 4px}
+.real{font-size:.8rem!important;color:var(--muted)}
+
+/* ---------- B 低潮閘門 ---------- */
+.gate-grid{display:grid;gap:24px;margin-top:12px;padding-bottom:56px}
+@media (min-width:920px){.gate-grid{grid-template-columns:minmax(0,1.35fr) minmax(320px,1fr);gap:40px;align-items:start}}
+.tide-top{display:flex;flex-wrap:wrap;gap:4px 12px;align-items:baseline}
+.tide-top b{font-family:var(--f-display);font-size:1.2rem}
+.tide-top .tn{color:var(--muted)}
+.readout{display:flex;flex-wrap:wrap;gap:2px 16px;align-items:baseline;margin-top:.5rem;font-family:var(--f-mono)}
+.readout .h{font-size:1.9rem;font-weight:500;letter-spacing:.02em}
+.readout .m{font-size:1rem}
+.readout .dir{font-family:var(--f-body);font-size:.85rem;color:var(--muted)}
+#tideChart{position:relative;margin-top:6px;touch-action:pan-y;cursor:ew-resize;border-radius:3px;-webkit-user-select:none;user-select:none}
+#tideChart:focus{outline:none}
+#tideChart:focus-visible{outline:2px solid var(--tide);outline-offset:3px}
+#tideChart svg{display:block;width:100%}
+.tc-water{fill:var(--tide-soft)}
+.tc-line{fill:none;stroke:var(--tide);stroke-width:2}
+.tc-grid{stroke:var(--line);stroke-width:1}
+.tc-ax{font-family:var(--f-mono);font-size:11px;fill:var(--muted)}
+.tc-thr{stroke:var(--c-clam);stroke-width:1.5;stroke-dasharray:5 4}
+.tc-thr-t{font-family:var(--f-body);font-size:11px;fill:var(--c-clam);font-weight:700}
+.tc-low{fill:var(--c-clam);opacity:.13}
+.tc-band{fill:var(--c-clam)}
+.tc-band-t{font-family:var(--f-body);font-size:11px;fill:var(--c-clam);font-weight:700}
+.tc-now{stroke:var(--muted);stroke-width:1;stroke-dasharray:2 3}
+.tc-now-t{font-family:var(--f-body);font-size:11px;fill:var(--muted)}
+.tc-h{stroke:var(--fg);stroke-width:1.5}
+.tc-dot{fill:var(--surface);stroke:var(--fg);stroke-width:2.5}
+.tc-tag{fill:var(--fg)}
+.tc-tag-t{font-family:var(--f-mono);font-size:12px;fill:var(--bg)}
+.lows{font-size:.88rem;margin:.6rem 0 0}
+.lows .mono{white-space:nowrap}
+.tide-btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:.7rem}
+.realnote{font-size:.84rem;color:var(--muted);border-left:3px solid var(--line);padding:2px 0 2px 12px;margin:1rem 0 0;max-width:40rem}
+
+.gate-card{position:relative;border:1px solid var(--fg);background:var(--surface);border-radius:3px;overflow:hidden}
+.flat{display:block;width:100%;height:auto}
+.fl-sand{fill:var(--line)}
+.fl-grain{fill:var(--muted);opacity:.35}
+.fl-clam{fill:var(--c-clam)}
+.fl-ridge{fill:none;stroke:var(--surface);stroke-width:.8;opacity:.8}
+.fl-eye{fill:var(--fg)}
+.fl-water{fill:var(--tide);opacity:.32}
+.fl-wl{fill:none;stroke:var(--tide);stroke-width:1.6}
+.fl-t{font-family:var(--f-mono);font-size:10px;fill:var(--muted)}
+.fl-wt{font-family:var(--f-mono);font-size:10px;fill:var(--tide);font-weight:500}
+.gate-state{display:flex;flex-wrap:wrap;gap:2px 10px;align-items:baseline;border-top:1px solid var(--fg);border-bottom:1px solid var(--line);padding:6px 16px;font-size:.8rem}
+.gate-state .g{font-family:var(--f-mono);font-weight:500}
+.gate-card.dry .gate-state .g{color:var(--c-clam)}
+.gate-card:not(.dry) .gate-state .g{color:var(--tide)}
+.below{position:relative;min-height:400px}
+.gate-card.covered .below{max-height:430px;overflow:hidden}
+.clam-body{padding:12px 16px 18px;transition:filter .6s,opacity .6s}
+.gate-card.covered .clam-body{filter:blur(5px);opacity:.4}
+.clam-body h3{font-size:1.5rem;font-weight:800;margin-top:.2rem}
+.clam-body h4{font-size:.78rem;letter-spacing:.08em;color:var(--muted);margin:1rem 0 0;border-bottom:1px solid var(--line);padding-bottom:3px}
+.clam-body .sci{font-size:.84rem;color:var(--muted);margin:.1rem 0 .5rem}
+.clam-body p{margin:.4rem 0}
+.peekbar{display:none;align-items:center;flex-wrap:wrap;gap:6px 10px;font-size:.84rem;background:var(--tide-soft);color:var(--tide);padding:6px 10px;border-radius:3px;margin-bottom:.4rem}
+.gate-card.peek .peekbar{display:flex}
+.peekbar .btn{border-color:var(--tide);color:var(--tide);font-size:.8rem;padding:0 10px}
+.media{position:relative;aspect-ratio:16/9;border:1px solid var(--fg);margin:.8rem 0;display:grid;place-items:center;padding:14px;text-align:center;
+  background:repeating-linear-gradient(172deg,var(--surface) 0 7px,var(--line) 7px 8px)}
+.media span{background:var(--surface);border:1px solid var(--fg);padding:5px 12px;font-size:.86rem;max-width:90%}
+.media .tc{position:absolute;left:8px;top:6px;font-family:var(--f-mono);font-size:.7rem;color:var(--fg);background:var(--surface);padding:0 5px}
+.media .tri{position:absolute;right:10px;bottom:10px;width:0;height:0;border-left:14px solid var(--fg);border-top:9px solid transparent;border-bottom:9px solid transparent}
+.flood{position:absolute;inset:0;background:var(--tide);color:var(--bg);padding:26px 18px 18px;
+  background-image:repeating-linear-gradient(180deg,transparent 0 26px,rgba(255,255,255,.07) 26px 27px);
+  transform:translateY(0);visibility:visible;transition:transform .8s cubic-bezier(.4,.1,.2,1),visibility 0s}
+.gate-card:not(.covered) .flood{transform:translateY(102%);visibility:hidden;transition:transform .8s cubic-bezier(.4,.1,.2,1),visibility 0s linear .8s}
+.flood .wave{position:absolute;left:0;right:0;top:-9px;width:100%;height:10px;fill:var(--tide)}
+.flood .fk{font-family:var(--f-mono);font-size:.78rem;opacity:.85;margin:0}
+.flood .ft{font-family:var(--f-display);font-size:1.45rem;font-weight:800;margin:.2rem 0 .5rem}
+.flood p{margin:.45rem 0;font-size:.94rem;max-width:30rem}
+.flood .fb{display:flex;flex-wrap:wrap;gap:8px;margin-top:1rem}
+.flood .btn{border-color:var(--bg);color:var(--bg)}
+.flood .btn:hover{background:var(--bg);color:var(--tide)}
+.flood .btn.solid{background:var(--bg);color:var(--tide)}
+.flood :focus-visible{outline-color:var(--bg)}
+.foot{border-top:1px solid var(--line);font-size:.8rem;color:var(--muted);padding-block:14px 40px}
+</style>
+</head>
+<body>
+<header class="sample-bar"><a href="../index.html">← 回到參考頁</a><span class="tag">方案 04 · 示意 sample</span><span class="sp"></span>
+<nav aria-label="其他方案"><a href="c1.html">01</a><a href="c2.html">02</a><a href="c3.html">03</a><a href="c4.html" aria-current="page">04</a><a href="c5.html">05</a><a href="c6.html">06</a><a href="c7.html">07</a><a href="c8.html">08</a></nav></header>
+<main>
+<section class="intro wrap" aria-labelledby="pageTitle">
+  <p class="eyebrow">方案 04 · 首頁導航裝置</p>
+  <h1 id="pageTitle">節氣潮汐輪</h1>
+  <p>以圓形曆作首頁導航：指針停在今天的節氣，轉動輪盤，就看到「這兩星期」水口有甚麼正在發生，並可沿連結往下讀。下半部是「低潮閘門」：沙白的內容只在退潮時完整打開。真實版本會接上香港天文台潮汐預報、把每段時節連到物種頁，並逐年加入新的物候紀錄。</p>
+  <p class="build">Webflow 做法：時節活動、村民原話與來源存於 CMS（Calendar Collection，以 Reference 連到物種），面板文字可由 CMS 原生輸出；輪盤、按真實日期轉動的指針和潮汐閘門需以 Code Embed 寫成（原生 SVG 與 JavaScript，不需 D3）。</p>
+  <div class="fit"><span class="chip cms">CMS：活動、原話、來源</span><span class="chip code">Code Embed：輪盤、指針、潮汐</span><span class="chip">節氣・農曆・潮汐</span><span class="chip">沙白是檢查點</span></div>
+</section>
+
+<section class="wrap" aria-labelledby="partA">
+  <div class="part-head"><span class="k">A</span><h2 id="partA">節氣輪</h2>
+    <p>外圈二十四節氣（立春在頂，順時針），次圈農曆月份（約數），再往內每一圈是一段時節活動，顏色取自所屬物種。</p></div>
+  <div class="wheel-grid">
+    <figure class="wheelfig">
+      <svg id="wheel" viewBox="-40 -40 720 760" tabindex="0" role="slider" aria-label="節氣輪：選擇日期" aria-valuemin="0" aria-valuemax="23" aria-valuenow="0" aria-describedby="wheelHint"></svg>
+      <div class="wheel-ctl">
+        <button class="btn" type="button" id="prevT">‹ 上一個節氣</button>
+        <button class="btn tide" type="button" id="todayT">回到今天</button>
+        <button class="btn" type="button" id="nextT">下一個節氣 ›</button>
+      </div>
+      <p class="hint" id="wheelHint">拖動指針或點按輪盤選擇日期；聚焦輪盤後按 ← → 鍵逐個節氣移動，Home 鍵回到今天。</p>
+      <ul class="legend" id="legend" aria-label="由外而內各圈"></ul>
+      <figcaption class="figcap">節氣日期為 2026 年約數；農曆月份按每月約兩個節氣排列，只是約數。各圈時段取自村民口述與團隊紀錄，見右方來源。</figcaption>
+    </figure>
+
+    <aside class="panel" aria-labelledby="panelTitle">
+      <p class="k" id="pK"></p>
+      <h2 id="panelTitle">這兩星期的水口</h2>
+      <div class="term"><b id="pName"></b><span class="rng" id="pRange"></span><span class="lun" id="pLunar"></span></div>
+      <p class="sel" id="pSel" aria-live="polite"></p>
+      <h3>正在進行</h3>
+      <ul class="acts" id="pNow"></ul>
+      <div id="pSoonWrap"><h3>快將開始</h3><ul class="acts" id="pSoon"></ul></div>
+      <div class="nodecard" id="nodeCard" tabindex="-1" hidden></div>
+      <a class="to-gate" href="#partB">到低潮閘門看這一天的潮汐 ↓</a>
+    </aside>
+  </div>
+</section>
+
+<section class="wrap" aria-labelledby="partB">
+  <div class="part-head"><span class="k">B</span><h2 id="partB">低潮閘門</h2>
+    <p>沙白在灘上幾乎不移動，是一個檢查點，而不是一條路線。人能否遇見牠，取決於潮水：潮水低於門檻時，下方的沙白卡片才完整打開。</p></div>
+  <div class="gate-grid">
+    <div>
+      <div class="tide-top"><b id="tDate"></b><span class="tn" id="tTerm"></span><span class="simulated">模擬潮汐，非天文台預報</span></div>
+      <div class="readout" aria-live="polite"><span class="h" id="tHour"></span><span class="m" id="tM"></span><span class="dir" id="tDir"></span></div>
+      <div id="tideChart" tabindex="0" role="slider" aria-label="時間：拖動選擇這一天的時刻" aria-valuemin="0" aria-valuemax="1435"></div>
+      <p class="lows" id="tLows"></p>
+      <div class="tide-btns">
+        <button class="btn tide" type="button" id="nextLow">跳到下一次低潮</button>
+        <button class="btn" type="button" id="nowBtn">現在</button>
+      </div>
+      <p class="realnote">這條曲線以正弦函數模擬（週期約 12.42 小時），門檻 0.8 米亦屬示意。真實版本會使用香港天文台最近潮汐站（例如石壁，待確認）的潮汐預報，並按實地量度的灘面高度設定門檻。</p>
+    </div>
+
+    <article class="gate-card covered" id="clamCard" aria-labelledby="clamTitle">
+      <svg class="flat" id="flat" viewBox="0 0 360 132" role="img" aria-label="泥灘示意剖面"></svg>
+      <div class="gate-state"><span class="g" id="gState"></span><span id="gNote"></span></div>
+      <div class="below">
+        <div class="clam-body" id="clamBody"></div>
+        <div class="flood" id="flood">
+          <svg class="wave" viewBox="0 0 120 10" preserveAspectRatio="none" aria-hidden="true"><path d="M0 10 Q7.5 0 15 5 T30 5 T45 5 T60 5 T75 5 T90 5 T105 5 T120 5 V10 Z"/></svg>
+          <p class="fk" id="fK"></p>
+          <p class="ft">潮水正蓋著泥灘</p>
+          <p id="fText"></p>
+          <p id="fNext"></p>
+          <div class="fb">
+            <button class="btn solid" type="button" id="peekBtn">仍然想看</button>
+            <button class="btn" type="button" id="fLow">等潮退：跳到低潮</button>
+          </div>
+        </div>
+      </div>
+    </article>
+  </div>
+</section>
+<p class="foot wrap">示意 sample。所有事實取自共用的 data.js；潮汐為模擬資料。村民以代號標示，口述內容未經核實者均已標明。</p>
+</main>
+
+<script src="data.js"></script>
+<script>
+(function(){
+"use strict";
+var D=window.SHUIHAU, NS="http://www.w3.org/2000/svg";
+var TERMS=D.solarTerms, TD=D.solarTermDates2026, TIDE=D.tide, THR=TIDE.lowThresholdM;
+var MONTHS=["正月","二月","三月","四月","五月","六月","七月","八月","九月","十月","十一月","十二月"];
+var NODE={}; D.nodes.forEach(function(n){NODE[n.id]=n;});
+var ST={observed:"研究員觀察",oral:"口述・未核實",consensus:"多人口述一致",check:"待科學核實",conflict:"爭議",pending:"待補充"};
+function $(id){return document.getElementById(id);}
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];});}
+function el(tag,attrs,parent){var e=document.createElementNS(NS,tag);for(var k in attrs){if(k==="text")e.textContent=attrs[k];else e.setAttribute(k,attrs[k]);}if(parent)parent.appendChild(e);return e;}
+function short(id){return NODE[id]?NODE[id].zh.split("（")[0]:id;}
+function pad(n){return (n<10?"0":"")+n;}
+function f2(n){return Math.round(n*100)/100;}
+
+/* ---------- 日期：以 2026 立春至 2027 立春為一圈 ---------- */
+var DAY=864e5;
+function dn(y,m,d){return Date.UTC(y,m-1,d)/DAY;}
+var B=TD.map(function(s,i){var p=s.split("-");return dn(i>=22?2027:2026,+p[0],+p[1]);});
+B.push(dn(2027,2,4));
+function ymd(day){var d=new Date(day*DAY);return [d.getUTCFullYear(),d.getUTCMonth()+1,d.getUTCDate()];}
+function inCycle(day){if(day>=B[0]&&day<B[24])return day;var a=ymd(day);var y=(a[1]>2||(a[1]===2&&a[2]>=4))?2026:2027;return dn(y,a[1],a[2]);}
+function dayToT(day){for(var i=0;i<24;i++){if(day<B[i+1])return i+(day-B[i])/(B[i+1]-B[i]);}return 23.99;}
+function tToDay(t){t=((t%24)+24)%24;var i=Math.floor(t);return Math.min(B[i+1]-1,Math.floor(B[i]+(t-i)*(B[i+1]-B[i])));}
+function md(day){var a=ymd(day);return a[1]+"月"+a[2]+"日";}
+function full(day){var a=ymd(day);return a[0]+"年"+a[1]+"月"+a[2]+"日";}
+
+var hk=new Date(Date.now()+8*36e5);
+var realToday=dn(hk.getUTCFullYear(),hk.getUTCMonth()+1,hk.getUTCDate());
+var today=inCycle(realToday), shifted=today!==realToday;
+var nowHour=Math.round((hk.getUTCHours()+hk.getUTCMinutes()/60)*12)/12;
+var state={day:today,hour:nowHour,peek:false};
+
+/* ---------- 潮汐（模擬） ---------- */
+var REF=Date.parse(TIDE.lowTideRef), PER=TIDE.periodHours*36e5;
+function msOf(day,hour){return day*DAY-8*36e5+hour*36e5;}
+function tideAt(ms){return TIDE.meanM-TIDE.ampM*Math.cos(2*Math.PI*(ms-REF)/PER);}
+function rising(ms){return Math.sin(2*Math.PI*(ms-REF)/PER)>0;}
+function hhmm(h){var m=Math.round(h*60);if(m>=1440)return "24:00";return pad(Math.floor(m/60))+":"+pad(m%60);}
+function lowWindows(day){var out=[],cur=null;for(var k=0;k<=288;k++){var h=k/12,low=tideAt(msOf(day,h))<THR;if(low&&!cur)cur=[h,h];if(low)cur[1]=h;if(!low&&cur){out.push(cur);cur=null;}}if(cur)out.push(cur);return out;}
+function nextTrough(ms){var k=Math.floor((ms-REF)/PER)+1;return REF+k*PER;}
+function msToDayHour(ms){var d=new Date(ms+8*36e5);return {day:dn(d.getUTCFullYear(),d.getUTCMonth()+1,d.getUTCDate()),hour:Math.round((d.getUTCHours()+d.getUTCMinutes()/60)*12)/12};}
+
+/* ---------- 活動 ---------- */
+var ACTS=D.calendar.filter(function(a){return !a.marker;});
+var MARKS=D.calendar.filter(function(a){return a.marker;});
+function span(a){var s=a.start,e=a.end;if(e<=s)e+=24;return [s,e];}
+function activeAt(a,i){var p=span(a);return (p[0]<i+1&&p[1]>i)||(p[0]<i+25&&p[1]>i+24);}
+function phaseOf(a,i){var p=span(a),s=Math.floor(p[0])%24,e=(Math.ceil(p[1])-1)%24;if(s===i&&e===i)return "只在這個節氣";if(s===i)return "這個節氣開始";if(e===i)return "這個節氣結束";return "進行中";}
+function nodesOf(a){var ids=[a.node];D.nodes.forEach(function(n){var s=short(n.id);if(ids.indexOf(n.id)<0&&s.length>=1&&a.zh.indexOf(s)>=0)ids.push(n.id);});return ids;}
+function chipFor(src){return /村民/.test(src)?'<span class="st oral">口述・未核實</span>':'<span class="st check">團隊紀錄・待核實</span>';}
+
+/* ---------- 輪盤 ---------- */
+var C=320, svg=$("wheel");
+function P(r,t){var a=t/24*2*Math.PI-Math.PI/2;return [f2(C+r*Math.cos(a)),f2(C+r*Math.sin(a))];}
+function ring(r1,r2,t1,t2){var lg=(t2-t1)>12?1:0,a=P(r2,t1),b=P(r2,t2),c=P(r1,t2),d=P(r1,t1);
+  return "M"+a+"A"+r2+" "+r2+" 0 "+lg+" 1 "+b+"L"+c+"A"+r1+" "+r1+" 0 "+lg+" 0 "+d+"Z";}
+function arcLine(r,t1,t2,rev){var lg=(t2-t1)>12?1:0,a=P(r,t1),b=P(r,t2);
+  return rev?"M"+b+"A"+r+" "+r+" 0 "+lg+" 0 "+a:"M"+a+"A"+r+" "+r+" 0 "+lg+" 1 "+b;}
+function upright(t){var d=t*15;return (d>90&&d<270)?d+180:d;}
+var termSegs=[],termLbls=[],monSegs=[],monLbls=[],actEls=[];
+
+function buildWheel(){
+  var defs=el("defs",{},svg);
+  // 節氣圈
+  TERMS.forEach(function(n,i){
+    termSegs.push(el("path",{d:ring(262,304,i,i+1),"class":"seg"+(i%2?" alt":"")},svg));
+    var p=P(283,i+.5);
+    termLbls.push(el("text",{x:p[0],y:p[1],"class":"tl","text-anchor":"middle","dominant-baseline":"central",transform:"rotate("+upright(i+.5)+" "+p[0]+" "+p[1]+")",text:n},svg));
+  });
+  el("circle",{cx:C,cy:C,r:304,"class":"rim"},svg);
+  // 農曆圈（約數）
+  MONTHS.forEach(function(n,i){
+    monSegs.push(el("path",{d:ring(224,258,i*2,i*2+2),"class":"mseg"},svg));
+    var p=P(241,i*2+1);
+    monLbls.push(el("text",{x:p[0],y:p[1],"class":"ml","text-anchor":"middle","dominant-baseline":"central",transform:"rotate("+upright(i*2+1)+" "+p[0]+" "+p[1]+")",text:n},svg));
+  });
+  // 活動圈
+  var lg=$("legend");
+  lg.insertAdjacentHTML("beforeend",'<li><i class="o"></i>二十四節氣</li><li><i class="m"></i>農曆月份（約數）</li>');
+  ACTS.forEach(function(a,k){
+    var r2=212-k*17,r1=r2-13,rm=r2-6.5,col="var("+NODE[a.node].color+")",p=span(a);
+    el("circle",{cx:C,cy:C,r:rm,"class":"guide"},svg);
+    var g=el("g",{"class":"act"},svg);
+    var path=el("path",{d:ring(r1,r2,p[0],p[1]),style:"fill:"+col},g);
+    el("title",{text:a.zh+"："+a.lunar+"（"+a.source+"）"},path);
+    var len=rm*((p[1]-p[0])/24)*2*Math.PI, need=a.zh.length*11+12;
+    if(len>need){
+      var mid=((p[0]+p[1])/2)%24, rev=(mid*15>90&&mid*15<270), id="ap"+k;
+      el("path",{id:id,d:arcLine(rev?rm-4:rm+4,p[0],p[1],rev),fill:"none"},defs);
+      var tx=el("text",{"class":"al"+(NODE[a.node].color==="--c-human"?" inv":"")},g);
+      var tp=el("textPath",{href:"#"+id,startOffset:"50%","text-anchor":"middle",text:a.zh},tx);
+    }
+    actEls.push(g);
+    lg.insertAdjacentHTML("beforeend",'<li><i style="background:'+col+'"></i>'+esc(a.zh)+'</li>');
+  });
+  lg.insertAdjacentHTML("beforeend",'<li><i class="x"></i>立秋前要落田</li>');
+  // 立秋前要落田
+  MARKS.forEach(function(m){
+    var a=P(90,m.start),b=P(332,m.start);
+    el("line",{x1:a[0],y1:a[1],x2:b[0],y2:b[1],"class":"mark"},svg);
+    var q=P(358,m.start);
+    el("text",{x:q[0],y:q[1],"class":"mark-t","text-anchor":"middle","dominant-baseline":"central",text:m.zh},svg);
+    el("text",{x:q[0],y:q[1]+22,"class":"mark-s","text-anchor":"middle","dominant-baseline":"central",text:m.source},svg);
+  });
+  // 今天
+  var tt=dayToT(today),d1=P(313,tt),d2=P(340,tt);
+  el("circle",{cx:d1[0],cy:d1[1],r:3.5,"class":"today-dot"},svg);
+  el("text",{x:d2[0],y:d2[1],"class":"today-t","text-anchor":"middle","dominant-baseline":"central",text:"今天"},svg);
+  // 中心
+  el("circle",{cx:C,cy:C,r:86,"class":"hub"},svg);
+  el("text",{x:C,y:C-46,"class":"hub-k","text-anchor":"middle","dominant-baseline":"central",id:"hubK"},svg);
+  el("text",{x:C,y:C-6,"class":"hub-n","text-anchor":"middle","dominant-baseline":"central",id:"hubN"},svg);
+  el("text",{x:C,y:C+34,"class":"hub-d","text-anchor":"middle","dominant-baseline":"central",id:"hubD"},svg);
+  el("text",{x:C,y:C+54,"class":"hub-l","text-anchor":"middle","dominant-baseline":"central",id:"hubL"},svg);
+  // 指針
+  var nd=el("g",{id:"needle","class":"drag"},svg);
+  el("line",{x1:C,y1:C-88,x2:C,y2:C-256,"class":"needle-l"},nd);
+  el("circle",{cx:C,cy:C-256,r:4,style:"fill:var(--fg)"},nd);
+  el("path",{d:"M"+C+" "+(C-305)+"L"+(C-11)+" "+(C-327)+"L"+(C+11)+" "+(C-327)+"Z","class":"knob"},nd);
+  el("circle",{cx:C,cy:C-316,r:26,"class":"hit"},nd);
+}
+buildWheel();
+var needle=$("needle"), needleDeg=0;
+function setNeedle(t){var target=t*15,d=((target-needleDeg)%360+540)%360-180;needleDeg+=d;needle.style.transform="rotate("+f2(needleDeg)+"deg)";}
+
+/* ---------- 面板 ---------- */
+function actItem(a,i,label){
+  var ids=nodesOf(a),col="var("+NODE[a.node].color+")";
+  var links=ids.map(function(id){return '<a href="#node-'+id+'" data-node="'+id+'">'+esc(short(id))+'</a>';}).join("");
+  if(a.node==="clam")links+='<a href="#partB">低潮閘門</a>';
+  return '<li style="--c:'+col+'"><span class="nm">'+esc(a.zh)+'</span><span class="ph">'+esc(label)+'</span>'+
+    '<q>'+esc(a.lunar)+'</q><div class="src">'+esc(a.source)+' '+chipFor(a.source)+'</div><div class="nodes">'+links+'</div></li>';
+}
+function renderPanel(t){
+  var i=Math.floor(t),s=B[i],e=B[i+1]-1,y=ymd(s)[0];
+  $("pK").textContent="第 "+(i+1)+" 個節氣 · "+y+" 年（約數）";
+  $("pName").textContent=TERMS[i];
+  $("pRange").textContent=md(s)+" 至 "+md(e);
+  $("pLunar").textContent="約農曆"+MONTHS[Math.floor(i/2)];
+  var isToday=state.day===today;
+  $("pSel").textContent="指針日期："+full(state.day)+(isToday?"（今天）":"")+(isToday&&shifted?"，以 2026 年節氣日期計":"");
+  var now=ACTS.filter(function(a){return activeAt(a,i);}).map(function(a){return actItem(a,i,phaseOf(a,i));});
+  MARKS.forEach(function(m){var mi=Math.floor(m.start);
+    if(i===mi||i===(mi+23)%24){
+      var ids=nodesOf(m),links=ids.map(function(id){return '<a href="#node-'+id+'" data-node="'+id+'">'+esc(short(id))+'</a>';}).join("");
+      now.unshift('<li class="mk"><span class="nm">'+esc(m.zh)+'</span><span class="ph">'+(i===mi?"時限：這個節氣":"時限：下一個節氣立秋")+'</span><q>'+esc(m.lunar)+'</q><div class="src">'+esc(m.source)+' '+chipFor(m.source)+'</div><div class="nodes">'+links+'</div></li>');}
+  });
+  $("pNow").innerHTML=now.length?now.join(""):'<li class="empty" style="padding-left:0">資料中這兩星期沒有記錄的時節活動。這不代表水口沒有事情發生，只是還未有人記下。</li>';
+  var soon=[];
+  [1,2].forEach(function(k){var j=(i+k)%24;ACTS.forEach(function(a){if(Math.floor(span(a)[0])%24===j&&!activeAt(a,i))soon.push(actItem(a,j,k===1?"下一個節氣："+TERMS[j]:"兩個節氣後："+TERMS[j]));});});
+  $("pSoon").innerHTML=soon.join("");
+  $("pSoonWrap").hidden=!soon.length;
+}
+function showNode(id){
+  var n=NODE[id];if(!n)return;
+  var rels=D.relations.filter(function(r){return r.from===id||r.to===id;});
+  var h='<div class="nc-h"><b>'+esc(n.zh)+'</b><span class="en">'+esc(n.en)+(n.sci?' · <i>'+esc(n.sci)+'</i>':'')+'</span><button class="btn x" type="button" id="ncClose">關閉</button></div><p>'+esc(n.blurb)+'</p>';
+  if(rels.length){h+='<ul class="rels">'+rels.map(function(r){
+    return '<li><span class="rv">'+esc(short(r.from))+'<em>'+esc(r.verb)+'</em>'+esc(short(r.to))+'</span>'+(r.note?'：'+esc(r.note):'')+
+      '<div class="src">'+esc(r.source)+' · '+esc(r.period)+' · 檢查點 '+esc(r.cp)+' <span class="st '+r.status+'">'+ST[r.status]+'</span></div></li>';}).join("")+'</ul>';}
+  h+='<p class="real">真實版：此處連到 Webflow CMS 的物種頁（/species/'+esc(id)+'），訪客可再往下讀訪談與影像。</p>';
+  var nc=$("nodeCard");nc.innerHTML=h;nc.hidden=false;nc.focus({preventScroll:false});
+  $("ncClose").addEventListener("click",function(){nc.hidden=true;nc.innerHTML="";svg.focus();});
+}
+document.querySelector(".panel").addEventListener("click",function(e){var a=e.target.closest("a[data-node]");if(!a)return;e.preventDefault();showNode(a.getAttribute("data-node"));});
+
+/* ---------- 總渲染 ---------- */
+function render(needleT){
+  var t=dayToT(state.day),i=Math.floor(t);
+  setNeedle(needleT!=null?needleT:t+.5/(B[i+1]-B[i]));
+  termSegs.forEach(function(p,k){p.classList.toggle("on",k===i);termLbls[k].classList.toggle("on",k===i);});
+  var mi=Math.floor(i/2);monSegs.forEach(function(p,k){p.classList.toggle("on",k===mi);monLbls[k].classList.toggle("on",k===mi);});
+  ACTS.forEach(function(a,k){actEls[k].classList.toggle("on",activeAt(a,i));});
+  $("hubK").textContent=state.day===today?"今天 · "+md(state.day):md(state.day);
+  $("hubN").textContent=TERMS[i];
+  $("hubD").textContent=pad(ymd(B[i])[1])+"."+pad(ymd(B[i])[2])+" – "+pad(ymd(B[i+1]-1)[1])+"."+pad(ymd(B[i+1]-1)[2]);
+  $("hubL").textContent="約農曆"+MONTHS[mi];
+  svg.setAttribute("aria-valuenow",i);
+  svg.setAttribute("aria-valuetext",TERMS[i]+"，"+md(B[i])+"至"+md(B[i+1]-1)+"；指針日期 "+md(state.day));
+  renderPanel(t);
+  renderTide();
+}
+
+/* ---------- 輪盤互動 ---------- */
+function svgPt(ev){var pt=svg.createSVGPoint();pt.x=ev.clientX;pt.y=ev.clientY;return pt.matrixTransform(svg.getScreenCTM().inverse());}
+function polar(ev){var p=svgPt(ev),dx=p.x-C,dy=p.y-C;return {t:((Math.atan2(dx,-dy)*180/Math.PI+360)%360)/15,r:Math.hypot(dx,dy)};}
+var dragging=false;
+function setFromT(t){var d=tToDay(t);var changed=d!==state.day;state.day=d;if(changed)render(t);else setNeedle(t);}
+svg.addEventListener("pointerdown",function(ev){
+  var o=polar(ev);if(o.r<86||o.r>370)return;
+  if(ev.pointerType==="touch"&&!ev.target.classList.contains("hit"))return; // 觸控：輕按用 click，拖動要按住指針
+  dragging=true;needle.classList.add("drag");
+  try{svg.setPointerCapture(ev.pointerId);}catch(e){}
+  setFromT(o.t);ev.preventDefault();
+});
+svg.addEventListener("pointermove",function(ev){if(dragging)setFromT(polar(ev).t);});
+function endDrag(){if(!dragging)return;dragging=false;needle.classList.remove("drag");render();}
+svg.addEventListener("pointerup",endDrag);svg.addEventListener("pointercancel",endDrag);
+svg.addEventListener("click",function(ev){var o=polar(ev);if(o.r<86||o.r>370)return;state.day=tToDay(o.t);render();});
+function step(dir){var i=Math.floor(dayToT(state.day)),ni=(i+dir+24)%24;state.day=(Math.floor(dayToT(today))===ni)?today:B[ni];render();}
+function goToday(){state.day=today;render();}
+svg.addEventListener("keydown",function(e){var k=e.key;
+  if(k==="ArrowRight"||k==="ArrowUp"||k==="PageUp")step(1);
+  else if(k==="ArrowLeft"||k==="ArrowDown"||k==="PageDown")step(-1);
+  else if(k==="Home")goToday();else return;e.preventDefault();});
+$("prevT").addEventListener("click",function(){step(-1);});
+$("nextT").addEventListener("click",function(){step(1);});
+$("todayT").addEventListener("click",goToday);
+
+/* ---------- 潮汐圖 ---------- */
+var chart=$("tideChart"),geo=null;
+function drawTide(){
+  var W=Math.max(300,Math.round(chart.clientWidth||600)),H=W<520?210:250;
+  var L=36,R=12,T=34,Bm=40,iw=W-L-R,ih=H-T-Bm;
+  function X(h){return f2(L+h/24*iw);} function Y(m){return f2(T+(2.4-m)/2.4*ih);}
+  geo={L:L,iw:iw,W:W};
+  var pts=[],k,h;for(k=0;k<=288;k++){h=k/12;pts.push(X(h)+" "+Y(tideAt(msOf(state.day,h))));}
+  var s='<svg viewBox="0 0 '+W+' '+H+'" width="'+W+'" height="'+H+'" aria-hidden="true">';
+  [0,0.8,1.6,2.4].forEach(function(m){s+='<line class="tc-grid" x1="'+L+'" x2="'+(W-R)+'" y1="'+Y(m)+'" y2="'+Y(m)+'"/>'+(m===THR?'':'<text class="tc-ax" x="'+(L-6)+'" y="'+(Y(m)+4)+'" text-anchor="end">'+m.toFixed(1)+'</text>');});
+  s+='<text class="tc-ax" x="'+(L-6)+'" y="'+(T-12)+'" text-anchor="end">米</text>';
+  lowWindows(state.day).forEach(function(w){var x1=X(w[0]),x2=X(w[1]);
+    s+='<rect class="tc-low" x="'+x1+'" y="'+T+'" width="'+f2(x2-x1)+'" height="'+ih+'"/><rect class="tc-band" x="'+x1+'" y="'+(Y(0)+3)+'" width="'+f2(x2-x1)+'" height="4" rx="2"/>';
+    if(x2-x1>54)s+='<text class="tc-band-t" x="'+f2((x1+x2)/2)+'" y="'+(Y(0)+19)+'" text-anchor="middle">灘面露出</text>';});
+  s+='<path class="tc-water" d="M'+X(0)+' '+Y(0)+'L'+pts.join("L")+'L'+X(24)+' '+Y(0)+'Z"/>';
+  s+='<path class="tc-line" d="M'+pts.join("L")+'"/>';
+  s+='<line class="tc-thr" x1="'+L+'" x2="'+(W-R)+'" y1="'+Y(THR)+'" y2="'+Y(THR)+'"/><text class="tc-thr-t" x="'+(L-6)+'" y="'+(Y(THR)+4)+'" text-anchor="end">'+THR.toFixed(1)+'</text>';
+  for(k=0;k<=24;k+=3){if(W<420&&k%6)continue;s+='<text class="tc-ax" x="'+X(k)+'" y="'+(H-6)+'" text-anchor="'+(k===24?"end":k===0?"start":"middle")+'">'+pad(k)+':00</text>';}
+  if(state.day===today){s+='<line class="tc-now" x1="'+X(nowHour)+'" x2="'+X(nowHour)+'" y1="'+(T-4)+'" y2="'+Y(0)+'"/>';}
+  var hx=X(state.hour),hy=Y(tideAt(msOf(state.day,state.hour))),lab=hhmm(state.hour),tw=50,tx=Math.min(W-R-tw,Math.max(L,hx-tw/2));
+  s+='<line class="tc-h" x1="'+hx+'" x2="'+hx+'" y1="'+(T-6)+'" y2="'+Y(0)+'"/>';
+  s+='<rect class="tc-tag" x="'+f2(tx)+'" y="'+(T-26)+'" width="'+tw+'" height="20" rx="3"/><text class="tc-tag-t" x="'+f2(tx+tw/2)+'" y="'+(T-12)+'" text-anchor="middle">'+lab+'</text>';
+  s+='<circle class="tc-dot" cx="'+hx+'" cy="'+hy+'" r="7"/>';
+  s+='</svg>';
+  chart.innerHTML=s;
+}
+function hourFromEv(ev){var r=chart.getBoundingClientRect(),x=ev.clientX-r.left,sc=r.width/geo.W;var h=((x/sc)-geo.L)/geo.iw*24;return Math.max(0,Math.min(23+11/12,Math.round(h*12)/12));}
+var tdrag=false;
+chart.addEventListener("pointerdown",function(ev){tdrag=true;try{chart.setPointerCapture(ev.pointerId);}catch(e){}state.hour=hourFromEv(ev);renderTide();});
+chart.addEventListener("pointermove",function(ev){if(!tdrag)return;var h=hourFromEv(ev);if(h!==state.hour){state.hour=h;renderTide();}});
+chart.addEventListener("pointerup",function(){tdrag=false;});chart.addEventListener("pointercancel",function(){tdrag=false;});
+chart.addEventListener("keydown",function(e){var k=e.key,h=state.hour;
+  if(k==="ArrowRight"||k==="ArrowUp")h+=0.25;else if(k==="ArrowLeft"||k==="ArrowDown")h-=0.25;
+  else if(k==="PageUp")h+=1;else if(k==="PageDown")h-=1;else if(k==="Home")h=0;else if(k==="End")h=23+11/12;else return;
+  e.preventDefault();state.hour=Math.max(0,Math.min(23+11/12,Math.round(h*12)/12));renderTide();});
+function jumpLow(){var t=nextTrough(msOf(state.day,state.hour)+60e3),o=msToDayHour(t);var nd=inCycle(o.day);var dayChanged=nd!==state.day;state.day=nd;state.hour=o.hour;if(dayChanged)render();else renderTide();}
+$("nextLow").addEventListener("click",jumpLow);
+$("fLow").addEventListener("click",jumpLow);
+$("nowBtn").addEventListener("click",function(){var ch=state.day!==today;state.day=today;state.hour=nowHour;if(ch)render();else renderTide();});
+$("peekBtn").addEventListener("click",function(){state.peek=true;renderTide();$("clamBody").focus();});
+var rt;window.addEventListener("resize",function(){clearTimeout(rt);rt=setTimeout(drawTide,120);});
+
+/* ---------- 泥灘剖面與沙白卡 ---------- */
+var media=(D.trails[0].stops.filter(function(s){return s.cp==="4.4";})[0]||{}).media||"影片：示範刺口鉗";
+var clamCps=D.checkpoints.filter(function(c){return c.species==="clam";}).map(function(c){var pl=D.places.filter(function(p){return p.id===c.place;})[0];return c.id+"（"+pl.zh+"）";});
+var clamRels=D.relations.filter(function(r){return r.from==="clam"||r.to==="clam";});
+function buildClam(){
+  var n=NODE.clam;
+  var h='<div class="peekbar"><span>潮漲中仍然打開。在真實的灘上，這時候看不到沙面的「眼」，也掘不到。</span><button class="btn" type="button" id="unpeek">讓潮水蓋回去</button></div>'+
+    '<h3 id="clamTitle">'+esc(n.zh)+'</h3><p class="sci">'+esc(n.en)+' · <i>'+esc(n.sci)+'</i> · 檢查點 '+esc(clamCps.join("、"))+'</p>'+
+    '<p>'+esc(n.blurb)+'</p>'+
+    '<div class="media" role="img" aria-label="影片位置：'+esc(media)+'"><span class="tc">示意 · 影片位置</span><span>'+esc(media)+'</span><i class="tri"></i></div>'+
+    '<h4>灘上的關係</h4><ul class="rels">'+clamRels.map(function(r){
+      return '<li><span class="rv">'+esc(short(r.from))+'<em>'+esc(r.verb)+'</em>'+esc(short(r.to))+'</span>'+(r.note?'：'+esc(r.note):'')+
+      '<div class="src">'+esc(r.source)+' · '+esc(r.period)+' <span class="st '+r.status+'">'+ST[r.status]+'</span></div></li>';}).join("")+'</ul>'+
+    '<h4>輪上的沙白</h4><p id="clamSeason"></p>';
+  var b=$("clamBody");b.innerHTML=h;b.setAttribute("tabindex","-1");
+  $("unpeek").addEventListener("click",function(){state.peek=false;renderTide();$("peekBtn").focus();});
+}
+buildClam();
+function drawFlat(h){
+  function Y(m){return f2(116-m*38);}
+  var surf=[[0,1.22],[60,1.1],[120,0.95],[180,0.8],[240,0.66],[300,0.52],[360,0.42]];
+  var d="M0 132L"+surf.map(function(p){return p[0]+" "+Y(p[1]);}).join("L")+"L360 132Z";
+  var s='<defs><pattern id="grain" width="7" height="6" patternUnits="userSpaceOnUse"><circle cx="1.5" cy="1.5" r=".7" class="fl-grain"/><circle cx="5" cy="4.5" r=".6" class="fl-grain"/></pattern></defs>';
+  s+='<path class="fl-sand" d="'+d+'"/><path d="'+d+'" fill="url(#grain)"/>';
+  [[150,0.88],[176,0.81],[204,0.74],[232,0.68]].forEach(function(c,i){var y=+Y(c[1]);
+    s+='<ellipse class="fl-clam" cx="'+c[0]+'" cy="'+(y+11+(i%2)*3)+'" rx="7.5" ry="5"/><path class="fl-ridge" d="M'+(c[0]-5)+' '+(y+10+(i%2)*3)+'q5 -3 10 0M'+(c[0]-4)+' '+(y+13+(i%2)*3)+'q4 -2 8 0"/>';
+    s+='<circle class="fl-eye" cx="'+(c[0]-2)+'" cy="'+(y+0.6)+'" r="1.3"/><circle class="fl-eye" cx="'+(c[0]+2)+'" cy="'+(y+0.6)+'" r="1.3"/>';});
+  var wy=+Y(h);
+  if(h>0.42){s+='<rect class="fl-water" x="0" y="'+wy+'" width="360" height="'+f2(132-wy)+'"/>';}
+  var wv="M0 "+wy;for(var x=0;x<360;x+=20)wv+=" q5 -2.5 10 0 t10 0";
+  s+='<path class="fl-wl" d="'+wv+'"/>';
+  s+='<text class="fl-wt" x="354" y="'+f2(Math.max(11,wy-5))+'" text-anchor="end">水位 '+h.toFixed(2)+' m（模擬）</text>';
+  s+='<text class="fl-t" x="6" y="'+f2(+Y(1.22)+16)+'" >岸</text><text class="fl-t" x="190" y="128" text-anchor="middle">泥灘 · 檢查點 1.2 · 示意剖面</text><text class="fl-t" x="354" y="128" text-anchor="end">海</text>';
+  $("flat").innerHTML=s;
+  $("flat").setAttribute("aria-label","泥灘示意剖面：模擬水位 "+h.toFixed(2)+" 米，"+(h<THR?"灘面露出":"潮水蓋過灘面"));
+}
+function renderTide(){
+  var ms=msOf(state.day,state.hour),h=tideAt(ms),low=h<THR,i=Math.floor(dayToT(state.day));
+  if(low)state.peek=false;
+  $("tDate").textContent=full(state.day);
+  $("tTerm").textContent=TERMS[i]+(state.day===today?" · 今天":"");
+  $("tHour").textContent=hhmm(state.hour);
+  $("tM").textContent="潮高約 "+h.toFixed(2)+" 米";
+  $("tDir").textContent=rising(ms)?"漲潮中":"退潮中";
+  chart.setAttribute("aria-valuenow",Math.round(state.hour*60));
+  chart.setAttribute("aria-valuetext",hhmm(state.hour)+"，模擬潮高 "+h.toFixed(2)+" 米，"+(low?"低於":"高於")+"門檻");
+  drawTide();
+  var wins=lowWindows(state.day);
+  $("tLows").innerHTML="這一天潮高低於 "+THR+" 米的時段："+(wins.length?wins.map(function(w){return '<span class="mono">'+hhmm(w[0])+"–"+hhmm(w[1])+'</span>';}).join("、"):"沒有")+"（模擬）";
+  drawFlat(h);
+  var card=$("clamCard"),body=$("clamBody"),fl=$("flood"),covered=!low&&!state.peek;
+  card.classList.toggle("dry",low);card.classList.toggle("covered",covered);card.classList.toggle("peek",!low&&state.peek);
+  body.inert=covered;body.setAttribute("aria-hidden",covered?"true":"false");
+  fl.inert=!covered;fl.setAttribute("aria-hidden",covered?"false":"true");
+  $("gState").textContent=low?"閘門：開":"閘門：關";
+  $("gNote").textContent=low?"潮高 "+h.toFixed(2)+" 米，低於 "+THR+" 米，灘面露出":"潮高 "+h.toFixed(2)+" 米，高於 "+THR+" 米"+(state.peek?"，你選擇了仍然想看":"");
+  var nt=nextTrough(ms+60e3),o=msToDayHour(nt),od=inCycle(o.day);
+  $("fK").textContent="模擬潮高 "+h.toFixed(2)+" 米 ＞ 門檻 "+THR+" 米";
+  $("fText").textContent="水面下是檢查點 1.2 的灘面。沙白仍埋在沙裡，靠濾食海水中的微藻生長；採沙白的人要等潮退，才能在沙面找到牠的「眼」。";
+  $("fNext").textContent="下一次低潮約在 "+(od===state.day?"":md(od)+" ")+hhmm(o.hour)+"（模擬）。";
+  var cs=ACTS.filter(function(a){return a.node==="clam"&&activeAt(a,i);});
+  $("clamSeason").innerHTML=cs.length?cs.map(function(a){return esc(TERMS[i])+"：<b>"+esc(a.zh)+"</b>，「"+esc(a.lunar)+"」（"+esc(a.source)+"）";}).join("<br>"):esc(TERMS[i])+"：輪上沒有這個節氣的沙白紀錄。資料只記下"+ACTS.filter(function(a){return a.node==="clam";}).map(function(a){var p=span(a);return TERMS[Math.floor(p[0])%24]+"至"+TERMS[(Math.ceil(p[1])-1)%24]+"「"+esc(a.lunar)+"」";}).join("，以及")+"。";
+}
+
+render();
+requestAnimationFrame(function(){requestAnimationFrame(function(){needle.classList.remove("drag");});});
+})();
+</script>
+</body>
+</html>

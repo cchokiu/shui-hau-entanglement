@@ -57,7 +57,7 @@ p{margin:.7rem 0}
 .nd text{fill:var(--gs-fg);font-size:10px;text-anchor:middle;paint-order:stroke;stroke:var(--gs-bg);stroke-width:3px;stroke-linejoin:round;pointer-events:none}
 @media (prefers-reduced-motion:no-preference){.lk,.ar,.nd .dot,.nd text{transition:opacity .18s,fill .18s,stroke .18s}}
 
-.hint{position:absolute;left:10px;bottom:10px;margin:0;font-family:var(--f-mono);font-size:.68rem;color:var(--gs-muted);pointer-events:none;max-width:60%}
+.hint{position:absolute;left:10px;bottom:10px;margin:0;font-family:var(--f-mono);font-size:.68rem;color:var(--gs-muted);pointer-events:none;max-width:calc(100% - 70px)}
 .empty{position:absolute;inset:0;display:none;align-items:center;justify-content:center;color:var(--gs-muted);font-size:.9rem;pointer-events:none}
 .empty.on{display:flex}
 .zc{position:absolute;right:10px;bottom:10px;display:flex;flex-direction:column;gap:4px}
@@ -70,7 +70,7 @@ p{margin:.7rem 0}
 
 /* 圖表設定抽屜：桌面浮在圖右上角，手機排在圖下面 */
 .drawer{background:var(--gs-panel);border-top:1px solid var(--gs-line);font-size:.82rem;color:var(--gs-fg)}
-@media (min-width:1000px){.drawer{position:absolute;top:48px;right:10px;width:252px;max-height:calc(100% - 100px);overflow:auto;border:1px solid var(--gs-line);border-radius:6px}}
+@media (min-width:1000px){.drawer{position:absolute;top:48px;right:10px;width:252px;max-height:calc(100% - 180px);overflow:auto;border:1px solid var(--gs-line);border-radius:6px}}
 .drawer summary{cursor:pointer;list-style:none;display:flex;align-items:center;justify-content:space-between;gap:8px}
 .drawer summary::-webkit-details-marker{display:none}
 .drawer>summary{padding:9px 12px;font-weight:700}

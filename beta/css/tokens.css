@@ -1,0 +1,30 @@
+/* 設計變數。數值依 2026 年 10 月的設計決定（Drive 設計稿為準；Framer 只作頁面結構參考）。 */
+@import url("https://fonts.googleapis.com/css2?family=EB+Garamond:wght@600&family=Noto+Serif+TC:wght@400;700&display=swap");
+
+:root {
+  /* 色彩 */
+  --bg: #f5f1e5;
+  --text: #475020;
+  --para: #000000;
+  --rule: color-mix(in srgb, var(--text) 25%, transparent);
+  --white: #ffffff;
+  --black: #000000;          /* 「人（村民）」的標籤色 */
+
+  /* 物種色 */
+  --c-cattle: #efd375;       /* 黃牛 */
+  --c-clam: #4fa096;         /* 文蛤（沙白） */
+  --c-rice: #bbc462;         /* 水稻（大米） */
+  --c-buffalo: #d36225;      /* 水牛 */
+
+  /* 字體 */
+  --font-zh: "Songti TC", "STSong", "Noto Serif TC", serif;
+  --font-latin: "Minion Pro", "EB Garamond", serif;
+
+  /* 字級與行距 */
+  --fs-title: clamp(32px, 2.5vw, 48px);   /* 標題，粗體 */
+  --fw-title: 700;
+  --fs-body: 16px;
+  --lh-body: 1.8;
+  --fs-nav: 16px;
+  --fs-latin: clamp(18px, 1.25vw, 24px);
+}

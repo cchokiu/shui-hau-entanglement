@@ -695,6 +695,138 @@ a {
   width: 29.9%;
 }
 
+/* ---------- 物種故事 ---------- */
+
+.species {
+  padding: 40px 56px 64px;
+}
+
+/* ≥900px：左上色塊插畫（寬 400px），右上相片區（右對齊，最寬 890px） */
+.species-top {
+  display: grid;
+  grid-template-columns: 400px minmax(0, 1fr);
+  align-items: start;
+  gap: 40px;
+}
+
+.species-art img {
+  display: block;
+  width: 400px;
+  max-width: 100%;
+  height: auto;
+}
+
+.species-photos {
+  display: grid;
+  grid-template-columns: 1fr 1fr 2fr;
+  align-items: start;
+  gap: 16px;
+  width: 100%;
+  max-width: 890px;
+  margin-left: auto;
+}
+
+.species-fig {
+  margin: 0;
+}
+
+.species-fig img {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 3 / 2;
+  object-fit: cover;
+}
+
+/* 單張相片或佔位框：放在右側最寬的一欄 */
+.species-fig.is-single,
+.species-hold.is-single {
+  grid-column: 3;
+}
+
+/* 「待補相片」佔位框：顏色 --text，透明度 0.15 */
+.species-hold {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 3 / 2;
+  background: color-mix(in srgb, var(--text) 15%, transparent);
+  color: var(--text);
+  font-size: 16px;
+}
+
+.species-text {
+  max-width: 960px;
+}
+
+.species-title {
+  margin: 40px 0 0;
+  font-size: var(--fs-title);
+  font-weight: var(--fw-title);
+  line-height: 1.3;
+  color: var(--text);
+}
+
+.species-latin {
+  margin: 6px 0 0;
+  font-family: var(--font-latin);
+  font-size: var(--fs-latin);
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--text);
+}
+
+.species-body {
+  margin-top: 24px;
+}
+
+.species-body p {
+  margin: 0;
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+  color: var(--para);
+}
+
+/* 每段之間空一行 */
+.species-body p + p {
+  margin-top: calc(var(--lh-body) * 1em);
+}
+
+.species-others {
+  margin: 56px 0 0;
+  font-size: 16px;
+  color: var(--text);
+}
+
+/* ---------- 手機（<900px）：上下排列，沒有橫向捲動 ---------- */
+
+@media (max-width: 899px) {
+  .species {
+    padding: 24px 20px 48px;
+  }
+
+  .species-top {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 24px;
+  }
+
+  .species-art img {
+    width: min(400px, 100%);
+  }
+
+  .species-photos {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    max-width: none;
+    margin-left: 0;
+  }
+
+  .species-fig.is-single,
+  .species-hold.is-single,
+  .species-fig:nth-child(3) {
+    grid-column: 1 / -1;
+  }
+}
+
 /* ---------- 燈箱（圖片放大） ---------- */
 
 .lightbox {

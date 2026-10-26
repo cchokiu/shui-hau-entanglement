@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>物種故事｜共構水口</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="css/tokens.css">
+  <link rel="stylesheet" href="css/site.css">
+</head>
+<body class="page-species">
+  <header class="site-header" id="siteHeader">
+    <a class="brand" href="#">
+      <img class="brand-logo" src="assets/elements/logo.png" alt="共構水口 一場跨越物種的感知之旅" width="800" height="226">
+    </a>
+    <nav class="site-nav" aria-label="主要導航">
+      <a href="index.html">首頁</a>
+      <a href="about.html">關於地圖</a>
+      <a href="species.html" aria-current="page">物種故事</a>
+      <a href="trail.html">路線探索</a>
+      <a href="#">互動地圖</a>
+      <a href="#">田野筆記</a>
+      <a href="#">項目團隊</a>
+    </nav>
+  </header>
+  <div class="site-rule" aria-hidden="true"></div>
+
+  <main class="species">
+    <div class="species-top">
+      <div class="species-art">
+        <img id="speciesArt" src="assets/elements/clam-bg.png" alt="" width="734" height="800">
+      </div>
+      <div class="species-photos" id="speciesPhotos"></div>
+    </div>
+
+    <article class="species-text">
+      <h1 class="species-title" id="speciesName"></h1>
+      <p class="species-latin" id="speciesLatin"></p>
+      <div class="species-body" id="speciesBody"></div>
+    </article>
+
+    <p class="species-others" id="speciesOthers"></p>
+  </main>
+
+  <script src="data/species.js"></script>
+  <script>
+    /* 依網址 hash 顯示物種（#clam、#buffalo、#rice、#cattle）；沒有或無效的 hash 顯示 #clam。 */
+    (function () {
+      "use strict";
+
+      var ORDER = ["clam", "buffalo", "rice", "cattle"];
+      var DEFAULT_KEY = "clam";
+
+      function keyFromHash() {
+        var k = location.hash.replace(/^#/, "");
+        return Object.prototype.hasOwnProperty.call(window.SPECIES, k) ? k : DEFAULT_KEY;
+      }
+
+      function render() {
+        var key = keyFromHash();
+        var s = window.SPECIES[key];
+
+        document.title = s.name + "｜物種故事｜共構水口";
+
+        var art = document.getElementById("speciesArt");
+        art.src = s.art;
+        art.alt = s.name + "色塊插畫";
+
+        var photos = document.getElementById("speciesPhotos");
+        photos.textContent = "";
+        if (s.photos.length) {
+          s.photos.forEach(function (p) {
+            var fig = document.createElement("figure");
+            fig.className = "species-fig" + (s.photos.length === 1 ? " is-single" : "");
+            var img = document.createElement("img");
+            img.src = p.src;
+            img.alt = p.alt;
+            fig.appendChild(img);
+            photos.appendChild(fig);
+          });
+        } else {
+          var hold = document.createElement("div");
+          hold.className = "species-hold is-single";
+          hold.textContent = "待補相片";
+          photos.appendChild(hold);
+        }
+
+        document.getElementById("speciesName").textContent = s.name;
+        document.getElementById("speciesLatin").innerHTML = s.latin;
+
+        var body = document.getElementById("speciesBody");
+        body.textContent = "";
+        s.body.forEach(function (text) {
+          var p = document.createElement("p");
+          p.textContent = text;
+          body.appendChild(p);
+        });
+
+        var others = document.getElementById("speciesOthers");
+        others.textContent = "";
+        others.appendChild(document.createTextNode("其他物種："));
+        var first = true;
+        ORDER.forEach(function (k) {
+          if (k === key) return;
+          if (!first) others.appendChild(document.createTextNode("、"));
+          first = false;
+          var a = document.createElement("a");
+          a.className = "text-link";
+          a.href = "species.html#" + k;
+          a.textContent = window.SPECIES[k].name;
+          others.appendChild(a);
+        });
+      }
+
+      window.addEventListener("hashchange", render);
+      render();
+    })();
+  </script>
+  <script src="js/common.js"></script>
+</body>
+</html>

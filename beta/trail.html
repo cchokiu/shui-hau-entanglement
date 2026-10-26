@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>路線探索｜共構水口</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+  <link rel="stylesheet" href="css/tokens.css">
+  <link rel="stylesheet" href="css/site.css">
+</head>
+<body>
+  <!-- 待確認：或需補相（站 2「稻米田」，s2-ricefield.jpg；只保留於註解，不在頁面顯示） -->
+
+  <header class="site-header" id="siteHeader">
+    <a class="brand" href="#">
+      <img class="brand-logo" src="assets/elements/logo.png" alt="共構水口 一場跨越物種的感知之旅" width="800" height="226">
+    </a>
+    <nav class="site-nav" aria-label="主要導航">
+      <a href="index.html">首頁</a>
+      <a href="about.html">關於地圖</a>
+      <a href="#">物種故事</a>
+      <a href="trail.html" aria-current="page">路線探索</a>
+      <a href="#">互動地圖</a>
+      <a href="#">田野筆記</a>
+      <a href="#">項目團隊</a>
+    </nav>
+  </header>
+  <div class="site-rule" aria-hidden="true"></div>
+
+  <main class="trail-page">
+    <div class="trail-map" id="routeMapWrap">
+      <div id="routeMap"></div>
+      <p class="tile-note" id="routeMapNote" hidden></p>
+      <p class="route-key">示意連線：只表示站點次序，並非實際行走路線</p>
+    </div>
+    <section class="trail-panel" id="routeSidePanel"></section>
+  </main>
+
+  <p class="visually-hidden" id="status" aria-live="polite"></p>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+  <script src="data/route1.js"></script>
+  <script src="js/trail.js"></script>
+</body>
+</html>

@@ -4,7 +4,30 @@
   "use strict";
 
   var ROUTE = window.ROUTE1;
-  var STOPS = ROUTE.stops;
+
+  /* 物種名稱對應的色票（與 tokens.css 相同） */
+  var SPECIES_COLOR = {
+    "翅口（沙白）": "--c-clam",
+    "水稻": "--c-rice",
+    "水牛": "--c-buffalo"
+  };
+
+  /* 將 route1.js 的站點資料轉為本頁使用的欄位；缺少的素材（missing）不轉入，即不顯示 */
+  var STOPS = ROUTE.stops.map(function (s) {
+    return {
+      n: s.order,
+      place: s.name,
+      lat: s.lat,
+      lng: s.lng,
+      paragraphs: s.text,
+      media: (s.photos || []).map(function (p) {
+        return { type: "image", src: p.src, caption: p.caption, alt: p.alt };
+      }),
+      meet: (s.species || []).map(function (name) {
+        return { label: name, color: SPECIES_COLOR[name] || "--text" };
+      })
+    };
+  });
   var N = STOPS.length;
   var TILE_ZOOM = 16;
 
@@ -265,7 +288,7 @@
     var wrapBtn = el("div", "start-row");
     wrapBtn.appendChild(start);
     frag.appendChild(wrapBtn);
-    frag.appendChild(el("p", "panel-foot", "站點位置為大約位置，待確認"));
+    frag.appendChild(el("p", "panel-foot", "站點位置為大約位置"));
   }
 
   function renderStepHead(frag) {
@@ -331,7 +354,7 @@
       btn.setAttribute("aria-label", "放大圖片：" + m.caption);
       var img = el("img");
       img.src = m.src;
-      img.alt = m.caption;
+      img.alt = m.alt || m.caption;
       img.loading = "lazy";
       btn.appendChild(img);
       btn.addEventListener("click", function () { openLightbox(m.src, m.caption, btn); });
@@ -380,7 +403,7 @@
     meet.appendChild(chips);
     frag.appendChild(meet);
 
-    frag.appendChild(el("p", "panel-foot", "站點位置為大約位置，待確認"));
+    frag.appendChild(el("p", "panel-foot", "站點位置為大約位置"));
   }
 
   function render(focusRole) {

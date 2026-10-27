@@ -44,11 +44,11 @@
 
   <script src="data/species.js"></script>
   <script>
-    /* 依網址 hash 顯示物種（#clam、#buffalo、#rice、#cattle）；沒有或無效的 hash 顯示 #clam。 */
+    /* 依網址 hash 顯示物種（#clam、#buffalo、#rice）；沒有或無效的 hash 顯示 #clam。 */
     (function () {
       "use strict";
 
-      var ORDER = ["clam", "buffalo", "rice", "cattle"];
+      var ORDER = ["clam", "buffalo", "rice"];
       var DEFAULT_KEY = "clam";
 
       function keyFromHash() {
@@ -78,11 +78,6 @@
             fig.appendChild(img);
             photos.appendChild(fig);
           });
-        } else {
-          var hold = document.createElement("div");
-          hold.className = "species-hold is-single";
-          hold.textContent = "待補相片";
-          photos.appendChild(hold);
         }
 
         document.getElementById("speciesName").textContent = s.name;

@@ -4,6 +4,7 @@
   "use strict";
 
   var ROUTE = window.ROUTE1;
+  var SPECIES_POINTS = window.SPECIES_POINTS || [];
 
   /* 物種名稱對應的色票（與 tokens.css 相同） */
   var SPECIES_COLOR = {
@@ -11,6 +12,16 @@
     "水稻": "--c-rice",
     "水牛": "--c-buffalo"
   };
+
+  var SPECIES_META = {
+    clam: { name: "翅口（沙白）", color: "--c-clam" },
+    buffalo: { name: "水牛", color: "--c-buffalo" },
+    rice: { name: "水稻", color: "--c-rice" }
+  };
+  var NAME_TO_KEY = {};
+  Object.keys(SPECIES_META).forEach(function (k) {
+    NAME_TO_KEY[SPECIES_META[k].name] = k;
+  });
 
   /* 將 route1.js 的站點資料轉為本頁使用的欄位；缺少的素材（missing）不轉入，即不顯示 */
   var STOPS = ROUTE.stops.map(function (s) {
@@ -39,7 +50,8 @@
   var reduceMQ = window.matchMedia("(prefers-reduced-motion: reduce)");
   var mobileMQ = window.matchMedia("(max-width: 899px)");
 
-  var state = { idx: -1 };
+  var state = { idx: -1, speciesKey: null };
+  var speciesLegend = document.getElementById("speciesLegend");
   var lightbox = null;
   var lightboxOpener = null;
 
@@ -66,12 +78,24 @@
   }
 
   function hashFor(idx) {
+    if (state.speciesKey && idx < 0) {
+      return "#species=" + state.speciesKey;
+    }
     return idx < 0
       ? "#trail=" + ROUTE.id
       : "#trail=" + ROUTE.id + "&stop=" + (idx + 1);
   }
 
   function parseHash() {
+    var sm = /species=([a-z0-9]+)/i.exec(location.hash);
+    if (sm) {
+      var key = sm[1];
+      if (SPECIES_META[key]) {
+        state.speciesKey = key;
+        return -1;
+      }
+    }
+    state.speciesKey = null;
     var m = /trail=([a-z0-9]+)(?:&stop=(\d+))?/i.exec(location.hash);
     if (!m || m[1] !== ROUTE.id || m[2] === undefined) return -1;
     var n = parseInt(m[2], 10);
@@ -106,6 +130,7 @@
 
   var map = null;
   var markerLayer = null;
+  var speciesLayer = null;
   var routeLine = null;
   var tileStat = { ok: 0, bad: 0 };
 
@@ -179,7 +204,64 @@
       interactive: false
     }).addTo(map);
     markerLayer = L.layerGroup().addTo(map);
+    speciesLayer = L.layerGroup().addTo(map);
     updateTileState();
+  }
+
+  function speciesPointsFor(key) {
+    var name = SPECIES_META[key] && SPECIES_META[key].name;
+    return SPECIES_POINTS.filter(function (p) {
+      return p.species && p.species.indexOf(name) !== -1;
+    });
+  }
+
+  function speciesBounds(key) {
+    var pts = speciesPointsFor(key);
+    if (!pts.length) return null;
+    return L.latLngBounds(pts.map(function (p) { return [p.lat, p.lng]; }));
+  }
+
+  function speciesIcon(key) {
+    return L.divIcon({
+      className: "species-marker species-marker--" + key,
+      iconSize: [14, 14],
+      iconAnchor: [7, 7]
+    });
+  }
+
+  function speciesPopupContent(point, key) {
+    var wrap = document.createElement("div");
+    var title = document.createElement("strong");
+    title.textContent = point.name;
+    wrap.appendChild(title);
+    point.species.forEach(function (name) {
+      var k = NAME_TO_KEY[name];
+      if (!k) return;
+      var p = document.createElement("p");
+      p.style.margin = "6px 0 0";
+      var a = document.createElement("a");
+      a.href = "species.html#" + k;
+      a.textContent = "查看" + name + "故事 →";
+      p.appendChild(a);
+      wrap.appendChild(p);
+    });
+    return wrap;
+  }
+
+  function renderLegend() {
+    if (!speciesLegend) return;
+    speciesLegend.textContent = "";
+    var title = el("p", "species-legend-title", "物種標記");
+    var list = el("ul", "species-legend-list");
+    Object.keys(SPECIES_META).forEach(function (key) {
+      var item = el("li", "species-legend-item");
+      var dot = el("span", "species-legend-dot species-legend-dot--" + key);
+      item.appendChild(dot);
+      item.appendChild(document.createTextNode(SPECIES_META[key].name));
+      list.appendChild(item);
+    });
+    var note = el("p", "species-legend-note", "標記位置為大約位置");
+    speciesLegend.append(title, list, note);
   }
 
   function tokenValue(name) {
@@ -191,9 +273,17 @@
     return mobileMQ.matches ? 40 : 48;
   }
 
-  /* 依目前狀態設定視野（不做動畫）：介紹頁包住三個站點；站點則置中於該站 */
+  /* 依目前狀態設定視野（不做動畫）：介紹頁包住三個站點；站點則置中於該站；物種 hash 則對應物種點位 */
   function applyView() {
     if (!map) return;
+    if (state.speciesKey) {
+      var b = speciesBounds(state.speciesKey);
+      if (b) {
+        var p = fitPad();
+        map.fitBounds(b, { padding: [p, p], animate: false });
+        return;
+      }
+    }
     if (state.idx < 0) {
       var p = fitPad();
       map.fitBounds(routeLine.getBounds(), { padding: [p, p], animate: false });
@@ -216,7 +306,7 @@
     setNavHeight();
     if (!map) return;
     map.invalidateSize({ animate: false });   /* 保持地圖中心不變 */
-    if (state.idx < 0) applyView();
+    if (state.idx < 0 || state.speciesKey) applyView();
   }
 
   function markerIcon(stop, current) {
@@ -244,10 +334,38 @@
       marker.on("click", function () { goTo(i, { push: true }); });
       markerLayer.addLayer(marker);
     });
+
+    speciesLayer.clearLayers();
+    renderLegend();
+    SPECIES_POINTS.forEach(function (point) {
+      var key = NAME_TO_KEY[point.species && point.species[0]];
+      if (!key || !SPECIES_META[key]) return;
+      var marker = L.marker([point.lat, point.lng], {
+        icon: speciesIcon(key),
+        title: point.name + "（" + SPECIES_META[key].name + "）",
+        alt: point.name,
+        keyboard: true,
+        zIndexOffset: 500
+      });
+      marker.bindPopup(speciesPopupContent(point, key));
+      speciesLayer.addLayer(marker);
+    });
   }
 
   function moveMap() {
     if (!map) return;
+    if (state.speciesKey) {
+      var b = speciesBounds(state.speciesKey);
+      if (b) {
+        var p = fitPad();
+        if (reduceMQ.matches) {
+          map.fitBounds(b, { padding: [p, p], animate: false });
+        } else {
+          map.flyToBounds(b, { padding: [p, p], duration: 0.9 });
+        }
+        return;
+      }
+    }
     if (state.idx < 0) {
       var p = fitPad();
       if (reduceMQ.matches) {
@@ -380,9 +498,17 @@
     frag.appendChild(el("h2", "stop-title", s.place));
 
     var paras = el("div", "paras");
-    s.paragraphs.forEach(function (text) {
-      paras.appendChild(el("p", "para", text));
-    });
+    if (s.paragraphs && s.paragraphs.length) {
+      paras.appendChild(el("p", "para", s.paragraphs[0]));
+      if (s.paragraphs.length > 1) {
+        var details = el("details", "stop-details");
+        details.appendChild(el("summary", "stop-summary", "閱讀更多"));
+        s.paragraphs.slice(1).forEach(function (text) {
+          details.appendChild(el("p", "para", text));
+        });
+        paras.appendChild(details);
+      }
+    }
     frag.appendChild(paras);
 
     if (s.media && s.media.length) {
@@ -451,6 +577,7 @@
     opts = opts || {};
     var target = clamp(idx, -1, N - 1);
     var changed = target !== state.idx;
+    if (target >= 0) state.speciesKey = null;   /* 進入站點後清除物種聚焦 */
     state.idx = target;
     render(opts.focus || null);
     syncHash(opts.push !== false);
@@ -473,7 +600,7 @@
   /* 網址 hash 變動（上一頁、下一頁、手動編輯）時同步 */
   function syncFromHash() {
     var target = parseHash();
-    if (target !== state.idx) goTo(target, { push: false });
+    if (target !== state.idx || state.speciesKey) goTo(target, { push: false });
   }
 
   window.addEventListener("popstate", syncFromHash);
@@ -542,7 +669,7 @@
 
   initMap();
 
-  /* 依網址 hash 還原位置（重新整理後停在同一站）；無效的 hash 回到路線介紹 */
+  /* 依網址 hash 還原位置（重新整理後停在同一站或對應物種）；無效的 hash 回到路線介紹 */
   state.idx = parseHash();
   render(null);
   syncHash(false);
@@ -557,7 +684,9 @@
     resizeTimer = setTimeout(relayout, 120);
   });
   relayout();
-  announce(state.idx < 0
-    ? ROUTE.title + "：路線介紹"
-    : "第 " + STOPS[state.idx].n + " 站：" + STOPS[state.idx].place);
+  announce(state.speciesKey
+    ? SPECIES_META[state.speciesKey].name + "：地圖點位"
+    : state.idx < 0
+      ? ROUTE.title + "：路線介紹"
+      : "第 " + STOPS[state.idx].n + " 站：" + STOPS[state.idx].place);
 })();

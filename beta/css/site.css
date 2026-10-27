@@ -141,6 +141,108 @@ a {
   max-width: calc(100% - 24px);
 }
 
+.species-legend {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  z-index: 500;
+  max-width: min(260px, calc(100% - 24px));
+  padding: 10px 12px;
+  font-size: 14px;
+  color: var(--text);
+  background: color-mix(in srgb, var(--white) 92%, transparent);
+  border: 1px solid var(--rule);
+}
+
+.species-legend-title {
+  margin: 0 0 8px;
+  font-weight: 700;
+}
+
+.species-legend-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.species-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.species-legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 1px solid var(--white);
+  box-shadow: 0 0 0 1px var(--text);
+}
+
+.species-legend-dot--clam { background: var(--c-clam); }
+.species-legend-dot--rice { background: var(--c-rice); }
+.species-legend-dot--buffalo { background: var(--c-buffalo); }
+
+.species-legend-note {
+  margin: 8px 0 0;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--text);
+}
+
+.species-marker {
+  display: block;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid var(--white);
+  box-shadow: 0 0 0 1px var(--text);
+}
+
+.species-marker--clam { background: var(--c-clam); }
+.species-marker--rice { background: var(--c-rice); }
+.species-marker--buffalo { background: var(--c-buffalo); }
+
+.leaflet-popup-content-wrapper,
+.leaflet-popup-tip {
+  background: var(--white);
+  color: var(--text);
+  border-radius: 0;
+  border: 1px solid var(--rule);
+}
+
+.leaflet-popup-content {
+  margin: 12px 16px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.leaflet-popup-content a {
+  color: var(--text);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.stop-details {
+  margin-top: 16px;
+  border: 1px solid var(--rule);
+  padding: 12px 14px;
+  background: var(--white);
+}
+
+.stop-summary {
+  cursor: pointer;
+  font-size: var(--fs-body);
+  color: var(--text);
+}
+
+.stop-details .para {
+  margin-top: 12px;
+}
+
 .trail-map.is-tiles-off .leaflet-tile-pane {
   opacity: 0;
 }
@@ -981,5 +1083,14 @@ a {
     right: auto;
     max-width: calc(100% - 24px);
     font-size: 12px;
+  }
+
+  .species-legend {
+    right: 12px;
+    bottom: 12px;
+    left: auto;
+    max-width: calc(50% - 18px);
+    font-size: 12px;
+    padding: 8px 10px;
   }
 }

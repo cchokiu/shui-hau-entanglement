@@ -26,7 +26,7 @@
   <div class="site-rule" aria-hidden="true"></div>
 
   <main class="species">
-    <div class="species-top">
+    <div class="species-top" id="speciesTop">
       <div class="species-art">
         <img id="speciesArt" src="assets/elements/clam-bg.png" alt="" width="734" height="800">
       </div>
@@ -37,6 +37,7 @@
       <h1 class="species-title" id="speciesName"></h1>
       <p class="species-latin" id="speciesLatin"></p>
       <div class="species-body" id="speciesBody"></div>
+      <p class="species-map-link" id="speciesMapLink"></p>
     </article>
 
     <p class="species-others" id="speciesOthers"></p>
@@ -68,6 +69,7 @@
 
         var photos = document.getElementById("speciesPhotos");
         photos.textContent = "";
+        document.getElementById("speciesTop").hidden = s.photos.length === 0;
         if (s.photos.length) {
           s.photos.forEach(function (p) {
             var fig = document.createElement("figure");
@@ -90,6 +92,14 @@
           p.textContent = text;
           body.appendChild(p);
         });
+
+        var mapLink = document.getElementById("speciesMapLink");
+        mapLink.textContent = "";
+        var mapAnchor = document.createElement("a");
+        mapAnchor.className = "text-link";
+        mapAnchor.href = "trail.html#species=" + key;
+        mapAnchor.textContent = "在地圖查看" + s.name + "的點位 →";
+        mapLink.appendChild(mapAnchor);
 
         var others = document.getElementById("speciesOthers");
         others.textContent = "";

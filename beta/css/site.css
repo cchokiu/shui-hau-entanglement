@@ -697,16 +697,23 @@ a {
 
 /* ---------- 物種故事 ---------- */
 
+/* 結構依 Framer；色彩與字體沿用 tokens.css。三個物種共用同一版面。 */
 .species {
-  padding: 40px 56px 64px;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px 56px 56px;
 }
 
-/* ≥900px：左上色塊插畫（寬 400px），右上相片區（右對齊，最寬 890px） */
 .species-top {
   display: grid;
-  grid-template-columns: 400px minmax(0, 1fr);
+  grid-template-columns: minmax(240px, 400px) minmax(0, 1fr);
   align-items: start;
   gap: 40px;
+  margin-bottom: 55px;
+}
+
+.species-top[hidden] {
+  display: none;
 }
 
 .species-art img {
@@ -718,12 +725,10 @@ a {
 
 .species-photos {
   display: grid;
-  grid-template-columns: 1fr 1fr 2fr;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   align-items: start;
   gap: 16px;
   width: 100%;
-  max-width: 890px;
-  margin-left: auto;
 }
 
 .species-fig {
@@ -735,44 +740,38 @@ a {
   width: 100%;
   height: auto;
   aspect-ratio: 3 / 2;
+  border-radius: 0;
   object-fit: cover;
 }
 
-/* 單張相片或佔位框：放在右側最寬的一欄 */
-.species-fig.is-single,
-.species-hold.is-single {
-  grid-column: 3;
+.species-fig.is-single {
+  grid-column: 1 / -1;
+  max-width: 600px;
+  margin-left: auto;
 }
 
-/* 「待補相片」佔位框：顏色 --text，透明度 0.15 */
-.species-hold {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  aspect-ratio: 3 / 2;
-  background: color-mix(in srgb, var(--text) 15%, transparent);
-  color: var(--text);
-  font-size: 16px;
-}
-
-.species-text {
-  max-width: 960px;
+.species-text,
+.species-others {
+  max-width: 1080px;
+  padding: 0 24px;
 }
 
 .species-title {
-  margin: 40px 0 0;
-  font-size: var(--fs-title);
+  margin: 0;
+  font-size: 36px;
   font-weight: var(--fw-title);
-  line-height: 1.3;
+  line-height: 1.2;
+  letter-spacing: -0.04em;
   color: var(--text);
 }
 
 .species-latin {
-  margin: 6px 0 0;
+  margin: 0;
   font-family: var(--font-latin);
-  font-size: var(--fs-latin);
+  font-size: 36px;
   font-weight: 600;
-  line-height: 1.3;
+  line-height: 1.2;
+  letter-spacing: -0.04em;
   color: var(--text);
 }
 
@@ -783,23 +782,27 @@ a {
 .species-body p {
   margin: 0;
   font-size: var(--fs-body);
-  line-height: var(--lh-body);
+  line-height: 1.5;
+  letter-spacing: -0.02em;
   color: var(--para);
 }
 
-/* 每段之間空一行 */
 .species-body p + p {
-  margin-top: calc(var(--lh-body) * 1em);
+  margin-top: 20px;
+}
+
+.species-map-link {
+  margin: 32px 0 0;
+  font-size: 16px;
 }
 
 .species-others {
-  margin: 56px 0 0;
+  margin: 40px 0 0;
   font-size: 16px;
   color: var(--text);
 }
 
-/* ---------- 手機（<900px）：上下排列，沒有橫向捲動 ---------- */
-
+/* 手機（<900px）：上下排列，移除 Framer Phone 的多餘空白與橫向溢出 */
 @media (max-width: 899px) {
   .species {
     padding: 24px 20px 48px;
@@ -808,22 +811,27 @@ a {
   .species-top {
     grid-template-columns: minmax(0, 1fr);
     gap: 24px;
+    margin-bottom: 32px;
   }
 
   .species-art img {
-    width: min(400px, 100%);
+    width: min(320px, 100%);
   }
 
   .species-photos {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .species-fig.is-single,
+  .species-fig:nth-child(3) {
+    grid-column: 1 / -1;
     max-width: none;
     margin-left: 0;
   }
 
-  .species-fig.is-single,
-  .species-hold.is-single,
-  .species-fig:nth-child(3) {
-    grid-column: 1 / -1;
+  .species-text,
+  .species-others {
+    padding: 0;
   }
 }
 

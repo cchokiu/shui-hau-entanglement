@@ -5,9 +5,9 @@ window.SPECIES = {
     latin: "Meretrix spp.",
     art: "assets/elements/clam-bg.png",
     photos: [
-      { src: "assets/species/clam-1.jpg", alt: "採蜆人在潮間帶泥灘上持竿工作" },
-      { src: "assets/species/clam-2.jpg", alt: "泥灘上的沙白及採蜆工具" },
-      { src: "assets/species/clam-3.jpg", alt: "泥灘上的文蛤" }
+      { src: "assets/species/clam-1.jpg", alt: "泥灘上的一枚貝殼，周圍是濕潤的泥面" },
+      { src: "assets/species/clam-3.jpg", alt: "退潮後的泥灘表面，一支長柄工具斜伸向泥面" },
+      { src: "assets/species/clam-4.jpg", alt: "一人穿長褲與長靴，手持長柄工具在泥灘上作業（只見下半身）" }
     ],
     body: [
       "文蛤俗稱沙白，是水口潮間帶的珍貴蜆類。在水口村民圍頭話中，沙白稱為「翅口」。村民會自製「翅口鐮」和「翅口耙」等採蜆工具，並將採來的沙白製成傳統家常菜式「瀨鑊邊」。牠們既是村民餐桌上連結海洋的象徵，也見證水口沙坪豐富多樣的生態。",
@@ -19,7 +19,8 @@ window.SPECIES = {
     latin: "Bubalus bubalis",
     art: "assets/elements/buffalo-bg.png",
     photos: [
-      { src: "assets/species/buffalo-1.jpg", alt: "村民帶領水牛走在林間小路上" }
+      { src: "assets/species/buffalo-1.jpg", alt: "一人背向鏡頭，與一頭水牛走在林間小路上" },
+      { src: "assets/species/buffalo-2.jpg", alt: "一頭水牛在圍欄內的田地中低頭吃草，前景為金黃色的作物" }
     ],
     body: [
       "在二十世紀初期，政府引入水牛以協助農民耕作，直至1970年代，本地稻米種植漸漸式微，村民便將牛隻野放。現時在南大嶼流浪水牛群約有115隻，平日游走各處濕地，啃食草葉維生。",

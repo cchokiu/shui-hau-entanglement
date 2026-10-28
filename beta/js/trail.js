@@ -387,11 +387,9 @@
 
   function topLinks() {
     var row = el("div", "panel-links");
-    var all = el("a", "text-link", "← 所有路徑");
-    all.href = "#";
-    var free = el("a", "text-link", "改為自由漫遊");
-    free.href = "#";
-    row.append(all, free);
+    var all = el("a", "text-link", "← 所有路線");
+    all.href = "routes.html";
+    row.appendChild(all);
     return row;
   }
 

@@ -1224,3 +1224,14 @@ a {
 .related-routes { margin-top: 36px; }
 .species-photos[hidden] { display: none; }
 .stop-gps-source { margin: 8px 0 0; font-size: 14px; font-weight: 400; color: var(--text); }
+
+/* ---------- 自由漫遊模式 ---------- */
+.mode-toggle { font-size: 16px; color: var(--text); text-decoration: underline; text-underline-offset: 4px; }
+.mode-toggle:focus-visible,
+.free-item:focus-visible,
+.free-back:focus-visible { outline: 2px solid var(--text); outline-offset: 3px; }
+.free-heading { margin-top: 36px; }
+.free-list { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.free-item { display: block; width: 100%; min-height: 48px; padding: 12px 14px; border: 1px solid var(--rule); background: var(--white); color: var(--text); font-family: var(--font-zh); font-size: var(--fs-nav); line-height: 1.4; text-align: left; cursor: pointer; }
+.free-item[aria-current="true"] { border-color: var(--text); background: var(--text); color: var(--white); }
+.free-back { margin-top: 28px; min-height: 40px; padding: 0 14px; border: 1px solid var(--text); background: var(--white); color: var(--text); font-family: var(--font-zh); font-size: var(--fs-nav); cursor: pointer; }

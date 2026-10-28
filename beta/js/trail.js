@@ -61,7 +61,7 @@
   var reduceMQ = window.matchMedia("(prefers-reduced-motion: reduce)");
   var mobileMQ = window.matchMedia("(max-width: 899px)");
 
-  var state = { idx: -1, speciesKey: null };
+  var state = { idx: -1, speciesKey: null, free: false };
   var speciesLegend = document.getElementById("speciesLegend");
   var lightbox = null;
   var lightboxOpener = null;
@@ -88,16 +88,19 @@
     return "dot--" + String(colorToken).replace(/^--c-/, "").replace(/^--/, "");
   }
 
+  /* 網址格式：順序導覽 #trail=ID&stop=N；自由漫遊 #trail=ID&mode=free（可再加 &stop=N） */
   function hashFor(idx) {
     if (state.speciesKey && idx < 0) {
       return "#species=" + state.speciesKey;
     }
+    var base = "#trail=" + ROUTE.id + (state.free ? "&mode=free" : "");
     return idx < 0
-      ? "#trail=" + ROUTE.id
-      : "#trail=" + ROUTE.id + "&stop=" + (idx + 1);
+      ? base
+      : base + "&stop=" + (idx + 1);
   }
 
   function parseHash() {
+    state.free = false;
     var sm = /species=([a-z0-9]+)/i.exec(location.hash);
     if (sm) {
       var key = sm[1];
@@ -107,9 +110,12 @@
       }
     }
     state.speciesKey = null;
-    var m = /trail=([a-z0-9]+)(?:&stop=(\d+))?/i.exec(location.hash);
-    if (!m || m[1] !== ROUTE.id || m[2] === undefined) return -1;
-    var n = parseInt(m[2], 10);
+    var m = /trail=([a-z0-9]+)/i.exec(location.hash);
+    if (!m || m[1] !== ROUTE.id) return -1;
+    state.free = /(?:^|&)mode=free(?![a-z0-9])/i.test(location.hash);
+    var sn = /(?:^|&)stop=(\d+)/.exec(location.hash);
+    if (!sn) return -1;
+    var n = parseInt(sn[1], 10);
     if (isNaN(n)) return -1;
     return clamp(n - 1, 0, N - 1);
   }
@@ -429,19 +435,84 @@
     return row;
   }
 
-  function renderIntro(frag) {
+  function renderIntroText(frag) {
     frag.appendChild(el("h1", "stop-title", ROUTE.title));
     ROUTE.intro.forEach(function (text) {
       frag.appendChild(el("p", "para", text));
     });
     if (ROUTE.sources && ROUTE.sources.length) frag.appendChild(el("p", "panel-foot", "資料來源：" + ROUTE.sources.join("；")));
+  }
+
+  /* 介紹區的模式切換：順序導覽 ↔ 自由漫遊 */
+  function modeToggle() {
+    var a = el("a", "mode-toggle", state.free ? "改為順序導覽" : "改為自由漫遊");
+    a.href = state.free ? "#trail=" + ROUTE.id : "#trail=" + ROUTE.id + "&mode=free";
+    var p = el("p", "para");
+    p.appendChild(a);
+    return p;
+  }
+
+  function renderIntro(frag) {
+    renderIntroText(frag);
     var start = el("button", "btn btn--next btn--start", "由第 1 站開始 →");
     start.type = "button";
     start.addEventListener("click", function () { goTo(0, { push: true, focus: "next" }); });
     var wrapBtn = el("div", "start-row");
     wrapBtn.appendChild(start);
     frag.appendChild(wrapBtn);
+    frag.appendChild(modeToggle());
     frag.appendChild(el("p", "panel-foot", "站點位置為大約位置"));
+  }
+
+  /* 自由漫遊：全部站點清單；目前站點加 aria-current */
+  function freeList() {
+    var list = el("ul", "free-list");
+    STOPS.forEach(function (s, i) {
+      var li = el("li");
+      var label = s.n + ". " + s.place +
+        (s.era ? "（" + s.era + "）" : "") +
+        (hasPos(s) ? "" : "（未有地圖位置）");
+      var b = el("button", "free-item", label);
+      b.type = "button";
+      if (i === state.idx) b.setAttribute("aria-current", "true");
+      b.addEventListener("click", function () { goTo(i, { push: true }); });
+      li.appendChild(b);
+      list.appendChild(li);
+    });
+    return list;
+  }
+
+  function renderFree(frag) {
+    if (state.idx < 0) {
+      renderIntroText(frag);
+      frag.appendChild(modeToggle());
+    }
+    frag.appendChild(el("h2", "meet-heading free-heading", "全部站點"));
+    frag.appendChild(freeList());
+    if (state.idx >= 0) {
+      var back = el("button", "free-back", "← 返回全部站點");
+      back.type = "button";
+      back.addEventListener("click", function () { goTo(-1, { push: true }); });
+      frag.appendChild(back);
+      renderStopBody(frag);
+    } else {
+      renderRelated(frag);
+      frag.appendChild(el("p", "panel-foot", "站點位置為大約位置"));
+    }
+  }
+
+  /* 「繼續探索」：列出相關路線（路線最後一站及自由漫遊清單底部） */
+  function renderRelated(frag) {
+    if (!ROUTE.related || !ROUTE.related.length) return;
+    var rel = el("section", "related-routes");
+    rel.appendChild(el("h3", "meet-heading", "繼續探索"));
+    ROUTE.related.forEach(function (id) {
+      var r = ROUTES.filter(function (x) { return x.id === id; })[0];
+      if (!r) return;
+      var p = el("p", "para"); var a = el("a", "text-link", "前往" + r.title + " →");
+      a.href = "trail.html#trail=" + r.id; p.appendChild(a); rel.appendChild(p);
+    });
+    frag.appendChild(rel);
   }
 
   function renderStepHead(frag) {
@@ -525,10 +596,14 @@
   }
 
   function renderStop(frag, focusRole) {
-    var s = STOPS[state.idx];
     renderStepHead(frag);
     renderNav(frag, focusRole);
+    renderStopBody(frag);
+    if (state.idx === N - 1) renderRelated(frag);
+  }
 
+  function renderStopBody(frag) {
+    var s = STOPS[state.idx];
     frag.appendChild(el("p", "stop-meta", ROUTE.title + " · 第 " + s.n + " 站，共 " + N + " 站 · " + s.place));
     frag.appendChild(el("h2", "stop-title", s.place));
     if (s.era) frag.appendChild(el("p", "stop-era", s.era));
@@ -579,26 +654,16 @@
 
     if (hasPos(s)) frag.appendChild(el("p", "panel-foot", "站點位置為大約位置"));
     if (s.gpsSource) frag.appendChild(el("p", "stop-gps-source", "位置：" + s.gpsSource));
-
-    if (state.idx === N - 1 && ROUTE.related && ROUTE.related.length) {
-      var rel = el("section", "related-routes");
-      rel.appendChild(el("h3", "meet-heading", "繼續探索"));
-      ROUTE.related.forEach(function (id) {
-        var r = ROUTES.filter(function (x) { return x.id === id; })[0];
-        if (!r) return;
-        var p = el("p", "para"); var a = el("a", "text-link", "前往" + r.title + " →");
-        a.href = "trail.html#trail=" + r.id; p.appendChild(a); rel.appendChild(p);
-      });
-      frag.appendChild(rel);
-    }
   }
 
   function render(focusRole) {
     panel.textContent = "";
     var frag = document.createDocumentFragment();
     frag.appendChild(topLinks());   /* 介紹頁與各站共用：側欄最上方 */
-    panel.classList.toggle("has-nav", state.idx >= 0);
-    if (state.idx < 0) {
+    panel.classList.toggle("has-nav", state.idx >= 0 && !state.free);
+    if (state.free) {
+      renderFree(frag);
+    } else if (state.idx < 0) {
       renderIntro(frag);
     } else {
       renderStop(frag, focusRole);
@@ -653,6 +718,7 @@
   }
 
   function step(d) {
+    if (state.free) return;   /* 自由漫遊不依次序換站 */
     var next = state.idx + d;
     if (next < 0 || next > N - 1) return;
     goTo(next, { push: true, focus: d > 0 ? "next" : "prev" });
@@ -662,8 +728,9 @@
   function syncFromHash() {
     var rm = /trail=([a-z0-9]+)/i.exec(location.hash);
     if (rm && rm[1] !== ROUTE.id && ROUTES.some(function (r) { return r.id === rm[1]; })) { location.reload(); return; }
+    var wasFree = state.free;
     var target = parseHash();
-    if (target !== state.idx || state.speciesKey) goTo(target, { push: false });
+    if (target !== state.idx || state.speciesKey || wasFree !== state.free) goTo(target, { push: false });
   }
 
   window.addEventListener("popstate", syncFromHash);

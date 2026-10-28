@@ -1223,3 +1223,4 @@ a {
 .stop-links { margin: 24px 0 0; padding: 0; list-style: none; display: grid; gap: 8px; font-size: 16px; }
 .related-routes { margin-top: 36px; }
 .species-photos[hidden] { display: none; }
+.stop-gps-source { margin: 8px 0 0; font-size: 14px; font-weight: 400; color: var(--text); }

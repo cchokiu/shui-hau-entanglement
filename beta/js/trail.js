@@ -38,6 +38,8 @@
       lat: s.lat,
       lng: s.lng,
       era: s.era || "",
+      fit: s.fit !== false,          /* false：總覽視野不計入此站（例如相距過遠的長洲） */
+      gpsSource: s.gps_source || "",
       links: s.links || [],
       paragraphs: s.text,
       media: (s.photos || []).map(function (p) {
@@ -277,6 +279,13 @@
     return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
   }
 
+  /* 總覽視野的範圍：只計入有位置且 fit 不為 false 的站點 */
+  function overviewBounds() {
+    var pts = STOPS.filter(function (s) { return hasPos(s) && s.fit; })
+      .map(function (s) { return [s.lat, s.lng]; });
+    return L.latLngBounds(pts.length ? pts : routeLine.getLatLngs());
+  }
+
   /* 地圖邊界內距：手機 40px，桌面 48px */
   function fitPad() {
     return mobileMQ.matches ? 40 : 48;
@@ -295,7 +304,7 @@
     }
     if (state.idx < 0 || !hasPos(STOPS[state.idx])) {
       var p = fitPad();
-      map.fitBounds(routeLine.getBounds(), { padding: [p, p], animate: false });
+      map.fitBounds(overviewBounds(), { padding: [p, p], animate: false });
     } else {
       var s = STOPS[state.idx];
       map.setView([s.lat, s.lng], TILE_ZOOM, { animate: false });
@@ -396,9 +405,9 @@
     if (state.idx < 0 || !hasPos(STOPS[state.idx])) {
       var p = fitPad();
       if (reduceMQ.matches) {
-        map.fitBounds(routeLine.getBounds(), { padding: [p, p], animate: false });
+        map.fitBounds(overviewBounds(), { padding: [p, p], animate: false });
       } else {
-        map.flyToBounds(routeLine.getBounds(), { padding: [p, p], duration: 0.9 });
+        map.flyToBounds(overviewBounds(), { padding: [p, p], duration: 0.9 });
       }
       return;
     }
@@ -569,6 +578,7 @@
     }
 
     if (hasPos(s)) frag.appendChild(el("p", "panel-foot", "站點位置為大約位置"));
+    if (s.gpsSource) frag.appendChild(el("p", "stop-gps-source", "位置：" + s.gpsSource));
 
     if (state.idx === N - 1 && ROUTE.related && ROUTE.related.length) {
       var rel = el("section", "related-routes");

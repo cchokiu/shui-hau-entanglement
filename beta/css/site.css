@@ -1235,3 +1235,25 @@ a {
 .free-item { display: block; width: 100%; min-height: 48px; padding: 12px 14px; border: 1px solid var(--rule); background: var(--white); color: var(--text); font-family: var(--font-zh); font-size: var(--fs-nav); line-height: 1.4; text-align: left; cursor: pointer; }
 .free-item[aria-current="true"] { border-color: var(--text); background: var(--text); color: var(--white); }
 .free-back { margin-top: 28px; min-height: 40px; padding: 0 14px; border: 1px solid var(--text); background: var(--white); color: var(--text); font-family: var(--font-zh); font-size: var(--fs-nav); cursor: pointer; }
+
+/* ---------- 互動地圖（Data Catalogue 地點） ---------- */
+.cat-marker { box-sizing: border-box; border-radius: 50%; border: 2px solid var(--white); box-shadow: 0 0 0 1px var(--text); cursor: pointer; }
+.cat-marker--1 { background: var(--c-clam); }
+.cat-marker--2 { background: var(--c-cattle); }
+.cat-marker--3 { background: var(--c-buffalo); }
+.cat-marker--4 { background: var(--black); }
+.cat-marker--5 { background: var(--c-rice); }
+.cat-marker.is-group { box-shadow: 0 0 0 3px var(--white), 0 0 0 5px var(--text); }
+.cat-marker.is-current { box-shadow: 0 0 0 3px var(--white), 0 0 0 6px var(--text); }
+.cat-marker:focus-visible { outline: 2px solid var(--text); outline-offset: 4px; }
+.cat-legend-dot { width: 10px; height: 10px; border-radius: 50%; border: 1px solid var(--white); box-shadow: 0 0 0 1px var(--text); }
+.cat-legend-dot--1 { background: var(--c-clam); }
+.cat-legend-dot--2 { background: var(--c-cattle); }
+.cat-legend-dot--3 { background: var(--c-buffalo); }
+.cat-legend-dot--4 { background: var(--black); }
+.cat-legend-dot--5 { background: var(--c-rice); }
+.cat-divider { margin: 32px 0; border: 0; border-top: 1px solid var(--rule); }
+.cat-item { margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--rule); }
+.cat-item-title { margin: 0; font-size: var(--fs-body); font-weight: 700; color: var(--text); }
+.cat-item-meta { margin: 6px 0 0; font-size: 14px; color: var(--text); }
+#catMap { width: 100%; height: 100%; background: var(--bg); }

@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>互動地圖｜共構水口</title>
+  <meta name="description" content="水口互動地圖：各地點的沙白、黃牛、水牛、人與水稻相關資料。">
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+  <link rel="stylesheet" href="css/tokens.css">
+  <link rel="stylesheet" href="css/site.css">
+</head>
+<body class="page-map">
+  <header class="site-header" id="siteHeader">
+    <a class="brand" href="index.html">
+      <img class="brand-logo" src="assets/elements/logo.png" alt="共構水口 一場跨越物種的感知之旅" width="800" height="226">
+    </a>
+    <nav class="site-nav" aria-label="主要導航">
+      <a href="index.html">首頁</a>
+      <a href="about.html">關於地圖</a>
+      <a href="species.html">物種故事</a>
+      <a href="routes.html">路線探索</a>
+      <a href="map.html" aria-current="page">互動地圖</a>
+      <a href="co-creation.html">多物種共創</a>
+    </nav>
+  </header>
+  <div class="site-rule" aria-hidden="true"></div>
+
+  <main class="trail-page map-page">
+    <div class="trail-map" id="catMapWrap">
+      <div id="catMap"></div>
+      <p class="tile-note" id="catMapNote" hidden></p>
+      <p class="route-key">標記為大約位置，點擊可查看該地點的資料</p>
+      <div class="species-legend" id="catLegend"></div>
+    </div>
+    <section class="trail-panel" id="catPanel"></section>
+  </main>
+
+  <p class="visually-hidden" id="status" aria-live="polite"></p>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+  <script src="data/catalogue-points.js"></script>
+  <script src="js/map.js"></script>
+</body>
+</html>

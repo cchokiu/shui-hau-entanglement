@@ -9,6 +9,8 @@ window.ROUTE1 = {
     "「瀨鑊邊」是本地客家人的傳統家常菜。根據香港中文大學人類學系張展鴻教授研究沙頭角和南大嶼的客家飲食，「瀨鑊邊」在1960至1970年代十分普遍，當中的食材反映出該地區的環境特色。雖然水口村不是客家村，但與毗鄰客家村落長年交流和通婚下，飲食文化亦隨之交融流傳。",
     "按水口村民分享，村民會從水口灣起行，採集當地海產沙白，經過農田時就採收自家種的蔬菜，回家後將食材煮成一鍋。村民順應季節當造的農產漁產，沿路就地取材，一道菜式呈現了在地人類與環境和其他物種的互動。"
   ],
+  sources: ["探討香港本地客家的傳統飲食「瀨鑊邊」及其社會文化意義", "水口手記"],
+  related: ["clam", "rice"],
   stops: [
     {
       id: "s1",
@@ -44,12 +46,13 @@ window.ROUTE1 = {
         "稻田生產的大米是「瀨鑊邊」主要食材。村民每年種兩造稻米，收成的穀粒會存放在家，食用前才拿去舂米、去殼。"
       ],
       photos: [
-        { src: "assets/species/farm-2.jpg", alt: "農地中的一株植物，葉片掌狀分裂，枝幹上有青色果實", caption: "農地植株" },
-        { src: "assets/species/farm-3.jpg", alt: "農地旁枝葉茂密的樹木", caption: "農地樹木" },
-        { src: "assets/species/farm-4.jpg", alt: "農地中的幼株，周圍為泥土地", caption: "農地幼株" }
+        { src: "assets/route1/s2-ricefield.jpg", alt: "稻田中一隻水牛背對鏡頭，低頭啃食稻叢與雜草，周圍為金黃色稻穗及綠色草地，後方為綠色防護網、金屬支架，支架上有太陽能板與一部相機", caption: "稻田（水牛在田間吃草）" },
+        { src: "assets/species/farm-2.jpg", alt: "木瓜樹，農地中的一株植物，葉片掌狀分裂，枝幹上有青色果實", caption: "木瓜" },
+        { src: "assets/species/farm-3.jpg", alt: "龍眼樹，農地旁枝葉茂密的樹木", caption: "龍眼樹" },
+        { src: "assets/species/farm-4.jpg", alt: "茄子植株，農地中的幼株，周圍為泥土地", caption: "茄子" }
       ],
       missing: [
-        "稻田相（水稻）：缺。Doc 註「有水牛搶Focus，或需補相」；原先引用的稻田相與水牛相同，已移除",
+        "稻田相（水稻）：缺。Doc 註「有水牛搶Focus，或需補相」；稻田相：暫用 DSC08581（畫面有水牛），Doc 註或需補相",
         "九層塔：Sheet 未見，缺"
       ]
     },
@@ -71,11 +74,12 @@ window.ROUTE1 = {
         { src: "assets/route1/s3-pine-1.jpg", alt: "枝葉茂密的松樹", caption: "松樹" },
         { src: "assets/route1/s3-pine-2.jpg", alt: "一顆松果落在石面上，周圍散落松針", caption: "松果" },
         { src: "assets/route1/s3-fern.jpg", alt: "林下叢生的羽狀蕨類植物，左側為樹幹", caption: "芒萁" },
-        { src: "assets/route1/s3-chopper.jpg", alt: "一把彎刀，刀身鏽跡斑駁，木柄朝下，置於混凝土地面上", caption: "斬柴刀" }
+        { src: "assets/route1/s3-chopper.jpg", alt: "一把彎刀，刀身鏽跡斑駁，木柄朝下，置於混凝土地面上", caption: "斬柴刀" },
+        { src: "assets/route1/s3-stove-1.jpg", alt: "以磚頭和水泥砌成的灶台，上置大小兩個鋁鍋，灶旁有藍色盆及不銹鋼盆，後方為綠色窗框的窗戶", caption: "以磚頭砌成的傳統柴火灶" },
+        { src: "assets/route1/s3-stove-2.jpg", alt: "灶膛內燃燒著柴火，火光明亮，灶面上置有不銹鋼鍋", caption: "以磚頭砌成的傳統柴火灶" }
       ],
       missing: [
         "瀨鑊邊相：缺（Doc 註「需補相」）",
-        "傳統柴火灶相：未引用（Sheet 歸於「村民家」，待確認）",
         "芒萁、松樹：Sheet 標示需要 ID，待確認"
       ]
     }

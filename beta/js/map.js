@@ -228,9 +228,59 @@
     }
   }
 
+  /* ---------- 訪客分享的地點（map-contribute.js 使用） ---------- */
+
+  var visitorLayer = null;
+
+  function showVisitor(v) {
+    panel.textContent = "";
+    var back = el("button", "free-back", "← 返回全部資料");
+    back.type = "button";
+    back.addEventListener("click", clearSelection);
+    panel.appendChild(back);
+    panel.appendChild(el("h2", "stop-title", "訪客分享"));
+    panel.appendChild(el("p", "para", "稱呼：" + (v.name || "匿名")));
+    if (v.species) panel.appendChild(el("p", "para", "相關物種：" + v.species));
+    panel.appendChild(el("p", "para", v.message || ""));
+    panel.appendChild(el("p", "panel-foot", "此為訪客分享，位置為大約位置"));
+    panel.scrollTop = 0;
+  }
+
+  /* 訪客地點：空心圓；點擊後在側欄顯示內容（一律用 textContent） */
+  function addVisitorPoints(list) {
+    if (!map) return;
+    if (!visitorLayer) visitorLayer = L.layerGroup().addTo(map);
+    visitorLayer.clearLayers();
+    (list || []).forEach(function (v) {
+      if (typeof v.lat !== "number" || typeof v.lng !== "number") return;
+      var marker = L.marker([v.lat, v.lng], {
+        icon: L.divIcon({ className: "visitor-dot", html: "", iconSize: [16, 16], iconAnchor: [8, 8] }),
+        title: "訪客分享",
+        alt: "訪客分享：" + (v.name || "匿名"),
+        keyboard: true,
+        zIndexOffset: 2000   /* 訪客點在資料點之上，重疊時仍可點到 */
+      });
+      marker.on("click", function () { showVisitor(v); });
+      visitorLayer.addLayer(marker);
+    });
+  }
+
+  /* 取消選點或送出後，回到全部資料清單 */
+  function resetPanel() {
+    clearSelection();
+  }
+
+  window.SHMap = {
+    map: null,
+    addVisitorPoints: addVisitorPoints,
+    resetPanel: resetPanel,
+    panel: panel
+  };
+
   /* ---------- 啟動 ---------- */
 
   initMap();
+  window.SHMap.map = map;
   renderMarkers();
   renderPanel();
   fitAll();

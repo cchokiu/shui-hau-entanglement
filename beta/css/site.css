@@ -1299,3 +1299,21 @@ html.is-leaving body { opacity: 0; }
 html.is-scattering .hero-plates .plate { transition: transform 600ms ease-in, opacity 600ms ease-in; transform: translate(calc(var(--sx,0) * 1px), calc(var(--sy,0) * 1px)) scale(.85); opacity: 0; }
 html.is-scattering.is-leaving body { transition-delay: 250ms; }
 @media (prefers-reduced-motion: reduce) { body, .hero-plates .plate { transition: none !important; } }
+
+/* ---------- 訪客加入地點（map-contribute.js） ---------- */
+.visitor-dot { box-sizing: border-box; border-radius: 50%; background: transparent; border: 2px solid var(--text); box-shadow: 0 0 0 2px var(--white); cursor: pointer; }
+.visitor-dot.is-temp { background: var(--white); border-style: dashed; }
+.visitor-dot:focus-visible { outline: 2px solid var(--text); outline-offset: 4px; }
+.is-picking #catMap,
+.is-picking #catMap .leaflet-grab,
+.is-picking #catMap .leaflet-interactive { cursor: crosshair !important; }
+.contribute-control { border: 0; }
+.contribute-btn { min-height: 40px; padding: 0 12px; border: 1px solid var(--text); background: var(--white); color: var(--text); font-family: var(--font-zh); font-size: var(--fs-nav); line-height: 1.2; cursor: pointer; }
+.contribute-btn:focus-visible { outline: 2px solid var(--text); outline-offset: 3px; }
+.contribute-btn:disabled { opacity: 0.4; cursor: default; }
+.contribute-hint { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); z-index: 600; margin: 0; padding: 8px 14px; background: var(--white); border: 1px solid var(--rule); color: var(--text); font-size: 15px; }
+.contribute-hint[hidden] { display: none; }
+.contribute-form { margin-top: 20px; }
+.contribute-consent { display: flex; align-items: flex-start; gap: 8px; }
+.contribute-actions { display: flex; gap: 12px; }
+.contribute-thanks { margin-top: 0; padding: 12px 14px; border: 1px solid var(--rule); background: var(--white); }

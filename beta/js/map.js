@@ -1,27 +1,48 @@
-/* 互動地圖頁：Data Catalogue 每一項資料一個點（data/catalogue-points.js 的 CATALOGUE_ITEMS）。
-   位置為大約位置；同一地點的點已分散，方便點選。hash：#item=ID。 */
+/* 互動地圖頁（G3）：資料標記（只顯示已核准、有座標的項目）、右下角圖例、資料卡、使用指南。
+   資料來源：data/map-items.js（由 ~/Documents/shui-hau-ref/build-map-items.py 生成）。
+   文字一律用 textContent 建立，不插入 HTML。 */
 (function () {
   "use strict";
 
-  var ITEMS = window.CATALOGUE_ITEMS || [];
-  var UNPLACED = window.CATALOGUE_UNPLACED || [];
+  var CATEGORIES = [
+    { key: "animal", label: "動物", color: "#56B4E9" },
+    { key: "plant", label: "植物", color: "#009E73" },
+    { key: "villager", label: "村民", color: "#CC79A7" },
+    { key: "tool", label: "工具", color: "#E69F00" },
+    { key: "story", label: "故事", color: "#D55E00" }
+  ];
+  var CAT_BY_KEY = {};
+  CATEGORIES.forEach(function (c) { CAT_BY_KEY[c.key] = c; });
+
   var DEFAULT_CENTER = [22.2195, 113.9165];
   var DEFAULT_ZOOM = 15;
   var DETAIL_ZOOM = 17;
 
+  /* 只收錄已核准（approved）、有座標、類別已定的項目 */
+  var ITEMS = (window.MAP_ITEMS || []).filter(function (it) {
+    return it && it.approved === true &&
+      typeof it.lat === "number" && typeof it.lng === "number" &&
+      CAT_BY_KEY[it.category];
+  });
+
   var wrap = document.getElementById("catMapWrap");
+  var mapEl = document.getElementById("catMap");
   var mapNote = document.getElementById("catMapNote");
-  var panel = document.getElementById("catPanel");
+  var legendList = document.getElementById("legendList");
+  var cardEl = document.getElementById("dataCard");
   var statusEl = document.getElementById("status");
+  var guideToggle = document.getElementById("guideToggle");
+  var guideBody = document.getElementById("guideBody");
   var reduceMQ = window.matchMedia("(prefers-reduced-motion: reduce)");
-  var mobileMQ = window.matchMedia("(max-width: 899px)");
+  var canHover = window.matchMedia("(hover: hover) and (pointer: fine)").matches;
 
   var map = null;
   var markerLayer = null;
   var tileStat = { ok: 0, bad: 0 };
-  var selectedId = null;
-  var byId = {};
-  ITEMS.forEach(function (it) { byId[it.id] = it; });
+  var markers = [];        // { item, marker, el }
+  var openItem = null;
+  var openerEl = null;
+  var legendItems = {};
 
   function el(tag, cls, text) {
     var node = document.createElement(tag);
@@ -34,18 +55,14 @@
     statusEl.textContent = text;
   }
 
-  function fitPad() {
-    return mobileMQ.matches ? 40 : 48;
-  }
-
-  /* ---------- 地圖 ---------- */
+  /* ---------- 底圖 ---------- */
 
   function updateTileState() {
     var off = (tileStat.ok === 0 && tileStat.bad > 0) || navigator.onLine === false;
     wrap.classList.toggle("is-tiles-off", off);
     mapNote.hidden = !off;
     mapNote.textContent = off
-      ? "底圖未能載入（離線或網絡不穩）。地點位置仍然正確，可照常使用。"
+      ? "底圖未能載入（離線或網絡不穩）。資料標記位置仍然正確，可照常使用。"
       : "";
   }
 
@@ -53,10 +70,9 @@
     if (!window.L) {
       mapNote.hidden = false;
       mapNote.textContent = "地圖程式庫未能載入，請重新整理。";
-      return;
+      return false;
     }
-    map = L.map("catMap", { zoomControl: true, attributionControl: true, zoomSnap: 1, zoomDelta: 1 });
-
+    map = L.map(mapEl, { zoomControl: true, attributionControl: true, zoomSnap: 1, zoomDelta: 1 });
     var satellite = L.tileLayer(
       "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
       { maxZoom: 19, attribution: "衛星影像 © Esri, Maxar, Earthstar Geographics" }
@@ -71,230 +87,249 @@
     });
     satellite.addTo(map);
     L.control.layers({ "衛星影像": satellite, "街道地圖": street }, null, { position: "topright" }).addTo(map);
-    map.on("baselayerchange", function () {
-      tileStat = { ok: 0, bad: 0 };
-      updateTileState();
-    });
-    window.addEventListener("online", function () {
-      tileStat = { ok: 0, bad: 0 };
-      updateTileState();
-    });
+    map.on("baselayerchange", function () { tileStat = { ok: 0, bad: 0 }; updateTileState(); });
+    window.addEventListener("online", function () { tileStat = { ok: 0, bad: 0 }; updateTileState(); });
     markerLayer = L.layerGroup().addTo(map);
+    map.on("click", closeCard);
     updateTileState();
+    return true;
   }
 
-  /* 總覽：包住全部點；沒有資料時置中於預設位置 */
+  function fitPad() {
+    return window.matchMedia("(max-width: 899px)").matches ? 40 : 48;
+  }
+
   function fitAll() {
     if (!map) return;
     if (ITEMS.length) {
-      var pts = ITEMS.map(function (it) { return [it.lat, it.lng]; });
       var p = fitPad();
-      map.fitBounds(L.latLngBounds(pts), { padding: [p, p], animate: false, maxZoom: DEFAULT_ZOOM });
+      map.fitBounds(L.latLngBounds(ITEMS.map(function (it) { return [it.lat, it.lng]; })),
+        { padding: [p, p], animate: false, maxZoom: DEFAULT_ZOOM });
     } else {
       map.setView(DEFAULT_CENTER, DEFAULT_ZOOM, { animate: false });
     }
   }
 
-  function dotIcon(current) {
-    var size = current ? 20 : 14;
+  /* ---------- 資料標記 ---------- */
+
+  function markerIcon(it) {
     return L.divIcon({
-      className: "cat-dot" + (current ? " is-current" : ""),
-      html: "",
-      iconSize: [size, size],
-      iconAnchor: [size / 2, size / 2]
+      className: "map-mk map-mk--" + it.category,
+      html: '<span class="map-mk-dot"></span>',
+      iconSize: [16, 16],
+      iconAnchor: [8, 8]
     });
+  }
+
+  function setMarkerHover(entry, on) {
+    if (!entry.el) return;
+    entry.el.classList.toggle("is-hover", on);
+    if (on) entry.marker.openTooltip(); else entry.marker.closeTooltip();
   }
 
   function renderMarkers() {
-    if (!map) return;
     markerLayer.clearLayers();
+    markers = [];
     ITEMS.forEach(function (it) {
-      var current = it.id === selectedId;
+      var cat = CAT_BY_KEY[it.category];
       var marker = L.marker([it.lat, it.lng], {
-        icon: dotIcon(current),
-        title: it.summary,
-        alt: it.summary,
+        icon: markerIcon(it),
+        title: it.title || cat.label,
+        alt: cat.label + "：" + (it.title || ""),
         keyboard: true,
-        zIndexOffset: current ? 1000 : 0
+        riseOnHover: true
       });
-      marker.on("click", function () { select(it.id); });
+      marker.bindTooltip(cat.label, { direction: "top", offset: [0, -10] });
+      var entry = { item: it, marker: marker, el: null };
+      marker.on("add", function () {
+        entry.el = marker.getElement();
+        if (!entry.el) return;
+        entry.el.addEventListener("focus", function () { setMarkerHover(entry, true); });
+        entry.el.addEventListener("blur", function () { setMarkerHover(entry, false); });
+      });
+      marker.on("mouseover", function () { setMarkerHover(entry, true); });
+      marker.on("mouseout", function () { if (!entry.el || !entry.el.matches(":focus")) setMarkerHover(entry, false); });
+      marker.on("click", function () { openCard(it, entry.el); });
       markerLayer.addLayer(marker);
+      markers.push(entry);
+    });
+    if (!ITEMS.length && !document.getElementById("mapEmpty")) {
+      var empty = el("p", "map-empty", "目前沒有已核准公開的資料標記。");
+      empty.id = "mapEmpty";
+      wrap.appendChild(empty);
+    }
+  }
+
+  /* ---------- 圖例 ---------- */
+
+  function setCategoryHighlight(key) {
+    markers.forEach(function (m) {
+      if (m.el) m.el.classList.toggle("is-cat-active", key !== null && m.item.category === key);
+    });
+    CATEGORIES.forEach(function (c) {
+      var b = legendItems[c.key];
+      if (b) b.classList.toggle("is-active", c.key === key);
     });
   }
 
-  /* ---------- 側欄 ---------- */
-
-  function renderIndex() {
-    panel.appendChild(el("p", "para", "點選地圖上的圓點，查看相關的田野資料。"));
-    var list = el("ul", "free-list");
-    ITEMS.forEach(function (it) {
+  function renderLegend() {
+    legendList.textContent = "";
+    CATEGORIES.forEach(function (c) {
       var li = el("li");
-      var b = el("button", "free-item", it.summary);
+      var b = el("button", "legend-item legend-item--" + c.key);
       b.type = "button";
-      var sub = [it.topic, it.form].filter(Boolean).join("．");
-      if (sub) b.appendChild(el("span", "free-sub", sub));
-      b.addEventListener("click", function () { select(it.id); });
+      b.setAttribute("aria-label", c.label);
+      b.appendChild(el("span", "legend-dot legend-dot--" + c.key));
+      b.appendChild(el("span", "legend-label", c.label));
+      b.addEventListener("mouseenter", function () { if (canHover) setCategoryHighlight(c.key); });
+      b.addEventListener("mouseleave", function () { if (canHover) setCategoryHighlight(null); });
+      b.addEventListener("focus", function () { if (b.matches(":focus-visible")) setCategoryHighlight(c.key); });
+      b.addEventListener("blur", function () { setCategoryHighlight(null); });
+      b.addEventListener("click", function () {
+        var first = markers.filter(function (m) { return m.item.category === c.key; })[0];
+        if (first && map) {
+          map.flyTo([first.item.lat, first.item.lng], Math.max(map.getZoom(), DETAIL_ZOOM - 1), { duration: reduceMQ.matches ? 0 : 0.6 });
+        }
+      });
+      legendItems[c.key] = b;
       li.appendChild(b);
-      list.appendChild(li);
+      legendList.appendChild(li);
     });
-    panel.appendChild(list);
+  }
 
-    if (UNPLACED.length) {
-      panel.appendChild(el("h2", "meet-heading free-heading", "位置待定"));
-      var ul = el("ul", "cat-unplaced");
-      UNPLACED.forEach(function (u) {
-        var sub = [u.topic, u.form].filter(Boolean).join("．");
-        ul.appendChild(el("li", null, sub ? u.summary + "（" + sub + "）" : u.summary));
-      });
-      panel.appendChild(ul);
+  /* ---------- 資料卡 ---------- */
+
+  function buildCarousel(photos) {
+    var box = el("div", "card-carousel");
+    var figure = el("figure", "card-figure");
+    var img = el("img");
+    img.alt = "";
+    img.loading = "lazy";
+    figure.appendChild(img);
+    box.appendChild(figure);
+    var index = 0;
+    var counter = el("p", "card-count");
+    function show(i) {
+      index = (i + photos.length) % photos.length;
+      img.src = photos[index].src;
+      img.alt = photos[index].alt || "";
+      counter.textContent = (index + 1) + " / " + photos.length;
     }
-    panel.appendChild(el("p", "panel-foot", "位置為大約位置"));
-  }
-
-  function renderItem(it) {
-    var back = el("button", "free-back", "← 返回全部資料");
-    back.type = "button";
-    back.addEventListener("click", clearSelection);
-    panel.appendChild(back);
-
-    panel.appendChild(el("h2", "stop-title", it.summary));
-    if (it.topic) panel.appendChild(el("p", "para", "對應主題：" + it.topic));
-    if (it.place) panel.appendChild(el("p", "para", "地點：" + it.place));
-    if (it.date) panel.appendChild(el("p", "para", "日期：" + it.date));
-    if (it.form) panel.appendChild(el("p", "para", "資料形式：" + it.form));
-    panel.appendChild(el("p", "panel-foot", "位置為大約位置"));
-  }
-
-  function renderPanel() {
-    panel.textContent = "";
-    if (!ITEMS.length) {
-      panel.appendChild(el("h1", "stop-title", "互動地圖"));
-      panel.appendChild(el("p", "para", "資料整理中"));
-      return;
+    show(0);
+    if (photos.length > 1) {
+      var nav = el("div", "card-carousel-nav");
+      var prev = el("button", "card-nav-btn", "上一張");
+      prev.type = "button";
+      prev.addEventListener("click", function () { show(index - 1); });
+      var next = el("button", "card-nav-btn", "下一張");
+      next.type = "button";
+      next.addEventListener("click", function () { show(index + 1); });
+      nav.append(prev, counter, next);
+      box.appendChild(nav);
+    } else {
+      box.appendChild(counter);
     }
-    var it = selectedId ? byId[selectedId] : null;
-    if (it) renderItem(it);
-    else {
-      panel.appendChild(el("h1", "stop-title", "互動地圖"));
-      renderIndex();
-    }
+    return box;
   }
 
-  /* ---------- 狀態 ---------- */
-
-  function setHash(h) {
-    if (location.hash === h) return;
-    history.pushState(null, "", h || (location.pathname + location.search));
-  }
-
-  function select(id, opts) {
-    var it = byId[id];
-    if (!it) return;
-    selectedId = id;
-    if (!opts || opts.hash !== false) setHash("#item=" + encodeURIComponent(id));
-    renderMarkers();
-    renderPanel();
-    panel.scrollTop = 0;
-    if (map) {
-      var z = Math.max(map.getZoom(), DETAIL_ZOOM);
-      if (reduceMQ.matches || (opts && opts.instant)) {
-        map.setView([it.lat, it.lng], z, { animate: false });
-      } else {
-        map.flyTo([it.lat, it.lng], z, { duration: 0.8 });
+  function buildCard(it) {
+    var cat = CAT_BY_KEY[it.category];
+    var card = el("article", "data-card-inner card-" + it.category);
+    card.appendChild(el("div", "card-band"));
+    var body = el("div", "card-body");
+    var close = el("button", "card-close", "關閉");
+    close.type = "button";
+    close.setAttribute("aria-label", "關閉資料卡");
+    close.addEventListener("click", closeCard);
+    body.appendChild(close);
+    body.appendChild(el("p", "card-cat", cat.label));
+    var title = el("h2", "card-title", it.title || cat.label);
+    title.id = "cardTitle";
+    title.tabIndex = -1;
+    body.appendChild(title);
+    if (it.location) body.appendChild(el("p", "card-meta", "大約位置：" + it.location));
+    (it.text || []).forEach(function (t) {
+      if (t) body.appendChild(el("p", "para card-text", t));
+    });
+    var media = it.media || [];
+    var photos = media.filter(function (m) { return m.type === "photo" && m.src; });
+    if (photos.length) body.appendChild(buildCarousel(photos));
+    media.forEach(function (m) {
+      if (!m.src) return;
+      if (m.type === "video") {
+        var v = el("video");
+        v.controls = true;
+        v.preload = "metadata";
+        v.src = m.src;
+        v.setAttribute("aria-label", (it.title || "影片"));
+        body.appendChild(v);
+      } else if (m.type === "audio") {
+        var a = el("audio");
+        a.controls = true;
+        a.preload = "metadata";
+        a.src = m.src;
+        a.setAttribute("aria-label", (it.title || "聲音"));
+        body.appendChild(a);
       }
-    }
-    announce(it.summary + "：地點資料");
-  }
-
-  function clearSelection() {
-    selectedId = null;
-    setHash(null);
-    renderMarkers();
-    renderPanel();
-    fitAll();
-    announce("互動地圖：資料清單");
-  }
-
-  function syncFromHash() {
-    var m = /item=([^&]+)/.exec(location.hash);
-    var id = m ? decodeURIComponent(m[1]) : null;
-    if (id && byId[id]) {
-      if (id !== selectedId) select(id, { hash: false });
-    } else if (selectedId) {
-      selectedId = null;
-      renderMarkers();
-      renderPanel();
-      fitAll();
-    }
-  }
-
-  /* ---------- 訪客分享的地點（map-contribute.js 使用） ---------- */
-
-  var visitorLayer = null;
-
-  function showVisitor(v) {
-    panel.textContent = "";
-    var back = el("button", "free-back", "← 返回全部資料");
-    back.type = "button";
-    back.addEventListener("click", clearSelection);
-    panel.appendChild(back);
-    panel.appendChild(el("h2", "stop-title", "訪客分享"));
-    panel.appendChild(el("p", "para", "稱呼：" + (v.name || "匿名")));
-    if (v.species) panel.appendChild(el("p", "para", "相關物種：" + v.species));
-    panel.appendChild(el("p", "para", v.message || ""));
-    panel.appendChild(el("p", "panel-foot", "此為訪客分享，位置為大約位置"));
-    panel.scrollTop = 0;
-  }
-
-  /* 訪客地點：空心圓；點擊後在側欄顯示內容（一律用 textContent） */
-  function addVisitorPoints(list) {
-    if (!map) return;
-    if (!visitorLayer) visitorLayer = L.layerGroup().addTo(map);
-    visitorLayer.clearLayers();
-    (list || []).forEach(function (v) {
-      if (typeof v.lat !== "number" || typeof v.lng !== "number") return;
-      var marker = L.marker([v.lat, v.lng], {
-        icon: L.divIcon({ className: "visitor-dot", html: "", iconSize: [16, 16], iconAnchor: [8, 8] }),
-        title: "訪客分享",
-        alt: "訪客分享：" + (v.name || "匿名"),
-        keyboard: true,
-        zIndexOffset: 2000   /* 訪客點在資料點之上，重疊時仍可點到 */
-      });
-      marker.on("click", function () { showVisitor(v); });
-      visitorLayer.addLayer(marker);
     });
+    if (it.source) body.appendChild(el("p", "card-source", "來源：" + it.source));
+    if (it.author) body.appendChild(el("p", "card-source", "作者：" + it.author));
+    card.appendChild(body);
+    return card;
   }
 
-  /* 取消選點或送出後，回到全部資料清單 */
-  function resetPanel() {
-    clearSelection();
+  function openCard(it, markerEl) {
+    openerEl = markerEl || null;
+    openItem = it;
+    cardEl.textContent = "";
+    cardEl.appendChild(buildCard(it));
+    cardEl.hidden = false;
+    cardEl.setAttribute("role", "dialog");
+    cardEl.setAttribute("aria-modal", "false");
+    cardEl.setAttribute("aria-labelledby", "cardTitle");
+    var t = document.getElementById("cardTitle");
+    if (t) t.focus({ preventScroll: true });
+    announce((CAT_BY_KEY[it.category] || {}).label + "：" + (it.title || "資料卡已打開"));
   }
 
-  window.SHMap = {
-    map: null,
-    addVisitorPoints: addVisitorPoints,
-    resetPanel: resetPanel,
-    panel: panel
-  };
+  function closeCard() {
+    if (!openItem) return;
+    openItem = null;
+    cardEl.hidden = true;
+    cardEl.textContent = "";
+    if (openerEl && openerEl.focus) openerEl.focus({ preventScroll: true });
+    openerEl = null;
+  }
+
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape" && openItem) {
+      e.preventDefault();
+      closeCard();
+    }
+  });
+
+  /* ---------- 使用指南（390 寬度可收合） ---------- */
+
+  function setGuide(open) {
+    guideBody.hidden = !open;
+    guideToggle.setAttribute("aria-expanded", open ? "true" : "false");
+  }
+  guideToggle.addEventListener("click", function () {
+    setGuide(guideBody.hidden);
+  });
 
   /* ---------- 啟動 ---------- */
 
   initMap();
-  window.SHMap.map = map;
+  renderLegend();
   renderMarkers();
-  renderPanel();
   fitAll();
 
-  /* 版面在載入後仍可能變動，載入完成及縮放後重算地圖尺寸，並回到目前視野 */
+  /* 版面在載入後仍可能變動，載入完成及縮放後重算地圖尺寸 */
   function relayout() {
     if (!map) return;
     map.invalidateSize({ animate: false });
-    if (selectedId && byId[selectedId]) {
-      var it = byId[selectedId];
-      map.setView([it.lat, it.lng], map.getZoom(), { animate: false });
-    } else {
-      fitAll();
-    }
+    if (!openItem) fitAll();
   }
   window.addEventListener("load", relayout);
   var resizeTimer = null;
@@ -302,11 +337,6 @@
     clearTimeout(resizeTimer);
     resizeTimer = setTimeout(relayout, 120);
   });
-  window.addEventListener("hashchange", syncFromHash);
-  window.addEventListener("popstate", syncFromHash);
-
-  /* 開啟網址時若帶 #item=ID，直接選取該項 */
-  syncFromHash();
   relayout();
-  announce(ITEMS.length ? "互動地圖：資料清單" : "互動地圖：資料整理中");
+  announce(ITEMS.length ? "互動地圖：" + ITEMS.length + " 個資料標記" : "互動地圖：目前沒有已核准公開的資料標記");
 })();

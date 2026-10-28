@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>互動地圖｜共構水口</title>
-  <meta name="description" content="水口互動地圖：各地點的沙白、黃牛、水牛、人與水稻相關資料。">
+  <meta name="description" content="水口村多物種資料地圖。">
   <link rel="icon" href="data:,">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
   <link rel="stylesheet" href="css/tokens.css">
@@ -32,18 +32,33 @@
     <div class="trail-map" id="catMapWrap">
       <div id="catMap"></div>
       <p class="tile-note" id="catMapNote" hidden></p>
-      <p class="route-key">圓點為大約位置；同一地點的資料已分散顯示，方便點選</p>
+      <section class="map-legend" aria-labelledby="legendTitle">
+        <h2 class="legend-title" id="legendTitle">資料標記</h2>
+        <ul class="legend-list" id="legendList"></ul>
+      </section>
+      <div class="data-card" id="dataCard" hidden></div>
     </div>
-    <section class="trail-panel" id="catPanel"></section>
+    <aside class="trail-panel guide" id="catPanel">
+      <button type="button" class="guide-toggle" id="guideToggle" aria-expanded="true" aria-controls="guideBody">使用指南</button>
+      <div class="guide-body" id="guideBody">
+        <h1 class="guide-title">使用指南</h1>
+        <ul class="guide-list">
+          <li>地圖上的彩色圓點是資料標記，顏色代表不同類別，見右下角「資料標記」。</li>
+          <li>滑鼠移到標記上，標記會亮起；按下標記可打開資料卡，閱讀文字、觀看相片及影音。</li>
+          <li>標記位置為大約位置。</li>
+          <li>想分享你在水口的發現？按「加入你的標記」。</li>
+          <li>到訪水口時，請尊重村民及生態，切勿進入私人農地或驚擾動物。</li>
+        </ul>
+        <a class="guide-cta" id="contributeBtn" href="index.html#guestbook">加入你的標記</a>
+      </div>
+    </aside>
   </main>
 
   <p class="visually-hidden" id="status" aria-live="polite"></p>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
-  <script src="data/catalogue-points.js"></script>
-  <script src="js/config.js"></script>
+  <script src="data/map-items.js"></script>
   <script src="js/map.js"></script>
-  <script src="js/map-contribute.js"></script>
   <script src="js/transitions.js"></script>
 </body>
 </html>

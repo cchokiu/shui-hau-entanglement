@@ -348,7 +348,7 @@
         html: label, iconSize: [w, h], iconAnchor: [w / 2, h / 2]
       });
       var names = idxs.map(function (i) { return STOPS[i].n + "．" + STOPS[i].place; }).join("、");
-      var marker = L.marker([s0.lat, s0.lng], { icon: icon, title: names, alt: "站點：" + names, keyboard: true, zIndexOffset: current ? 1000 : 0 });
+      var marker = L.marker([s0.lat, s0.lng], { icon: icon, title: names, alt: "站點：" + names, keyboard: true, zIndexOffset: current ? 2000 : 1000 });
       marker.on("click", function () {
         var pos = idxs.indexOf(state.idx);
         goTo(pos === -1 ? idxs[0] : idxs[(pos + 1) % idxs.length], { push: true });

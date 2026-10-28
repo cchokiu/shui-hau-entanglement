@@ -68,7 +68,7 @@
 
         var photos = document.getElementById("speciesPhotos");
         photos.textContent = "";
-        document.getElementById("speciesTop").hidden = s.photos.length === 0;
+        photos.hidden = s.photos.length === 0;
         if (s.photos.length) {
           s.photos.forEach(function (p) {
             var fig = document.createElement("figure");

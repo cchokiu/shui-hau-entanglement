@@ -1222,3 +1222,4 @@ a {
 .stop-era { margin: 6px 0 0; font-family: var(--font-latin); font-size: 16px; color: var(--text); }
 .stop-links { margin: 24px 0 0; padding: 0; list-style: none; display: grid; gap: 8px; font-size: 16px; }
 .related-routes { margin-top: 36px; }
+.species-photos[hidden] { display: none; }

@@ -1198,3 +1198,21 @@ a {
     padding: 8px 10px;
   }
 }
+
+/* ---------- 路線一覽、多物種共創 ---------- */
+.list-page { max-width: 1080px; margin: 0 auto; padding: 48px 56px 80px; }
+.list-title { margin: 0 0 32px; font-size: var(--fs-title); font-weight: var(--fw-title); line-height: 1.3; color: var(--text); }
+.route-cards { display: grid; gap: 20px; margin: 0; padding: 0; list-style: none; }
+.route-card-link { display: block; padding: 24px 28px; border: 1px solid var(--rule); background: var(--white); color: var(--text); text-decoration: none; }
+.route-card-link:hover { border-color: var(--text); }
+.route-card-link:focus-visible { outline: 2px solid var(--text); outline-offset: 3px; }
+.route-card-title { margin: 0; font-size: 24px; font-weight: var(--fw-title); line-height: 1.3; }
+.route-card-meta { margin: 16px 0 0; font-size: 16px; text-decoration: underline; text-underline-offset: 4px; }
+.cc-section + .cc-section { margin-top: 56px; }
+.cc-heading { margin: 0 0 20px; font-size: 24px; font-weight: var(--fw-title); color: var(--text); }
+.cc-items { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 28px; }
+.cc-item img { width: 100%; height: auto; }
+.cc-item-title { margin: 12px 0 0; font-size: var(--fs-body); font-weight: 700; color: var(--text); }
+.cc-item-meta { margin: 8px 0 0; font-size: 14px; color: var(--text); }
+.cc-empty { margin: 0; font-size: var(--fs-body); color: var(--para); }
+@media (max-width: 899px) { .list-page { padding: 32px 20px 56px; } }

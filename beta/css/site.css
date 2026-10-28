@@ -1268,3 +1268,18 @@ a {
 .team-title { margin: 6px 0 0; font-size: 15px; color: var(--text); }
 .team-note { margin: 6px 0 0; font-size: 14px; color: var(--text); }
 .team-bio { margin-top: 12px; }
+
+/* ---------- 路線探索（探索模式）：路線選單、圓點標記、路線分組 ---------- */
+.route-menu { position: relative; display: inline-block; margin-top: 24px; }
+.route-menu-btn { min-width: 220px; }
+.route-menu-list { position: absolute; top: 100%; left: 0; z-index: 700; min-width: 280px; margin: 4px 0 0; padding: 0; list-style: none; background: var(--white); border: 1px solid var(--rule); }
+.route-menu-list[hidden] { display: none; }
+.route-menu-list a { display: block; min-height: 48px; padding: 12px 14px; color: var(--text); text-decoration: none; font-size: var(--fs-nav); line-height: 1.4; }
+.route-menu-list a span { display: block; font-size: 14px; }
+.route-menu-list a:hover,
+.route-menu-list a:focus-visible { background: var(--text); color: var(--white); outline: none; }
+.route-group-title { margin-top: 36px; }
+.stop-marker.is-dot { width: 16px; height: 16px; font-size: 14px; }
+.stop-marker.is-dot.is-group { border-radius: 999px; }
+.stop-marker.is-dot.is-current { font-size: 16px; }
+.explore-links { margin-top: 28px; }

@@ -9,7 +9,21 @@
     for (var i = 0; i < ROUTES.length; i++) { if (m && ROUTES[i].id === m[1]) return ROUTES[i]; }
     return ROUTES[0];
   }
-  var ROUTE = routeFromHash();
+  /* 探索模式：網址沒有 trail= 時（無 hash 或 #explore），地圖顯示三條路線的全部站點，不畫路線線條 */
+  var EXPLORE_MODE = !/trail=/i.test(location.hash);
+  var EXPLORE = {
+    id: "explore",
+    title: "路線探索",
+    intro: ["地圖上每一點都是一個故事。點選任何一點閱讀內容，或按「開始路線探索」跟隨一條路線。"],
+    sources: [],
+    related: [],
+    stops: ROUTES.reduce(function (all, r) {
+      return all.concat(r.stops.map(function (s) {
+        return Object.assign({}, s, { routeId: r.id, routeTitle: r.title, routeOrder: s.order });
+      }));
+    }, [])
+  };
+  var ROUTE = EXPLORE_MODE ? EXPLORE : routeFromHash();
   function hasPos(s) { return typeof s.lat === "number" && typeof s.lng === "number"; }
   var SPECIES_POINTS = window.SPECIES_POINTS || [];
 
@@ -34,6 +48,9 @@
   var STOPS = ROUTE.stops.map(function (s) {
     return {
       n: s.order,
+      routeId: s.routeId || ROUTE.id,
+      routeTitle: s.routeTitle || ROUTE.title,
+      routeOrder: s.routeOrder || s.order,
       place: s.name,
       lat: s.lat,
       lng: s.lng,
@@ -61,7 +78,7 @@
   var reduceMQ = window.matchMedia("(prefers-reduced-motion: reduce)");
   var mobileMQ = window.matchMedia("(max-width: 899px)");
 
-  var state = { idx: -1, speciesKey: null, free: false };
+  var state = { idx: -1, speciesKey: null, free: false, cluster: null };
   var speciesLegend = document.getElementById("speciesLegend");
   var lightbox = null;
   var lightboxOpener = null;
@@ -93,6 +110,10 @@
     if (state.speciesKey && idx < 0) {
       return "#species=" + state.speciesKey;
     }
+    if (EXPLORE_MODE) {
+      if (idx < 0) return "#explore";
+      return "#explore&stop=" + STOPS[idx].routeId + "-" + STOPS[idx].routeOrder;
+    }
     var base = "#trail=" + ROUTE.id + (state.free ? "&mode=free" : "");
     return idx < 0
       ? base
@@ -110,6 +131,15 @@
       }
     }
     state.speciesKey = null;
+    if (EXPLORE_MODE) {
+      state.free = true;
+      var es = /(?:^|&)stop=([a-z0-9]+)-(\d+)/i.exec(location.hash);
+      if (!es) return -1;
+      for (var k = 0; k < STOPS.length; k++) {
+        if (STOPS[k].routeId === es[1] && STOPS[k].routeOrder === parseInt(es[2], 10)) return k;
+      }
+      return -1;
+    }
     var m = /trail=([a-z0-9]+)/i.exec(location.hash);
     if (!m || m[1] !== ROUTE.id) return -1;
     state.free = /(?:^|&)mode=free(?![a-z0-9])/i.test(location.hash);
@@ -203,23 +233,26 @@
       updateTileState();
     });
 
-    /* 底下先畫一條較寬的淺色底線（casing），讓深色虛線在森林底圖上清楚可見 */
-    L.polyline(latlngs, {
-      className: "route-casing",
-      color: tokenValue("--bg"),
-      weight: 7,
-      opacity: 0.85,
-      interactive: false
-    }).addTo(map);
+    /* 路線模式才畫路線線條；探索模式只顯示站點 */
+    if (!EXPLORE_MODE) {
+      /* 底下先畫一條較寬的淺色底線（casing），讓深色虛線在森林底圖上清楚可見 */
+      L.polyline(latlngs, {
+        className: "route-casing",
+        color: tokenValue("--bg"),
+        weight: 7,
+        opacity: 0.85,
+        interactive: false
+      }).addTo(map);
 
-    routeLine = L.polyline(latlngs, {
-      className: "route-line",
-      color: tokenValue("--text"),   /* 與 CSS 的 --text 相同 */
-      weight: 3,
-      opacity: 0.9,
-      dashArray: "6 6",
-      interactive: false
-    }).addTo(map);
+      routeLine = L.polyline(latlngs, {
+        className: "route-line",
+        color: tokenValue("--text"),   /* 與 CSS 的 --text 相同 */
+        weight: 3,
+        opacity: 0.9,
+        dashArray: "6 6",
+        interactive: false
+      }).addTo(map);
+    }
     markerLayer = L.layerGroup().addTo(map);
     speciesLayer = L.layerGroup().addTo(map);
     updateTileState();
@@ -289,7 +322,7 @@
   function overviewBounds() {
     var pts = STOPS.filter(function (s) { return hasPos(s) && s.fit; })
       .map(function (s) { return [s.lat, s.lng]; });
-    return L.latLngBounds(pts.length ? pts : routeLine.getLatLngs());
+    return L.latLngBounds(pts.length ? pts : [[22.2195, 113.9165]]);
   }
 
   /* 地圖邊界內距：手機 40px，桌面 48px */
@@ -343,6 +376,38 @@
     });
   }
 
+  /* 探索模式：同一座標的站點合併；單站為圓點，多站顯示站數。標題列出路線名與站名。 */
+  function renderExploreMarker(idxs) {
+    var multi = idxs.length > 1;
+    var current = idxs.indexOf(state.idx) !== -1;
+    var size = multi ? (current ? 32 : 28) : (current ? 20 : 16);
+    var icon = L.divIcon({
+      className: "stop-marker is-dot" + (multi ? " is-group" : "") + (current ? " is-current" : ""),
+      html: multi ? String(idxs.length) : "",
+      iconSize: [size, size],
+      iconAnchor: [size / 2, size / 2]
+    });
+    var names = idxs.map(function (i) {
+      var s = STOPS[i];
+      return s.routeTitle + " 第 " + s.routeOrder + " 站：" + s.place;
+    }).join("、");
+    var s0 = STOPS[idxs[0]];
+    var marker = L.marker([s0.lat, s0.lng], {
+      icon: icon, title: names, alt: names, keyboard: true,
+      zIndexOffset: current ? 1000 : 0
+    });
+    marker.on("click", function () {
+      if (!multi) {
+        goTo(idxs[0], { push: true });
+      } else {
+        state.cluster = idxs;
+        render(null);
+        announce(s0.place + "：" + idxs.length + " 個站點");
+      }
+    });
+    markerLayer.addLayer(marker);
+  }
+
   function renderStopMarkers() {
     var groups = {}, order = [];
     STOPS.forEach(function (s, i) {
@@ -353,6 +418,7 @@
     });
     order.forEach(function (k) {
       var idxs = groups[k];
+      if (EXPLORE_MODE) { renderExploreMarker(idxs); return; }
       var s0 = STOPS[idxs[0]];
       var current = idxs.indexOf(state.idx) !== -1;
       var label = idxs.map(function (i) { return STOPS[i].n; }).join("·");
@@ -443,13 +509,142 @@
     if (ROUTE.sources && ROUTE.sources.length) frag.appendChild(el("p", "panel-foot", "資料來源：" + ROUTE.sources.join("；")));
   }
 
-  /* 介紹區的模式切換：順序導覽 ↔ 自由漫遊 */
+  /* 單一路線介紹區的連結：順序導覽時回到路線探索（自由漫遊）；單一路線的自由漫遊（手動網址）時可切回順序導覽 */
   function modeToggle() {
-    var a = el("a", "mode-toggle", state.free ? "改為順序導覽" : "改為自由漫遊");
-    a.href = state.free ? "#trail=" + ROUTE.id : "#trail=" + ROUTE.id + "&mode=free";
+    var a;
+    if (state.free) {
+      a = el("a", "mode-toggle", "改為順序導覽");
+      a.href = "#trail=" + ROUTE.id;
+    } else {
+      a = el("a", "mode-toggle", "← 返回自由漫遊");
+      a.href = "trail.html";
+    }
     var p = el("p", "para");
     p.appendChild(a);
     return p;
+  }
+
+  /* 「開始路線探索 ▾」選單：桌面滑鼠移入展開（移出延遲 150ms）；點按切換；鍵盤 Enter／Space 展開並移到第一項；Esc 收起並回到按鈕；焦點離開時收起 */
+  function routeMenu() {
+    var wrapM = el("div", "route-menu");
+    var btn = el("button", "btn route-menu-btn", "開始路線探索 ▾");
+    btn.type = "button";
+    btn.setAttribute("aria-expanded", "false");
+    btn.setAttribute("aria-controls", "routeMenuList");
+    var list = el("ul", "route-menu-list");
+    list.id = "routeMenuList";
+    list.hidden = true;
+    ROUTES.forEach(function (r) {
+      var li = el("li");
+      var a = el("a");
+      a.href = "#trail=" + r.id;
+      a.appendChild(document.createTextNode(r.title));
+      a.appendChild(el("span", null, "共 " + r.stops.length + " 站"));
+      li.appendChild(a);
+      list.appendChild(li);
+    });
+
+    var closeTimer = null;
+    var hover = window.matchMedia("(hover: hover)");
+    function setOpen(v) {
+      list.hidden = !v;
+      btn.setAttribute("aria-expanded", v ? "true" : "false");
+    }
+    wrapM.addEventListener("mouseenter", function () {
+      if (!hover.matches) return;
+      clearTimeout(closeTimer);
+      setOpen(true);
+    });
+    wrapM.addEventListener("mouseleave", function () {
+      if (!hover.matches) return;
+      clearTimeout(closeTimer);
+      closeTimer = setTimeout(function () { setOpen(false); }, 150);
+    });
+    btn.addEventListener("click", function () {
+      setOpen(list.hidden);
+      if (!list.hidden) {
+        var first = list.querySelector("a");
+        if (first) first.focus();
+      }
+    });
+    wrapM.addEventListener("keydown", function (e) {
+      if (e.key === "Escape") {
+        setOpen(false);
+        btn.focus();
+      }
+    });
+    wrapM.addEventListener("focusout", function (e) {
+      if (!wrapM.contains(e.relatedTarget)) setOpen(false);
+    });
+    wrapM.append(btn, list);
+    return wrapM;
+  }
+
+  /* 探索模式：列出一組站點（按路線分組用），項目為 free-item 按鈕 */
+  function explorePointButton(i) {
+    var s = STOPS[i];
+    var label = s.n + ". " + s.place + (s.era ? "（" + s.era + "）" : "") + (hasPos(s) ? "" : "（未有地圖位置）");
+    var b = el("button", "free-item", label);
+    b.type = "button";
+    b.addEventListener("click", function () { goTo(i, { push: true }); });
+    return b;
+  }
+
+  /* 探索模式：某個地圖位置有多個站點時，列出這些站點讓訪客選擇 */
+  function renderCluster(frag) {
+    var back = el("button", "free-back", "← 返回全部站點");
+    back.type = "button";
+    back.addEventListener("click", function () { goTo(-1, { push: true }); });
+    frag.appendChild(back);
+    frag.appendChild(el("h2", "meet-heading free-heading", "此位置的站點"));
+    var list = el("ul", "free-list");
+    state.cluster.forEach(function (i) {
+      var s = STOPS[i];
+      var li = el("li");
+      var b = el("button", "free-item", s.routeTitle + " · 第 " + s.routeOrder + " 站：" + s.place);
+      b.type = "button";
+      b.addEventListener("click", function () {
+        state.cluster = null;
+        goTo(i, { push: true });
+      });
+      li.appendChild(b);
+      list.appendChild(li);
+    });
+    frag.appendChild(list);
+  }
+
+  /* 探索模式的面板：介紹（未選站）、群組站點（未選站）、站點內容（已選站） */
+  function renderExplore(frag) {
+    if (state.idx >= 0) {
+      renderStopBody(frag);
+      var s = STOPS[state.idx];
+      var links = el("p", "para explore-links");
+      var back = el("a", "text-link", "← 返回全部站點");
+      back.href = "#explore";
+      var go = el("a", "text-link", "由此站開始這條路線 →");
+      go.href = "trail.html#trail=" + s.routeId + "&stop=" + s.routeOrder;
+      links.append(back, document.createTextNode("　"), go);
+      frag.appendChild(links);
+      return;
+    }
+    if (state.cluster) {
+      renderCluster(frag);
+      return;
+    }
+    renderIntroText(frag);
+    frag.appendChild(routeMenu());
+    ROUTES.forEach(function (r) {
+      frag.appendChild(el("h2", "meet-heading route-group-title", r.title));
+      var list = el("ul", "free-list");
+      STOPS.forEach(function (s, i) {
+        if (s.routeId !== r.id) return;
+        var li = el("li");
+        li.appendChild(explorePointButton(i));
+        list.appendChild(li);
+      });
+      frag.appendChild(list);
+    });
+    frag.appendChild(el("p", "panel-foot", "站點位置為大約位置"));
   }
 
   function renderIntro(frag) {
@@ -604,7 +799,9 @@
 
   function renderStopBody(frag) {
     var s = STOPS[state.idx];
-    frag.appendChild(el("p", "stop-meta", ROUTE.title + " · 第 " + s.n + " 站，共 " + N + " 站 · " + s.place));
+    frag.appendChild(el("p", "stop-meta", EXPLORE_MODE
+      ? s.routeTitle + "．第 " + s.routeOrder + " 站"
+      : ROUTE.title + " · 第 " + s.n + " 站，共 " + N + " 站 · " + s.place));
     frag.appendChild(el("h2", "stop-title", s.place));
     if (s.era) frag.appendChild(el("p", "stop-era", s.era));
 
@@ -659,6 +856,14 @@
   function render(focusRole) {
     panel.textContent = "";
     var frag = document.createDocumentFragment();
+    if (EXPLORE_MODE) {
+      panel.classList.toggle("has-nav", false);
+      renderExplore(frag);
+      panel.appendChild(frag);
+      setNavHeight();
+      renderMarkers();
+      return;
+    }
     frag.appendChild(topLinks());   /* 介紹頁與各站共用：側欄最上方 */
     panel.classList.toggle("has-nav", state.idx >= 0 && !state.free);
     if (state.free) {
@@ -703,6 +908,7 @@
     opts = opts || {};
     var target = clamp(idx, -1, N - 1);
     var changed = target !== state.idx;
+    state.cluster = null;   /* 換站或回到介紹時，清除多站位置的選單 */
     if (target >= 0) state.speciesKey = null;   /* 進入站點後清除物種聚焦 */
     state.idx = target;
     render(opts.focus || null);
@@ -718,7 +924,7 @@
   }
 
   function step(d) {
-    if (state.free) return;   /* 自由漫遊不依次序換站 */
+    if (state.free || EXPLORE_MODE) return;   /* 自由漫遊及探索模式不依次序換站 */
     var next = state.idx + d;
     if (next < 0 || next > N - 1) return;
     goTo(next, { push: true, focus: d > 0 ? "next" : "prev" });
@@ -728,6 +934,8 @@
   function syncFromHash() {
     var rm = /trail=([a-z0-9]+)/i.exec(location.hash);
     if (rm && rm[1] !== ROUTE.id && ROUTES.some(function (r) { return r.id === rm[1]; })) { location.reload(); return; }
+    /* 探索模式與路線模式之間切換：重新載入，與換路線的做法一致 */
+    if (!/trail=/i.test(location.hash) !== EXPLORE_MODE) { location.reload(); return; }
     var wasFree = state.free;
     var target = parseHash();
     if (target !== state.idx || state.speciesKey || wasFree !== state.free) goTo(target, { push: false });

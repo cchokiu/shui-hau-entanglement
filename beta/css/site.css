@@ -1291,3 +1291,11 @@ a {
 .free-item .free-sub { display: block; margin-top: 4px; font-size: 14px; opacity: 0.85; }
 .cat-unplaced { margin: 0; padding-left: 1.2em; font-size: var(--fs-body); color: var(--para); }
 .cat-unplaced li { margin-top: 8px; }
+
+/* ---------- 頁面轉場（js/transitions.js） ---------- */
+html.is-entering body { opacity: 0; }
+body { transition: opacity 300ms ease; }
+html.is-leaving body { opacity: 0; }
+html.is-scattering .hero-plates .plate { transition: transform 600ms ease-in, opacity 600ms ease-in; transform: translate(calc(var(--sx,0) * 1px), calc(var(--sy,0) * 1px)) scale(.85); opacity: 0; }
+html.is-scattering.is-leaving body { transition-delay: 250ms; }
+@media (prefers-reduced-motion: reduce) { body, .hero-plates .plate { transition: none !important; } }

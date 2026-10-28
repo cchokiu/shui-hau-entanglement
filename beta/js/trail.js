@@ -429,8 +429,8 @@
 
   function topLinks() {
     var row = el("div", "panel-links");
-    var all = el("a", "text-link", "← 所有路線");
-    all.href = "routes.html";
+    var all = el("a", "text-link", "← 全部站點");
+    all.href = "trail.html";
     row.appendChild(all);
     return row;
   }

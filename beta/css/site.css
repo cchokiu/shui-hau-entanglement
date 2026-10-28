@@ -1216,3 +1216,9 @@ a {
 .cc-item-meta { margin: 8px 0 0; font-size: 14px; color: var(--text); }
 .cc-empty { margin: 0; font-size: var(--fs-body); color: var(--para); }
 @media (max-width: 899px) { .list-page { padding: 32px 20px 56px; } }
+
+/* ---------- 多路線：合併標記、年代、連結、繼續探索 ---------- */
+.stop-marker.is-group { border-radius: 999px; padding: 0 8px; }
+.stop-era { margin: 6px 0 0; font-family: var(--font-latin); font-size: 16px; color: var(--text); }
+.stop-links { margin: 24px 0 0; padding: 0; list-style: none; display: grid; gap: 8px; font-size: 16px; }
+.related-routes { margin-top: 36px; }

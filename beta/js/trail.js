@@ -3,7 +3,14 @@
 (function () {
   "use strict";
 
-  var ROUTE = window.ROUTE1;
+  var ROUTES = [window.ROUTE1, window.ROUTE2, window.ROUTE3].filter(Boolean);
+  function routeFromHash() {
+    var m = /trail=([a-z0-9]+)/i.exec(location.hash);
+    for (var i = 0; i < ROUTES.length; i++) { if (m && ROUTES[i].id === m[1]) return ROUTES[i]; }
+    return ROUTES[0];
+  }
+  var ROUTE = routeFromHash();
+  function hasPos(s) { return typeof s.lat === "number" && typeof s.lng === "number"; }
   var SPECIES_POINTS = window.SPECIES_POINTS || [];
 
   /* 物種名稱對應的色票（與 tokens.css 相同） */
@@ -30,6 +37,8 @@
       place: s.name,
       lat: s.lat,
       lng: s.lng,
+      era: s.era || "",
+      links: s.links || [],
       paragraphs: s.text,
       media: (s.photos || []).map(function (p) {
         return { type: "image", src: p.src, caption: p.caption, alt: p.alt };
@@ -150,7 +159,7 @@
       return;
     }
 
-    var latlngs = STOPS.map(function (s) { return [s.lat, s.lng]; });
+    var latlngs = STOPS.filter(hasPos).map(function (s) { return [s.lat, s.lng]; });
 
     map = L.map("routeMap", {
       zoomControl: true,
@@ -284,7 +293,7 @@
         return;
       }
     }
-    if (state.idx < 0) {
+    if (state.idx < 0 || !hasPos(STOPS[state.idx])) {
       var p = fitPad();
       map.fitBounds(routeLine.getBounds(), { padding: [p, p], animate: false });
     } else {
@@ -319,21 +328,39 @@
     });
   }
 
+  function renderStopMarkers() {
+    var groups = {}, order = [];
+    STOPS.forEach(function (s, i) {
+      if (!hasPos(s)) return;
+      var k = s.lat.toFixed(6) + "," + s.lng.toFixed(6);
+      if (!groups[k]) { groups[k] = []; order.push(k); }
+      groups[k].push(i);
+    });
+    order.forEach(function (k) {
+      var idxs = groups[k];
+      var s0 = STOPS[idxs[0]];
+      var current = idxs.indexOf(state.idx) !== -1;
+      var label = idxs.map(function (i) { return STOPS[i].n; }).join("·");
+      var h = current ? 40 : 30;
+      var w = Math.max(h, label.length * 9 + 16);
+      var icon = L.divIcon({
+        className: "stop-marker" + (current ? " is-current" : "") + (idxs.length > 1 ? " is-group" : ""),
+        html: label, iconSize: [w, h], iconAnchor: [w / 2, h / 2]
+      });
+      var names = idxs.map(function (i) { return STOPS[i].n + "．" + STOPS[i].place; }).join("、");
+      var marker = L.marker([s0.lat, s0.lng], { icon: icon, title: names, alt: "站點：" + names, keyboard: true, zIndexOffset: current ? 1000 : 0 });
+      marker.on("click", function () {
+        var pos = idxs.indexOf(state.idx);
+        goTo(pos === -1 ? idxs[0] : idxs[(pos + 1) % idxs.length], { push: true });
+      });
+      markerLayer.addLayer(marker);
+    });
+  }
+
   function renderMarkers() {
     if (!map) return;
     markerLayer.clearLayers();
-    STOPS.forEach(function (stop, i) {
-      var current = i === state.idx;
-      var marker = L.marker([stop.lat, stop.lng], {
-        icon: markerIcon(stop, current),
-        title: stop.n + "．" + stop.place,
-        alt: "第 " + stop.n + " 站：" + stop.place,
-        keyboard: true,
-        zIndexOffset: current ? 1000 : 0
-      });
-      marker.on("click", function () { goTo(i, { push: true }); });
-      markerLayer.addLayer(marker);
-    });
+    renderStopMarkers();
 
     speciesLayer.clearLayers();
     renderLegend();
@@ -366,7 +393,7 @@
         return;
       }
     }
-    if (state.idx < 0) {
+    if (state.idx < 0 || !hasPos(STOPS[state.idx])) {
       var p = fitPad();
       if (reduceMQ.matches) {
         map.fitBounds(routeLine.getBounds(), { padding: [p, p], animate: false });
@@ -398,6 +425,7 @@
     ROUTE.intro.forEach(function (text) {
       frag.appendChild(el("p", "para", text));
     });
+    if (ROUTE.sources && ROUTE.sources.length) frag.appendChild(el("p", "panel-foot", "資料來源：" + ROUTE.sources.join("；")));
     var start = el("button", "btn btn--next btn--start", "由第 1 站開始 →");
     start.type = "button";
     start.addEventListener("click", function () { goTo(0, { push: true, focus: "next" }); });
@@ -494,6 +522,7 @@
 
     frag.appendChild(el("p", "stop-meta", ROUTE.title + " · 第 " + s.n + " 站，共 " + N + " 站 · " + s.place));
     frag.appendChild(el("h2", "stop-title", s.place));
+    if (s.era) frag.appendChild(el("p", "stop-era", s.era));
 
     var paras = el("div", "paras");
     if (s.paragraphs && s.paragraphs.length) {
@@ -515,19 +544,43 @@
       frag.appendChild(list);
     }
 
-    var meet = el("section", "meet-section");
-    meet.appendChild(el("h3", "meet-heading", "在這裡遇見"));
-    var chips = el("ul", "meet-list");
-    s.meet.forEach(function (item) {
-      var li = el("li", "meet-chip");
-      li.appendChild(el("span", "dot " + dotClass(item.color)));
-      li.appendChild(document.createTextNode(item.label));
-      chips.appendChild(li);
-    });
-    meet.appendChild(chips);
-    frag.appendChild(meet);
+    if (s.links.length) {
+      var linkList = el("ul", "stop-links");
+      s.links.forEach(function (l) {
+        var li = el("li"); var a = el("a", "text-link", l.label + " ↗");
+        a.href = l.url; a.target = "_blank"; a.rel = "noopener noreferrer";
+        li.appendChild(a); linkList.appendChild(li);
+      });
+      frag.appendChild(linkList);
+    }
 
-    frag.appendChild(el("p", "panel-foot", "站點位置為大約位置"));
+    if (s.meet.length) {
+      var meet = el("section", "meet-section");
+      meet.appendChild(el("h3", "meet-heading", "在這裡遇見"));
+      var chips = el("ul", "meet-list");
+      s.meet.forEach(function (item) {
+        var li = el("li", "meet-chip");
+        li.appendChild(el("span", "dot " + dotClass(item.color)));
+        li.appendChild(document.createTextNode(item.label));
+        chips.appendChild(li);
+      });
+      meet.appendChild(chips);
+      frag.appendChild(meet);
+    }
+
+    if (hasPos(s)) frag.appendChild(el("p", "panel-foot", "站點位置為大約位置"));
+
+    if (state.idx === N - 1 && ROUTE.related && ROUTE.related.length) {
+      var rel = el("section", "related-routes");
+      rel.appendChild(el("h3", "meet-heading", "繼續探索"));
+      ROUTE.related.forEach(function (id) {
+        var r = ROUTES.filter(function (x) { return x.id === id; })[0];
+        if (!r) return;
+        var p = el("p", "para"); var a = el("a", "text-link", "前往" + r.title + " →");
+        a.href = "trail.html#trail=" + r.id; p.appendChild(a); rel.appendChild(p);
+      });
+      frag.appendChild(rel);
+    }
   }
 
   function render(focusRole) {
@@ -597,6 +650,8 @@
 
   /* 網址 hash 變動（上一頁、下一頁、手動編輯）時同步 */
   function syncFromHash() {
+    var rm = /trail=([a-z0-9]+)/i.exec(location.hash);
+    if (rm && rm[1] !== ROUTE.id && ROUTES.some(function (r) { return r.id === rm[1]; })) { location.reload(); return; }
     var target = parseHash();
     if (target !== state.idx || state.speciesKey) goTo(target, { push: false });
   }

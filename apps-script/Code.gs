@@ -1,15 +1,24 @@
-const SHEET_ID = "1kTtZzgerODlb5hqlUfxhfMRlY0FbYf88IBkeZuyyQSE";
+const HEADERS = ["time", "name", "message", "species", "approved"];
+
+/** Ensure the bound spreadsheet is ready for the first entry or read. */
+function ensureHeaders(sheet) {
+  if (sheet.getRange(1, 1).getValue() === "") {
+    sheet.getRange(1, 1, 1, HEADERS.length).setValues([HEADERS]);
+  }
+}
 
 /**
  * POST endpoint for guestbook submissions.
- * Accepts: name (optional, max 40 chars), message (required, max 500 chars).
+ * Accepts: name (optional, max 40 chars), message (required, max 500 chars), species (optional).
  * Honeypot fields: hp / honeypot / website — if any has a value, the request is silently discarded.
- * approved column is left empty for manual moderation.
+ * New entries are not public until approved is changed to "yes" in the sheet.
  */
 function doPost(e) {
   const lock = LockService.getScriptLock();
+  let locked = false;
   try {
     lock.waitLock(10000);
+    locked = true;
 
     const params = e.parameter || {};
 
@@ -22,6 +31,7 @@ function doPost(e) {
 
     const name = (params.name || "").toString().trim().slice(0, 40);
     const message = (params.message || "").toString().trim();
+    const species = (params.species || "").toString().trim();
 
     if (!message) {
       return jsonOut({ success: false, error: "message is required" });
@@ -30,14 +40,15 @@ function doPost(e) {
       return jsonOut({ success: false, error: "message exceeds 500 characters" });
     }
 
-    const sheet = SpreadsheetApp.openById(SHEET_ID).getSheets()[0];
-    sheet.appendRow([new Date(), name, message, ""]);
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheets()[0];
+    ensureHeaders(sheet);
+    sheet.appendRow([new Date(), name, message, species, "no"]);
 
     return jsonOut({ success: true });
   } catch (err) {
     return jsonOut({ success: false, error: err.message });
   } finally {
-    lock.releaseLock();
+    if (locked) lock.releaseLock();
   }
 }
 
@@ -47,13 +58,14 @@ function doPost(e) {
  * Max 50 entries, newest first.
  */
 function doGet(e) {
-  const sheet = SpreadsheetApp.openById(SHEET_ID).getSheets()[0];
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheets()[0];
+  ensureHeaders(sheet);
   const rows = sheet.getDataRange().getValues();
   const out = [];
 
   for (let i = 1; i < rows.length; i++) {
     const row = rows[i];
-    const approved = String(row[3] || "").trim().toLowerCase();
+    const approved = String(row[4] || "").trim().toLowerCase();
     if (approved === "yes") {
       out.push({
         timestamp: row[0] ? new Date(row[0]).toISOString() : "",

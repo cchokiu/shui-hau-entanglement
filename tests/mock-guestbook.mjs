@@ -17,7 +17,7 @@ const store = [
     timestamp: new Date(Date.now() - 172800000).toISOString(),
     name: "未審核者",
     message: "這則留言還沒被核准，不應該出現在列表。",
-    approved: ""
+    approved: "no"
   },
   {
     timestamp: new Date(Date.now() - 259200000).toISOString(),
@@ -88,7 +88,7 @@ const server = http.createServer((req, res) => {
         timestamp: new Date().toISOString(),
         name,
         message,
-        approved: ""
+        approved: "no"
       });
       return sendJson(res, 200, { success: true });
     });

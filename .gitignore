@@ -4,3 +4,4 @@ AGENTS.md
 PROJECT_LOG.md
 docs/data/
 *.csv
+.clasp.json

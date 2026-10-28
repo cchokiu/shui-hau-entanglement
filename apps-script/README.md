@@ -2,17 +2,19 @@
 
 ## 檔案
 
-- `Code.gs`：提供 `doPost` 與 `doGet`，連結到 Google Sheet `1kTtZzgerODlb5hqlUfxhfMRlY0FbYf88IBkeZuyyQSE`。
+- `Code.gs`：提供 `doPost` 與 `doGet`，連結到綁定的 Google 試算表（網址不放入 repo）。
 
 ## Sheet 欄位
 
-工作表第一列必須是標題列：
+工作表第一列必須是標題列（程式會在第一次寫入或讀取時自動建立）：
 
-| A | B | C | D |
-|---|---|---|---|
-| timestamp | name | message | approved |
+| A | B | C | D | E | F | G |
+|---|---|---|---|---|---|---|
+| time | name | message | species | approved | lat | lng |
 
-`approved` 欄手動填入 `yes`（大小寫不拘、前後空白無所謂）才會透過 `doGet` 公開顯示。
+- `approved` 欄預設為 `no`；手動改為 `yes`（大小寫不拘、前後空白無所謂）才會透過 `doGet` 公開顯示。
+- `lat`、`lng`（F、G 欄）只由訪客「加入你的地點」功能寫入，可選；有值時會隨 `doGet` 一併回傳，供地圖顯示。
+- 訪客送出的地點範圍：北緯 22.15–22.35、東經 113.80–114.10，超出範圍會被拒絕。
 
 ## Apps Script 部署步驟
 
@@ -43,3 +45,11 @@ var CONFIG = {
 ```
 
 若 `GUESTBOOK_URL` 為空字串，前端會顯示「留言功能即將開放」，不顯示表單。
+
+## 重新部署步驟（加入 lat、lng 之後必做）
+
+1. 在 Sheet 第一列的 F、G 欄填上 `lat`、`lng`（若第一列已有標題，直接補上這兩格）。
+2. 把新的 `Code.gs` 貼到 Apps Script（取代舊內容），點選「儲存」。
+3. 點選「部署」→「管理部署」→ 該部署的「編輯」→「版本」選「新版本」→「部署」。網址不會改變，`config.js` 不需要修改。
+
+未完成以上三步之前，訪客送出的地點只會變成普通留言（舊後端忽略 `lat`、`lng`），地圖上不會出現。

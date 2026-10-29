@@ -449,6 +449,14 @@
   /* ---------- 啟動 ---------- */
 
   initMap();
+
+  /* C6：?pick=1 才載入取點工具；沒有這個參數時完全不載入 */
+  if (map && /[?&]pick=1(?:&|$)/.test(location.search)) {
+    var pickScript = document.createElement("script");
+    pickScript.src = "js/pick-coords.js";
+    pickScript.onload = function () { if (window.SHPickCoords) window.SHPickCoords.attach(map); };
+    document.head.appendChild(pickScript);
+  }
   renderLegend();
   renderMarkers();
   fitAll();

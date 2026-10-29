@@ -2,6 +2,7 @@
    gps_dms 為 Sheet「Location」原文照錄；lat／lng 由 gps_dms 換算；precision 一律為 approx。
    status："gps_missing" 表示沒有 Sheet 座標（lat／lng 為 null，不上地圖）；"candidate" 表示以推斷位置代用。
    s1、s3、s5 的公開地標大約座標（Wikipedia）只作參考，保存在 gps_candidate，未用於地圖。
+   s2 水口灣借用田地點 4.2 的座標（22°13'13.5"N 113°54'59.3"E），s4 禾寮取村屋較高位置（依 Chris 指示，22.2229, 113.9149），兩者皆為推斷、待確認。
    s6 嶼南道借用水牛點 3.2「馬路（來往貝澳）」的座標，為推斷，待確認。 */
 window.ROUTE3 = {
   id: "rice",
@@ -15,13 +16,13 @@ window.ROUTE3 = {
     { id: "s1", order: 1, name: "石壁村", era: "1625年", species: ["水稻"], point_ref: null, gps_dms: null, lat: null, lng: null, precision: "approx", status: "gps_missing",
       gps_candidate: { lat: 22.2275, lng: 113.8950, gps_dms: "22°13′39″N 113°53′42″E", source: "Wikipedia：石壁水塘（舊石壁村 1963 年被水塘淹沒），大約位置" },
       text: ["相傳池姓婦人為免兒子被徵召入伍從軍，由石壁村搬遷至水口，種水稻為生。"], photos: [], links: [], missing: ["【相片】1945年的航拍照片：Screenshot 2026-08-23 at 1.13.38 AM.png", "【相片】1959年的水口村及村內農地：Screenshot 2026-08-23 at 1.20.07 AM.png"] },
-    { id: "s2", order: 2, name: "水口灣", era: "1945–1970年", species: ["水稻"], point_ref: "1.2", gps_dms: "22°13'10.3\"N 113°55'11.9\"E", lat: 22.219528, lng: 113.919972, precision: "approx",
-      text: ["水口村村民在水口灣的廣闊土地種植水稻，並輔以蔬菜、捕魚和飼養牲畜，形成近於自給自足的農村經濟。"], photos: [], links: [], missing: ["【影片】水口村民祥叔講解如何利用石頭去除穀殼：DJI Copy_20260625165134_0034_D.MP4", "【相片】村民家中昔日用作去除穀殼的石頭：DSC08253.JPG"] },
+    { id: "s2", order: 2, name: "水口灣", era: "1945–1970年", species: ["水稻"], point_ref: "4.2", gps_dms: "22°13'13.5\"N 113°54'59.3\"E", lat: 22.220417, lng: 113.916472, precision: "approx", status: "candidate",
+      text: ["水口村村民在水口灣的廣闊土地種植水稻，並輔以蔬菜、捕魚和飼養牲畜，形成近於自給自足的農村經濟。"], photos: [], links: [], missing: ["座標借用田地點 4.2，推斷，待確認", "【影片】水口村民祥叔講解如何利用石頭去除穀殼：DJI Copy_20260625165134_0034_D.MP4", "【相片】村民家中昔日用作去除穀殼的石頭：DSC08253.JPG"] },
     { id: "s3", order: 3, name: "長洲", era: "1945–1960年", species: ["水稻"], point_ref: null, gps_dms: null, lat: null, lng: null, precision: "approx", status: "gps_missing",
       gps_candidate: { lat: 22.210556, lng: 114.028889, gps_dms: "22°12′38″N 114°01′44″E", source: "Wikipedia：長洲，大約位置（相距水口約 11 km，不計入地圖範圍）" },
       text: ["水口村村民會將大部分農產品售往長洲，換取接近兩倍份量的次等米。"], photos: [], links: [], missing: ["【錄音】祥叔提及「到長洲賣東西，換柴米油鹽」：需找相關訪談剪接 Audio"] },
-    { id: "s4", order: 4, name: "禾寮", era: "1945–1960年", species: ["水稻"], point_ref: null, gps_dms: null, lat: null, lng: null, precision: "approx", status: "gps_missing",
-      text: ["在昔日的農耕時期，大戶的農戶一般會建一間禾寮，用來儲藏收割回來的數百斤以上穀物以及農具。"], photos: [], links: [], missing: ["【相片】農具：用作清除田內雜草：DSC08283_adjusted.JPG", "【相片】舊禾寮：待補相", "【相片】復修後的新禾寮：待補相"] },
+    { id: "s4", order: 4, name: "禾寮", era: "1945–1960年", species: ["水稻"], point_ref: null, gps_dms: null, lat: 22.2229, lng: 113.9149, precision: "approx", status: "candidate",
+      text: ["在昔日的農耕時期，大戶的農戶一般會建一間禾寮，用來儲藏收割回來的數百斤以上穀物以及農具。"], photos: [], links: [], missing: ["推斷：村屋較高位置（依 Chris 指示），待實地確認", "【相片】農具：用作清除田內雜草：DSC08283_adjusted.JPG", "【相片】舊禾寮：待補相", "【相片】復修後的新禾寮：待補相"] },
     { id: "s5", order: 5, name: "塘福村", era: "1960年代", species: ["水稻"], point_ref: null, gps_dms: null, lat: null, lng: null, precision: "approx", status: "gps_missing",
       gps_candidate: { lat: 22.228, lng: 113.933, gps_dms: "22°13′41″N 113°55′59″E", source: "Wikipedia：塘福，大約位置" },
       text: [

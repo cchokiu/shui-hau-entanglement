@@ -2,7 +2,7 @@
 <html lang="zh-Hant">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>路線探索｜共構水口</title>
   <link rel="icon" href="data:,">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
@@ -31,10 +31,12 @@
     <div class="trail-map" id="routeMapWrap">
       <div id="routeMap"></div>
       <p class="tile-note" id="routeMapNote" hidden></p>
-      <p class="route-key">示意連線：只表示站點次序，並非實際行走路線</p>
-      <div class="route-switch" id="routeSwitch" role="group" aria-label="路線" hidden></div>
+      <p class="route-key paper-chip paper-chip--label" id="routeKey">示意連線：只表示站點次序，並非實際行走路線</p>
     </div>
-    <section class="trail-panel" id="routeSidePanel"></section>
+    <section class="trail-panel" id="routeSidePanel">
+      <div class="route-tabs" id="routeTabs" role="tablist" aria-label="路線"></div>
+      <div class="panel-body" id="routePanelBody" role="tabpanel"></div>
+    </section>
   </main>
 
   <p class="visually-hidden" id="status" aria-live="polite"></p>

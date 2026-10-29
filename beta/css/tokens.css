@@ -12,9 +12,25 @@
 
   /* 物種色 */
   --c-cattle: #efd375;       /* 黃牛 */
-  --c-clam: #4fa096;         /* 文蛤（沙白） */
+  --c-clam: #4fa096;         /* 翅口（沙白） */
   --c-rice: #bbc462;         /* 水稻（大米） */
   --c-buffalo: #d36225;      /* 水牛 */
+
+  /* 紙質皮膚（W5）：紋理檔未到之前，用內嵌 SVG 噪點作後備。
+     用法：background-image: var(--paper-x), var(--paper-noise)；檔案缺失時只顯示噪點。 */
+  --paper-base: url("../assets/paper/base.webp");
+  --paper-cattle: url("../assets/paper/cattle.webp");
+  --paper-clam: url("../assets/paper/clam.webp");
+  --paper-rice: url("../assets/paper/rice.webp");
+  --paper-buffalo: url("../assets/paper/buffalo.webp");
+  --paper-tape: url("../assets/paper/tape.webp");
+  --paper-noise: url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%27220%27 height=%27220%27%3E%3Cfilter id=%27n%27 x=%270%27 y=%270%27 width=%27100%25%27 height=%27100%25%27%3E%3CfeTurbulence type=%27fractalNoise%27 baseFrequency=%27.85%27 numOctaves=%272%27 seed=%277%27 stitchTiles=%27stitch%27/%3E%3CfeColorMatrix values=%270 0 0 0 .36  0 0 0 0 .31  0 0 0 0 .2  .30 0 0 0 0%27/%3E%3C/filter%3E%3Crect width=%27100%25%27 height=%27100%25%27 filter=%27url%28%23n%29%27/%3E%3C/svg%3E");
+  --paper-opacity: 0.5;       /* 底紙紋理強度 */
+
+  /* 紙塊字色與底色（對比度見 tools/check-contrast.mjs，皆 ≥ 4.5:1） */
+  --ink-dark: #2f3415;
+  --ink-deep: #1b1f0c;                /* 翅口（沙白）、水牛底色上使用 */
+  --c-buffalo-chip: #d87742;          /* 水牛色 85% ＋ 紙色 15%：原色 #d36225 配任何深色字都不到 4.5:1 */
 
   /* 字體 */
   --font-zh: "Songti TC", "STSong", "Noto Serif TC", serif;

@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>互動地圖｜共構水口</title>
+  <meta name="description" content="水口村多物種資料地圖。">
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+  <link rel="stylesheet" href="css/tokens.css">
+  <link rel="stylesheet" href="css/site.css">
+  <script>document.documentElement.classList.add("is-entering");setTimeout(function(){document.documentElement.classList.remove("is-entering")},2000)</script>
+</head>
+<body class="page-map">
+  <header class="site-header" id="siteHeader">
+    <a class="brand" href="index.html">
+      <img class="brand-logo" src="assets/elements/logo.png" alt="共構水口 一場跨越物種的感知之旅" width="800" height="226">
+    </a>
+    <nav class="site-nav" aria-label="主要導航">
+      <a href="index.html">首頁</a>
+      <a href="about.html">關於地圖</a>
+      <a href="species.html">物種故事</a>
+      <a href="trail.html">路線探索</a>
+      <a href="map.html" aria-current="page">互動地圖</a>
+      <a href="co-creation.html">多物種共創</a>
+      <a href="team.html">項目團隊</a>
+    </nav>
+  </header>
+  <div class="site-rule" aria-hidden="true"></div>
+
+  <main class="trail-page map-page">
+    <div class="trail-map" id="catMapWrap">
+      <div id="catMap"></div>
+      <p class="tile-note" id="catMapNote" hidden></p>
+      <section class="map-legend paper-chip paper-chip--label" aria-labelledby="legendTitle">
+        <h2 class="legend-title" id="legendTitle">資料標記</h2>
+        <ul class="legend-list" id="legendList"></ul>
+      </section>
+      <div class="data-card" id="dataCard" hidden></div>
+    </div>
+    <aside class="trail-panel guide" id="catPanel">
+      <button type="button" class="guide-toggle" id="guideToggle" aria-expanded="true" aria-controls="guideBody">使用指南</button>
+      <div class="guide-body" id="guideBody">
+        <div class="guide-dyn" id="guideDyn" hidden></div>
+        <div id="guideMain">
+          <h1 class="guide-title">使用指南</h1>
+          <ul class="guide-list">
+            <li>地圖上的彩色圓點是資料標記，顏色代表不同類別，見右下角「資料標記」。</li>
+            <li>滑鼠移到標記上，標記會亮起；按下標記可打開資料卡，閱讀文字、觀看相片及影音。</li>
+            <li>標記位置為大約位置。</li>
+            <li>想分享你在水口的發現？按「加入你的標記」，在地圖上點一下，再填寫內容；經審批後，標記會以空心圓顯示在地圖上。</li>
+            <li>到訪水口時，請尊重村民及生態，切勿進入私人農地或驚擾動物。</li>
+          </ul>
+          <button type="button" class="guide-cta paper-chip paper-chip--rice" id="contributeBtn">加入你的標記</button>
+          <p class="contribute-note" id="contributeNote" role="status" hidden></p>
+        </div>
+      </div>
+    </aside>
+  </main>
+
+  <p class="visually-hidden" id="status" aria-live="polite"></p>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+  <script src="js/config.js"></script>
+  <script src="data/map-items.js"></script>
+  <script src="js/map.js"></script>
+  <script src="js/map-contribute.js"></script>
+  <script src="js/transitions.js"></script>
+</body>
+</html>

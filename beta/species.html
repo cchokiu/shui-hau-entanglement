@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>物種故事｜共構水口</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="css/tokens.css">
+  <link rel="stylesheet" href="css/site.css">
+  <script>document.documentElement.classList.add("is-entering");setTimeout(function(){document.documentElement.classList.remove("is-entering")},2000)</script>
+</head>
+<body class="page-species">
+  <header class="site-header" id="siteHeader">
+    <a class="brand" href="index.html">
+      <img class="brand-logo" src="assets/elements/logo.png" alt="共構水口 一場跨越物種的感知之旅" width="800" height="226">
+    </a>
+    <nav class="site-nav" aria-label="主要導航">
+      <a href="index.html">首頁</a>
+      <a href="about.html">關於地圖</a>
+      <a href="species.html" aria-current="page">物種故事</a>
+      <a href="trail.html">路線探索</a>
+      <a href="map.html">互動地圖</a>
+      <a href="co-creation.html">多物種共創</a>
+      <a href="team.html">項目團隊</a>
+    </nav>
+  </header>
+  <div class="site-rule" aria-hidden="true"></div>
+
+  <main class="species">
+    <div class="species-top" id="speciesTop">
+      <div class="species-art">
+        <img id="speciesArt" src="assets/elements/clam-bg.png" alt="" width="734" height="800">
+      </div>
+      <div class="species-photos" id="speciesPhotos"></div>
+    </div>
+
+    <article class="species-text">
+      <h1 class="species-title" id="speciesName"></h1>
+      <p class="species-latin" id="speciesLatin"></p>
+      <div class="species-body" id="speciesBody"></div>
+      <p class="species-map-link" id="speciesMapLink"></p>
+    </article>
+
+    <p class="species-others" id="speciesOthers"></p>
+  </main>
+
+  <script src="data/species.js"></script>
+  <script>
+    /* 依網址 hash 顯示物種（#clam、#buffalo、#rice）；沒有或無效的 hash 顯示 #clam。 */
+    (function () {
+      "use strict";
+
+      var ORDER = ["clam", "buffalo", "rice"];
+      var DEFAULT_KEY = "clam";
+
+      function keyFromHash() {
+        var k = location.hash.replace(/^#/, "");
+        return Object.prototype.hasOwnProperty.call(window.SPECIES, k) ? k : DEFAULT_KEY;
+      }
+
+      function render() {
+        var key = keyFromHash();
+        var s = window.SPECIES[key];
+
+        document.title = s.name + "｜物種故事｜共構水口";
+
+        var art = document.getElementById("speciesArt");
+        art.src = s.art;
+        art.alt = s.name + "色塊插畫";
+
+        var photos = document.getElementById("speciesPhotos");
+        photos.textContent = "";
+        photos.hidden = s.photos.length === 0;
+        if (s.photos.length) {
+          s.photos.forEach(function (p) {
+            var fig = document.createElement("figure");
+            fig.className = "species-fig" + (s.photos.length === 1 ? " is-single" : "");
+            var img = document.createElement("img");
+            img.src = p.src;
+            img.alt = p.alt;
+            fig.appendChild(img);
+            photos.appendChild(fig);
+          });
+        }
+
+        document.getElementById("speciesName").textContent = s.name;
+        document.getElementById("speciesLatin").innerHTML = s.latin;
+
+        var body = document.getElementById("speciesBody");
+        body.textContent = "";
+        s.body.forEach(function (text) {
+          var p = document.createElement("p");
+          p.textContent = text;
+          body.appendChild(p);
+        });
+
+        var mapLink = document.getElementById("speciesMapLink");
+        mapLink.textContent = "";
+        var mapAnchor = document.createElement("a");
+        mapAnchor.className = "text-link";
+        mapAnchor.href = "trail.html";
+        mapAnchor.textContent = "在地圖查看路線 →";
+        mapLink.appendChild(mapAnchor);
+
+        var others = document.getElementById("speciesOthers");
+        others.textContent = "";
+        others.appendChild(document.createTextNode("其他物種："));
+        var first = true;
+        ORDER.forEach(function (k) {
+          if (k === key) return;
+          if (!first) others.appendChild(document.createTextNode("、"));
+          first = false;
+          var a = document.createElement("a");
+          a.className = "text-link";
+          a.href = "species.html#" + k;
+          a.textContent = window.SPECIES[k].name;
+          others.appendChild(a);
+        });
+      }
+
+      window.addEventListener("hashchange", render);
+      render();
+    })();
+  </script>
+  <script src="js/common.js"></script>
+  <script src="js/transitions.js"></script>
+</body>
+</html>

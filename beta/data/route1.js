@@ -1,119 +1,86 @@
-/* 路線一「瀨鑊邊：一頓飯的路線」資料。文字逐字取自內容資料。
-   coordStatus 一律為 approx（大約位置）。 */
+/* 路線一「瀨鑊邊：一頓飯的路線」資料。
+   文字取自 Doc（人名以「村民」代替，「//」包住的草稿句不收錄，引文編號省略）。
+   gps_dms 為 Sheet「Location」原文，一字不改；lat／lng 由 gps_dms 換算，取 6 位小數。
+   precision 一律為 approx（大約位置）。missing 只作資料紀錄，前端不顯示。 */
 window.ROUTE1 = {
   id: "laiwok",
   title: "一、「瀨鑊邊」：一頓飯的路線",
   intro: [
     "「瀨鑊邊」是本地客家人的傳統家常菜。根據香港中文大學人類學系張展鴻教授研究沙頭角和南大嶼的客家飲食，「瀨鑊邊」在1960至1970年代十分普遍，當中的食材反映出該地區的環境特色。雖然水口村不是客家村，但與毗鄰客家村落長年交流和通婚下，飲食文化亦隨之交融流傳。",
-    "按水口村民馮瑞珍分享，村民會從水口灣起行，採集當地海產沙白，經過農田時就採收自家種的蔬菜，回家後將食材煮成一鍋。村民順應季節當造的農產漁產，沿路就地取材，一道菜式呈現了在地人類與環境和其他物種的互動。"
+    "按水口村民分享，村民會從水口灣起行，採集當地海產沙白，經過農田時就採收自家種的蔬菜，回家後將食材煮成一鍋。村民順應季節當造的農產漁產，沿路就地取材，一道菜式呈現了在地人類與環境和其他物種的互動。"
   ],
+  sources: ["探討香港本地客家的傳統飲食「瀨鑊邊」及其社會文化意義", "水口手記"],
+  related: ["clam", "rice"],
   stops: [
     {
-      n: 1,
-      place: "水口灣",
-      species: "文蛤",
+      id: "s1",
+      order: 1,
+      name: "水口灣",
+      species: ["翅口（沙白）"],
+      point_ref: "1.2",
+      gps_dms: "22°13'10.3\"N 113°55'11.9\"E",
       lat: 22.219528,
       lng: 113.919972,
-      coordStatus: "approx",
-      paragraphs: [
+      precision: "approx",
+      text: [
         "村民會從水口灣採集沙白。他們使用掘蜆工具例如翅口鐮或翅口耙，並收獲放進竹籮中。"
       ],
-      media: [
-        {
-          type: "video",
-          src: "https://drive.google.com/file/d/1T5TSQrBUepc0D8DIGk4NtlGMZ42mKsSw/preview",
-          caption: "水口村民馮瑞珍展示如何使用翅口鐮",
-          note: ""
-        }
-      ],
-      meet: [
-        { label: "文蛤（沙白）", color: "--c-clam" },
-        { label: "人（村民）", color: "--black" }
+      photos: [],
+      missing: [
+        "翅口鐮.mp4：Doc 所指影片，檔案及權限未核實",
+        "站點相片：缺"
       ]
     },
     {
-      n: 2,
-      place: "農田",
-      species: "稻米、農產食品如九層塔、蔥、蔬菜",
-      lat: 22.220417,
-      lng: 113.916472,
-      coordStatus: "approx",
-      paragraphs: [
+      id: "s2",
+      order: 2,
+      name: "農田",
+      species: ["水稻"],
+      point_ref: "5.1",
+      gps_dms: "22°13'13.6\"N 113°54'58.7\"E",
+      lat: 22.220444,
+      lng: 113.916306,
+      precision: "approx",
+      text: [
         "離開水口灣，村民經過田間小路時，就順道採收當季的農作物，例如葉菜、香蔥，作為「瀨鑊邊」的食材配料。",
         "稻田生產的大米是「瀨鑊邊」主要食材。村民每年種兩造稻米，收成的穀粒會存放在家，食用前才拿去舂米、去殼。"
       ],
-      media: [
-        {
-          type: "image",
-          src: "assets/route1/s2-ricefield.jpg",
-          caption: "稻米田",
-          note: ""
-        }
+      photos: [
+        { src: "assets/route1/s2-ricefield.jpg", alt: "稻田中一隻水牛背對鏡頭，低頭啃食稻叢與雜草，周圍為金黃色稻穗及綠色草地，後方為綠色防護網、金屬支架，支架上有太陽能板與一部相機", caption: "稻田（水牛在田間吃草）" },
+        { src: "assets/species/farm-2.jpg", alt: "木瓜樹，農地中的一株植物，葉片掌狀分裂，枝幹上有青色果實", caption: "木瓜" },
+        { src: "assets/species/farm-3.jpg", alt: "龍眼樹，農地旁枝葉茂密的樹木", caption: "龍眼樹" },
+        { src: "assets/species/farm-4.jpg", alt: "茄子植株，農地中的幼株，周圍為泥土地", caption: "茄子" }
       ],
-      meet: [
-        { label: "水稻", color: "--c-rice" },
-        { label: "九層塔、蔥、蔬菜", color: "--text" }
+      missing: [
+        "稻田相（水稻）：缺。Doc 註「有水牛搶Focus，或需補相」；稻田相：暫用 DSC08581（畫面有水牛），Doc 註或需補相",
+        "九層塔：Sheet 未見，缺"
       ]
     },
     {
-      n: 3,
-      place: "水口村",
-      species: "大米、農產品從山上斬取的柴草，例如芒萁、松樹",
+      id: "s3",
+      order: 3,
+      name: "水口村",
+      species: ["水稻"],
+      point_ref: "5.2",
+      gps_dms: "22°13'19.8\"N 113°54'52.4\"E",
       lat: 22.222167,
       lng: 113.914556,
-      coordStatus: "approx",
-      paragraphs: [
+      precision: "approx",
+      text: [
         "家中有村民預先從後山搜集的柴草，以及自家種植的大米儲糧。",
         "烹煮「瀨鑊邊」時，村民先在灶頭裡燃點柴枝，並用石舂將米粒研磨成粉漿。大鐵鑊中爆香乾蔥、薑蒜，加入沙白和蔬菜熬煮成湯，再沿鑊邊瀨（酻）一圈粉漿，待粉漿熱熟成形後，便能鏟進湯中，一同熬煮。這道菜煮法省時方便，亦易飽腹，是水口村的家常菜式。"
       ],
-      media: [
-        {
-          type: "image",
-          src: "assets/route1/s3-pine-1.jpg",
-          caption: "柴草：松樹、松果",
-          note: ""
-        },
-        {
-          type: "image",
-          src: "assets/route1/s3-pine-2.jpg",
-          caption: "柴草：松樹、松果",
-          note: ""
-        },
-        {
-          type: "image",
-          src: "assets/route1/s3-fern.jpg",
-          caption: "柴草：芒萁",
-          note: ""
-        },
-        {
-          type: "image",
-          src: "assets/route1/s3-chopper.jpg",
-          caption: "斬柴刀",
-          note: ""
-        },
-        {
-          type: "image",
-          src: "assets/route1/s3-stove-1.jpg",
-          caption: "以磚頭砌成的傳統柴火灶",
-          note: ""
-        },
-        {
-          type: "image",
-          src: "assets/route1/s3-stove-2.jpg",
-          caption: "以磚頭砌成的傳統柴火灶",
-          note: ""
-        },
-        {
-          type: "placeholder",
-          src: "",
-          caption: "瀨鑊邊",
-          note: "待補相"
-        }
+      photos: [
+        { src: "assets/route1/s3-pine-1.jpg", alt: "枝葉茂密的松樹", caption: "松樹" },
+        { src: "assets/route1/s3-pine-2.jpg", alt: "一顆松果落在石面上，周圍散落松針", caption: "松果" },
+        { src: "assets/route1/s3-fern.jpg", alt: "林下叢生的羽狀蕨類植物，左側為樹幹", caption: "芒萁" },
+        { src: "assets/route1/s3-chopper.jpg", alt: "一把彎刀，刀身鏽跡斑駁，木柄朝下，置於混凝土地面上", caption: "斬柴刀" },
+        { src: "assets/route1/s3-stove-1.jpg", alt: "以磚頭和水泥砌成的灶台，上置大小兩個鋁鍋，灶旁有藍色盆及不銹鋼盆，後方為綠色窗框的窗戶", caption: "以磚頭砌成的傳統柴火灶" },
+        { src: "assets/route1/s3-stove-2.jpg", alt: "灶膛內燃燒著柴火，火光明亮，灶面上置有不銹鋼鍋", caption: "以磚頭砌成的傳統柴火灶" }
       ],
-      meet: [
-        { label: "水稻（大米）", color: "--c-rice" },
-        { label: "芒萁、松樹", color: "--text" },
-        { label: "文蛤（沙白）", color: "--c-clam" }
+      missing: [
+        "瀨鑊邊相：缺（Doc 註「需補相」）",
+        "芒萁、松樹：Sheet 標示需要 ID，待確認"
       ]
     }
   ]

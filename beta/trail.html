@@ -2,28 +2,27 @@
 <html lang="zh-Hant">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>路線探索｜共構水口</title>
   <link rel="icon" href="data:,">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
   <link rel="stylesheet" href="css/tokens.css">
   <link rel="stylesheet" href="css/site.css">
+  <script>document.documentElement.classList.add("is-entering");setTimeout(function(){document.documentElement.classList.remove("is-entering")},2000)</script>
 </head>
 <body>
-  <!-- 待確認：或需補相（站 2「稻米田」，s2-ricefield.jpg；只保留於註解，不在頁面顯示） -->
-
   <header class="site-header" id="siteHeader">
-    <a class="brand" href="#">
+    <a class="brand" href="index.html">
       <img class="brand-logo" src="assets/elements/logo.png" alt="共構水口 一場跨越物種的感知之旅" width="800" height="226">
     </a>
     <nav class="site-nav" aria-label="主要導航">
       <a href="index.html">首頁</a>
       <a href="about.html">關於地圖</a>
-      <a href="#">物種故事</a>
+      <a href="species.html">物種故事</a>
       <a href="trail.html" aria-current="page">路線探索</a>
-      <a href="#">互動地圖</a>
-      <a href="#">田野筆記</a>
-      <a href="#">項目團隊</a>
+      <a href="map.html">互動地圖</a>
+      <a href="co-creation.html">多物種共創</a>
+      <a href="team.html">項目團隊</a>
     </nav>
   </header>
   <div class="site-rule" aria-hidden="true"></div>
@@ -32,15 +31,22 @@
     <div class="trail-map" id="routeMapWrap">
       <div id="routeMap"></div>
       <p class="tile-note" id="routeMapNote" hidden></p>
-      <p class="route-key">示意連線：只表示站點次序，並非實際行走路線</p>
+      <p class="route-key paper-chip paper-chip--label" id="routeKey">示意連線：只表示站點次序，並非實際行走路線</p>
     </div>
-    <section class="trail-panel" id="routeSidePanel"></section>
+    <section class="trail-panel" id="routeSidePanel">
+      <div class="route-tabs" id="routeTabs" role="tablist" aria-label="路線"></div>
+      <div class="panel-body" id="routePanelBody" role="tabpanel"></div>
+    </section>
   </main>
 
   <p class="visually-hidden" id="status" aria-live="polite"></p>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
   <script src="data/route1.js"></script>
+  <script src="data/route2.js"></script>
+  <script src="data/route3.js"></script>
+  <script src="data/species-points.js"></script>
   <script src="js/trail.js"></script>
+  <script src="js/transitions.js"></script>
 </body>
 </html>

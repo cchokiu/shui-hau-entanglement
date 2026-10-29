@@ -1,5 +1,6 @@
 /* 互動地圖頁（G3）：資料標記（只顯示已核准、有座標的項目）、右下角圖例、資料卡、使用指南。
-   資料來源：data/map-items.js（由 ~/Documents/shui-hau-ref/build-map-items.py 生成）。
+   資料來源：data/map-items.js（由 tools/build-map-items.mjs 生成）。
+   訪客標記（已核准）由 js/map-contribute.js 經 window.SHMap.addVisitorPoints 加入。
    文字一律用 textContent 建立，不插入 HTML。 */
 (function () {
   "use strict";
@@ -13,6 +14,9 @@
   ];
   var CAT_BY_KEY = {};
   CATEGORIES.forEach(function (c) { CAT_BY_KEY[c.key] = c; });
+  /* 訪客標記：另一款樣式（空心圓＋白邊），不屬於資料類別 */
+  var VISITOR = { key: "visitor", label: "訪客標記" };
+  var LEGEND_ENTRIES = CATEGORIES.concat([VISITOR]);
 
   var DEFAULT_CENTER = [22.2195, 113.9165];
   var DEFAULT_ZOOM = 15;
@@ -33,6 +37,9 @@
   var statusEl = document.getElementById("status");
   var guideToggle = document.getElementById("guideToggle");
   var guideBody = document.getElementById("guideBody");
+  var guideMain = document.getElementById("guideMain");
+  var guideDyn = document.getElementById("guideDyn");
+  var mobileMQ = window.matchMedia("(max-width: 899px)");
   var reduceMQ = window.matchMedia("(prefers-reduced-motion: reduce)");
   var canHover = window.matchMedia("(hover: hover) and (pointer: fine)").matches;
 
@@ -43,6 +50,7 @@
   var openItem = null;
   var openerEl = null;
   var legendItems = {};
+  var visitorEntries = [];
 
   function el(tag, cls, text) {
     var node = document.createElement(tag);
@@ -166,7 +174,7 @@
     markers.forEach(function (m) {
       if (m.el) m.el.classList.toggle("is-cat-active", key !== null && m.item.category === key);
     });
-    CATEGORIES.forEach(function (c) {
+    LEGEND_ENTRIES.forEach(function (c) {
       var b = legendItems[c.key];
       if (b) b.classList.toggle("is-active", c.key === key);
     });
@@ -174,13 +182,14 @@
 
   function renderLegend() {
     legendList.textContent = "";
-    CATEGORIES.forEach(function (c) {
+    LEGEND_ENTRIES.forEach(function (c) {
       var li = el("li");
       var b = el("button", "legend-item legend-item--" + c.key);
       b.type = "button";
       b.setAttribute("aria-label", c.label);
       b.appendChild(el("span", "legend-dot legend-dot--" + c.key));
       b.appendChild(el("span", "legend-label", c.label));
+      b.appendChild(el("span", "legend-count"));
       b.addEventListener("mouseenter", function () { if (canHover) setCategoryHighlight(c.key); });
       b.addEventListener("mouseleave", function () { if (canHover) setCategoryHighlight(null); });
       b.addEventListener("focus", function () { if (b.matches(":focus-visible")) setCategoryHighlight(c.key); });
@@ -194,6 +203,19 @@
       legendItems[c.key] = b;
       li.appendChild(b);
       legendList.appendChild(li);
+    });
+    updateLegendCounts();
+  }
+
+  /* 圖例每類顯示數量（訪客標記為 0 時不顯示數字） */
+  function updateLegendCounts() {
+    LEGEND_ENTRIES.forEach(function (c) {
+      var b = legendItems[c.key];
+      if (!b) return;
+      var n = markers.filter(function (m) { return m.item.category === c.key; }).length;
+      var countEl = b.querySelector(".legend-count");
+      countEl.textContent = n > 0 ? String(n) : "";
+      b.setAttribute("aria-label", n > 0 ? c.label + " " + n : c.label);
     });
   }
 
@@ -232,7 +254,30 @@
     return box;
   }
 
+  /* 訪客標記資料卡：名字（無則「訪客」）、留言、物種、回覆 */
+  function buildVisitorCard(it) {
+    var card = el("article", "data-card-inner card-visitor");
+    card.appendChild(el("div", "card-band"));
+    var body = el("div", "card-body");
+    var close = el("button", "card-close", "關閉");
+    close.type = "button";
+    close.setAttribute("aria-label", "關閉資料卡");
+    close.addEventListener("click", closeCard);
+    body.appendChild(close);
+    body.appendChild(el("p", "card-cat", VISITOR.label));
+    var title = el("h2", "card-title", it.title);
+    title.id = "cardTitle";
+    title.tabIndex = -1;
+    body.appendChild(title);
+    if (it.message) body.appendChild(el("p", "para card-text", it.message));
+    if (it.species) body.appendChild(el("p", "card-meta", "物種：" + it.species));
+    if (it.reply) body.appendChild(el("p", "para card-reply", "回覆：" + it.reply));
+    card.appendChild(body);
+    return card;
+  }
+
   function buildCard(it) {
+    if (it.category === "visitor") return buildVisitorCard(it);
     var cat = CAT_BY_KEY[it.category];
     var card = el("article", "data-card-inner card-" + it.category);
     card.appendChild(el("div", "card-band"));
@@ -289,7 +334,7 @@
     cardEl.setAttribute("aria-labelledby", "cardTitle");
     var t = document.getElementById("cardTitle");
     if (t) t.focus({ preventScroll: true });
-    announce((CAT_BY_KEY[it.category] || {}).label + "：" + (it.title || "資料卡已打開"));
+    announce(((CAT_BY_KEY[it.category] || VISITOR).label) + "：" + (it.title || "資料卡已打開"));
   }
 
   function closeCard() {
@@ -318,6 +363,87 @@
     setGuide(guideBody.hidden);
   });
 
+  /* ---------- 訪客標記（已核准） ---------- */
+
+  function visitorIcon() {
+    return L.divIcon({
+      className: "map-mk map-mk--visitor",
+      html: '<span class="map-mk-dot"></span>',
+      iconSize: [18, 18],
+      iconAnchor: [9, 9]
+    });
+  }
+
+  /* 以新清單取代目前的訪客標記；list 為 { name, message, species, reply, lat, lng }[] */
+  function addVisitorPoints(list) {
+    if (!map) return;
+    visitorEntries.forEach(function (entry) {
+      markerLayer.removeLayer(entry.marker);
+      markers.splice(markers.indexOf(entry), 1);
+    });
+    visitorEntries = [];
+    (list || []).forEach(function (v) {
+      if (!v || typeof v.lat !== "number" || typeof v.lng !== "number") return;
+      var name = String(v.name || "").trim() || "訪客";
+      var it = {
+        category: "visitor",
+        title: name,
+        message: String(v.message || ""),
+        species: String(v.species || ""),
+        reply: String(v.reply || ""),
+        lat: v.lat,
+        lng: v.lng
+      };
+      var marker = L.marker([it.lat, it.lng], {
+        icon: visitorIcon(),
+        title: VISITOR.label + "：" + name,
+        alt: VISITOR.label + "：" + name,
+        keyboard: true,
+        riseOnHover: true
+      });
+      marker.bindTooltip(VISITOR.label, { direction: "top", offset: [0, -10] });
+      var entry = { item: it, marker: marker, el: null };
+      marker.on("add", function () {
+        entry.el = marker.getElement();
+        if (!entry.el) return;
+        entry.el.addEventListener("focus", function () { setMarkerHover(entry, true); });
+        entry.el.addEventListener("blur", function () { setMarkerHover(entry, false); });
+      });
+      marker.on("mouseover", function () { setMarkerHover(entry, true); });
+      marker.on("mouseout", function () { if (!entry.el || !entry.el.matches(":focus")) setMarkerHover(entry, false); });
+      marker.on("click", function () { openCard(it, entry.el); });
+      markerLayer.addLayer(marker);
+      markers.push(entry);
+      visitorEntries.push(entry);
+    });
+    updateLegendCounts();
+  }
+
+  /* ---------- 指南面板（供 map-contribute.js 使用） ---------- */
+
+  /* 顯示專用容器（取代使用指南內容），回傳該容器 */
+  function openPanel() {
+    setGuide(true);
+    guideDyn.textContent = "";
+    guideDyn.hidden = false;
+    guideMain.hidden = true;
+    return guideDyn;
+  }
+
+  /* 還原使用指南；notice 有值時，在指南上方顯示一則提示 */
+  function resetPanel(notice) {
+    guideDyn.textContent = "";
+    guideMain.hidden = false;
+    if (notice) {
+      var p = el("p", "para contribute-thanks", notice);
+      p.setAttribute("role", "status");
+      guideDyn.appendChild(p);
+      guideDyn.hidden = false;
+    } else {
+      guideDyn.hidden = true;
+    }
+  }
+
   /* ---------- 啟動 ---------- */
 
   initMap();
@@ -332,6 +458,15 @@
     if (!openItem) fitAll();
   }
   window.addEventListener("load", relayout);
+  window.SHMap = {
+    map: map,
+    panel: guideDyn,
+    openPanel: openPanel,
+    resetPanel: resetPanel,
+    addVisitorPoints: addVisitorPoints,
+    startPicking: null,          /* 由 map-contribute.js 設定 */
+    isMobile: function () { return mobileMQ.matches; }
+  };
   var resizeTimer = null;
   window.addEventListener("resize", function () {
     clearTimeout(resizeTimer);

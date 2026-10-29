@@ -1,27 +1,45 @@
-/* 互動地圖：訪客「加入你的地點」。
-   選點 → 表單 → POST 到 CONFIG.GUESTBOOK_URL（欄位：name、message、species、lat、lng、website）。
-   地點經審批（Sheet 的 approved 改為 yes）後才會公開。
-   GUESTBOOK_URL 為空，或載入失敗時，隱藏按鈕，不顯示錯誤。 */
+/* 互動地圖：訪客「加入你的標記」。
+   選點 → 表單 → POST 到 CONFIG.GUESTBOOK_URL（欄位：section=map、name、message、species、lat、lng、website）。
+   標記經審批（Sheet 的「已核准公開」改為 y）後才會公開。
+   GUESTBOOK_URL 為空，或載入已核准標記失敗時，按鈕停用並顯示「標記功能暫未開放」。 */
 (function () {
   "use strict";
 
   var SH = window.SHMap;
   var CONFIG = window.CONFIG || {};
   var URL_ = CONFIG.GUESTBOOK_URL || "";
-  if (!SH || !SH.map || !window.L || !URL_) return;
+  var SPECIES = ["翅口（沙白）", "水牛", "黃牛", "水稻", "人", "其他"];
+  var BOUNDS = { latMin: 22.15, latMax: 22.35, lngMin: 113.80, lngMax: 114.10 };
+  var UNAVAILABLE = "標記功能暫未開放";
+
+  var btnEl = document.getElementById("contributeBtn");
+  var noteEl = document.getElementById("contributeNote");
+  var wrap = document.getElementById("catMapWrap");
+  if (!btnEl) return;
+
+  /* 功能不可用時：按鈕仍顯示但停用，並說明原因（不靜默消失） */
+  var unavailable = false;
+  function markUnavailable() {
+    unavailable = true;
+    btnEl.disabled = true;
+    if (noteEl) {
+      noteEl.textContent = UNAVAILABLE;
+      noteEl.hidden = false;
+    }
+  }
+
+  if (!SH || !SH.map || !window.L || !URL_) {
+    markUnavailable();
+    return;
+  }
 
   var map = SH.map;
   var panel = SH.panel;
-  var wrap = document.getElementById("catMapWrap");
-  var SPECIES = ["沙白", "水牛", "黃牛", "水稻", "人", "其他"];
-  var BOUNDS = { latMin: 22.15, latMax: 22.35, lngMin: 113.80, lngMax: 114.10 };
 
   var picking = false;
   var sending = false;
   var tempMarker = null;
   var hintEl = null;
-  var control = null;
-  var btnEl = null;
 
   function el(tag, cls, text) {
     var n = document.createElement(tag);
@@ -64,7 +82,7 @@
     hideHint();
     map.off("click", onPick);
     removeTemp();
-    if (btnEl) btnEl.disabled = false;
+    if (!unavailable) btnEl.disabled = false;
     SH.resetPanel();
   }
 
@@ -72,11 +90,17 @@
 
   function startPicking() {
     if (picking || sending) return;
+    if (unavailable) return;
     picking = true;
-    if (btnEl) btnEl.disabled = true;
+    btnEl.disabled = true;
     wrap.classList.add("is-picking");
-    showHint("在地圖上點一下，放置你的地點");
+    showHint("在地圖上點一下");
     map.on("click", onPick);
+    /* 手機：地圖在上方，先捲到地圖，讓訪客看到提示 */
+    if (SH.isMobile()) {
+      var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      wrap.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
+    }
   }
 
   function onPick(e) {
@@ -88,7 +112,7 @@
       draggable: true,
       icon: L.divIcon({ className: "visitor-dot is-temp", html: "", iconSize: [18, 18], iconAnchor: [9, 9] }),
       title: "拖動以調整位置",
-      alt: "你的地點（可拖動）"
+      alt: "你的標記（可拖動）"
     }).addTo(map);
     showForm();
   }
@@ -96,13 +120,13 @@
   /* ---------- 表單 ---------- */
 
   function showForm() {
-    panel.textContent = "";
+    panel = SH.openPanel();
     var back = el("button", "free-back", "← 取消");
     back.type = "button";
     back.addEventListener("click", cancel);
     panel.appendChild(back);
-    panel.appendChild(el("h2", "stop-title", "加入你的地點"));
-    panel.appendChild(el("p", "para", "可拖動地圖上的標記，調整位置。"));
+    panel.appendChild(el("h2", "stop-title", "加入你的標記"));
+    panel.appendChild(el("p", "para", "可拖動地圖上的標記，調整位置。標記位置會以大約位置顯示。"));
 
     var form = el("form", "guestbook-form contribute-form");
     form.noValidate = true;
@@ -170,7 +194,9 @@
     });
     panel.appendChild(form);
     panel.scrollTop = 0;
-    msgInput.focus();
+    /* 手機：表單在地圖下方；如表單不在畫面內，捲到可見處 */
+    if (SH.isMobile()) panel.scrollIntoView({ block: "nearest" });
+    msgInput.focus({ preventScroll: true });
   }
 
   function setStatus(node, text) {
@@ -195,6 +221,7 @@
     }
 
     var fd = new FormData();
+    fd.append("section", "map");
     fd.append("name", form.elements.name.value.trim());
     fd.append("message", message);
     fd.append("species", form.elements.species.value);
@@ -210,7 +237,7 @@
       .then(function (j) {
         if (!j || !j.success) throw new Error("rejected");
         exitMode();
-        panel.insertBefore(el("p", "para contribute-thanks", "謝謝！地點審批後會顯示在地圖上。"), panel.firstChild);
+        SH.resetPanel("謝謝！標記經審批後會顯示在地圖上。");
       })
       .catch(function () {
         sending = false;
@@ -228,37 +255,28 @@
     if (e.key === "Escape" && (picking || tempMarker)) cancel();
   });
 
-  /* ---------- 按鈕（Leaflet control） ---------- */
+  /* ---------- 按鈕 ---------- */
 
-  var Ctrl = L.Control.extend({
-    options: { position: "topright" },
-    onAdd: function () {
-      var box = L.DomUtil.create("div", "leaflet-bar contribute-control");
-      var b = L.DomUtil.create("button", "contribute-btn", box);
-      b.type = "button";
-      b.textContent = "＋ 加入你的地點";
-      L.DomEvent.disableClickPropagation(box);
-      L.DomEvent.on(b, "click", function (e) {
-        L.DomEvent.stop(e);
-        startPicking();
-      });
-      btnEl = b;
-      return box;
-    }
-  });
-  control = new Ctrl();
-  control.addTo(map);
+  btnEl.addEventListener("click", startPicking);
+  SH.startPicking = startPicking;
 
-  /* 載入已核准的訪客地點；失敗時隱藏按鈕，不顯示錯誤 */
-  fetch(URL_, { method: "GET", headers: { Accept: "application/json" } })
+  /* 載入已核准的訪客標記；失敗時按鈕停用並顯示「標記功能暫未開放」 */
+  function withSection(url, section) {
+    return url + (url.indexOf("?") === -1 ? "?" : "&") + "section=" + encodeURIComponent(section);
+  }
+
+  fetch(withSection(URL_, "map"), { method: "GET", headers: { Accept: "application/json" } })
     .then(function (r) { return r.json(); })
     .then(function (list) {
       if (!Array.isArray(list)) throw new Error("bad list");
       SH.addVisitorPoints(list.filter(function (v) {
-        return typeof v.lat === "number" && typeof v.lng === "number";
+        /* 舊版後端不分段落：有 section 欄位時只收 map */
+        return v && (v.section === undefined || v.section === "map") &&
+          typeof v.lat === "number" && typeof v.lng === "number";
       }));
     })
     .catch(function () {
-      if (control) control.remove();
+      if (picking || tempMarker) exitMode();
+      markUnavailable();
     });
 })();

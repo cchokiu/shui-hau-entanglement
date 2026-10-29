@@ -1,5 +1,5 @@
 /* 由 tools/build-map-items.mjs 生成，請勿手改。生成日期：2026-10-29
-   資料來源：beta/data/catalogue-points.js（水口研究資料目錄）（尚無媒體 manifest，media 為空）。
+   資料來源：beta/data/catalogue-points.js（水口研究資料目錄）及 tools/media-manifest.json。
    位置為大約位置；同一地點的點經螺旋分散，點與點的距離只為方便點選。 */
 window.MAP_ITEMS = [
   {
@@ -51,7 +51,13 @@ window.MAP_ITEMS = [
       "記錄：2nd visit",
       "資料形式：相片"
     ],
-    "media": [],
+    "media": [
+      {
+        "type": "photo",
+        "src": "assets/catalogue/r4.jpg",
+        "alt": ""
+      }
+    ],
     "source": "水口研究資料目錄",
     "form": "相片",
     "date": "2nd visit"
@@ -68,7 +74,13 @@ window.MAP_ITEMS = [
       "海膽相 3張",
       "資料形式：相片"
     ],
-    "media": [],
+    "media": [
+      {
+        "type": "photo",
+        "src": "assets/catalogue/r5.jpg",
+        "alt": ""
+      }
+    ],
     "source": "水口研究資料目錄",
     "form": "相片",
     "date": ""
@@ -204,7 +216,13 @@ window.MAP_ITEMS = [
       "翅口（沙白）",
       "資料形式：相片"
     ],
-    "media": [],
+    "media": [
+      {
+        "type": "photo",
+        "src": "assets/catalogue/r13.jpg",
+        "alt": ""
+      }
+    ],
     "source": "水口研究資料目錄",
     "form": "相片",
     "date": ""
@@ -258,7 +276,13 @@ window.MAP_ITEMS = [
       "記錄：2nd visit",
       "資料形式：相片"
     ],
-    "media": [],
+    "media": [
+      {
+        "type": "photo",
+        "src": "assets/catalogue/r18.jpg",
+        "alt": ""
+      }
+    ],
     "source": "水口研究資料目錄",
     "form": "相片",
     "date": "2nd visit"
@@ -276,7 +300,13 @@ window.MAP_ITEMS = [
       "記錄：3rd visit",
       "資料形式：相片"
     ],
-    "media": [],
+    "media": [
+      {
+        "type": "photo",
+        "src": "assets/catalogue/r19.jpg",
+        "alt": ""
+      }
+    ],
     "source": "水口研究資料目錄",
     "form": "相片",
     "date": "3rd visit"
@@ -294,7 +324,13 @@ window.MAP_ITEMS = [
       "記錄：3rd visit",
       "資料形式：相片"
     ],
-    "media": [],
+    "media": [
+      {
+        "type": "photo",
+        "src": "assets/catalogue/r20.jpg",
+        "alt": ""
+      }
+    ],
     "source": "水口研究資料目錄",
     "form": "相片",
     "date": "3rd visit"
@@ -311,7 +347,13 @@ window.MAP_ITEMS = [
       "翅口（沙白）相片",
       "資料形式：相片"
     ],
-    "media": [],
+    "media": [
+      {
+        "type": "photo",
+        "src": "assets/catalogue/r21.jpg",
+        "alt": ""
+      }
+    ],
     "source": "水口研究資料目錄",
     "form": "相片",
     "date": ""
@@ -328,7 +370,13 @@ window.MAP_ITEMS = [
       "泥灘動物",
       "資料形式：相片"
     ],
-    "media": [],
+    "media": [
+      {
+        "type": "photo",
+        "src": "assets/catalogue/r22.jpg",
+        "alt": ""
+      }
+    ],
     "source": "水口研究資料目錄",
     "form": "相片",
     "date": ""
@@ -345,7 +393,13 @@ window.MAP_ITEMS = [
       "水牛擋路",
       "資料形式：相片"
     ],
-    "media": [],
+    "media": [
+      {
+        "type": "photo",
+        "src": "assets/catalogue/r23.jpg",
+        "alt": ""
+      }
+    ],
     "source": "水口研究資料目錄",
     "form": "相片",
     "date": ""
@@ -416,7 +470,13 @@ window.MAP_ITEMS = [
       "記錄：1st visit",
       "資料形式：相片"
     ],
-    "media": [],
+    "media": [
+      {
+        "type": "photo",
+        "src": "assets/catalogue/r27.jpg",
+        "alt": ""
+      }
+    ],
     "source": "水口研究資料目錄",
     "form": "相片",
     "date": "1st visit"
@@ -434,7 +494,13 @@ window.MAP_ITEMS = [
       "記錄：1st visit",
       "資料形式：相片"
     ],
-    "media": [],
+    "media": [
+      {
+        "type": "photo",
+        "src": "assets/catalogue/r30.jpg",
+        "alt": ""
+      }
+    ],
     "source": "水口研究資料目錄",
     "form": "相片",
     "date": "1st visit"
@@ -452,7 +518,13 @@ window.MAP_ITEMS = [
       "記錄：1st visit",
       "資料形式：相片"
     ],
-    "media": [],
+    "media": [
+      {
+        "type": "photo",
+        "src": "assets/catalogue/r31.jpg",
+        "alt": ""
+      }
+    ],
     "source": "水口研究資料目錄",
     "form": "相片",
     "date": "1st visit"
@@ -470,7 +542,13 @@ window.MAP_ITEMS = [
       "記錄：1st visit",
       "資料形式：相片"
     ],
-    "media": [],
+    "media": [
+      {
+        "type": "photo",
+        "src": "assets/catalogue/r32.jpg",
+        "alt": ""
+      }
+    ],
     "source": "水口研究資料目錄",
     "form": "相片",
     "date": "1st visit"
@@ -488,7 +566,13 @@ window.MAP_ITEMS = [
       "記錄：1st visit",
       "資料形式：相片"
     ],
-    "media": [],
+    "media": [
+      {
+        "type": "photo",
+        "src": "assets/catalogue/r33.jpg",
+        "alt": ""
+      }
+    ],
     "source": "水口研究資料目錄",
     "form": "相片",
     "date": "1st visit"
@@ -506,7 +590,13 @@ window.MAP_ITEMS = [
       "記錄：1st visit",
       "資料形式：相片"
     ],
-    "media": [],
+    "media": [
+      {
+        "type": "photo",
+        "src": "assets/catalogue/r34.jpg",
+        "alt": ""
+      }
+    ],
     "source": "水口研究資料目錄",
     "form": "相片",
     "date": "1st visit"
@@ -594,7 +684,13 @@ window.MAP_ITEMS = [
       "記錄：1st visit",
       "資料形式：相片"
     ],
-    "media": [],
+    "media": [
+      {
+        "type": "photo",
+        "src": "assets/catalogue/r40.jpg",
+        "alt": ""
+      }
+    ],
     "source": "水口研究資料目錄",
     "form": "相片",
     "date": "1st visit"
@@ -612,7 +708,13 @@ window.MAP_ITEMS = [
       "記錄：2nd visit",
       "資料形式：相片"
     ],
-    "media": [],
+    "media": [
+      {
+        "type": "photo",
+        "src": "assets/catalogue/r41.jpg",
+        "alt": ""
+      }
+    ],
     "source": "水口研究資料目錄",
     "form": "相片",
     "date": "2nd visit"
@@ -773,7 +875,13 @@ window.MAP_ITEMS = [
       "水牛，在鳥會田間吃草",
       "資料形式：相片"
     ],
-    "media": [],
+    "media": [
+      {
+        "type": "photo",
+        "src": "assets/catalogue/r50.jpg",
+        "alt": ""
+      }
+    ],
     "source": "水口研究資料目錄",
     "form": "相片",
     "date": ""
@@ -805,7 +913,13 @@ window.MAP_ITEMS = [
     "text": [
       "眼蝶？"
     ],
-    "media": [],
+    "media": [
+      {
+        "type": "photo",
+        "src": "assets/catalogue/r52.jpg",
+        "alt": ""
+      }
+    ],
     "source": "水口研究資料目錄",
     "form": "",
     "date": ""
@@ -821,7 +935,13 @@ window.MAP_ITEMS = [
     "text": [
       "蜻蜓"
     ],
-    "media": [],
+    "media": [
+      {
+        "type": "photo",
+        "src": "assets/catalogue/r53.jpg",
+        "alt": ""
+      }
+    ],
     "source": "水口研究資料目錄",
     "form": "",
     "date": ""
@@ -853,7 +973,13 @@ window.MAP_ITEMS = [
     "text": [
       "山下的路"
     ],
-    "media": [],
+    "media": [
+      {
+        "type": "photo",
+        "src": "assets/catalogue/r55.jpg",
+        "alt": ""
+      }
+    ],
     "source": "水口研究資料目錄",
     "form": "",
     "date": ""
@@ -938,7 +1064,13 @@ window.MAP_ITEMS = [
       "雞屎藤",
       "資料形式：相片"
     ],
-    "media": [],
+    "media": [
+      {
+        "type": "photo",
+        "src": "assets/catalogue/r62.jpg",
+        "alt": ""
+      }
+    ],
     "source": "水口研究資料目錄",
     "form": "相片",
     "date": ""
@@ -955,7 +1087,13 @@ window.MAP_ITEMS = [
       "酸味草",
       "資料形式：相片"
     ],
-    "media": [],
+    "media": [
+      {
+        "type": "photo",
+        "src": "assets/catalogue/r63.jpg",
+        "alt": ""
+      }
+    ],
     "source": "水口研究資料目錄",
     "form": "相片",
     "date": ""
@@ -972,7 +1110,13 @@ window.MAP_ITEMS = [
       "海金沙",
       "資料形式：相片"
     ],
-    "media": [],
+    "media": [
+      {
+        "type": "photo",
+        "src": "assets/catalogue/r64.jpg",
+        "alt": ""
+      }
+    ],
     "source": "水口研究資料目錄",
     "form": "相片",
     "date": ""
@@ -989,7 +1133,13 @@ window.MAP_ITEMS = [
       "地膽草",
       "資料形式：相片"
     ],
-    "media": [],
+    "media": [
+      {
+        "type": "photo",
+        "src": "assets/catalogue/r65.jpg",
+        "alt": ""
+      }
+    ],
     "source": "水口研究資料目錄",
     "form": "相片",
     "date": ""
@@ -1006,7 +1156,13 @@ window.MAP_ITEMS = [
       "油甘子",
       "資料形式：相片"
     ],
-    "media": [],
+    "media": [
+      {
+        "type": "photo",
+        "src": "assets/catalogue/r66.jpg",
+        "alt": ""
+      }
+    ],
     "source": "水口研究資料目錄",
     "form": "相片",
     "date": ""
@@ -1023,7 +1179,13 @@ window.MAP_ITEMS = [
       "山棯",
       "資料形式：相片"
     ],
-    "media": [],
+    "media": [
+      {
+        "type": "photo",
+        "src": "assets/catalogue/r67.jpg",
+        "alt": ""
+      }
+    ],
     "source": "水口研究資料目錄",
     "form": "相片",
     "date": ""
@@ -1040,7 +1202,13 @@ window.MAP_ITEMS = [
       "布渣葉",
       "資料形式：相片"
     ],
-    "media": [],
+    "media": [
+      {
+        "type": "photo",
+        "src": "assets/catalogue/r68.jpg",
+        "alt": ""
+      }
+    ],
     "source": "水口研究資料目錄",
     "form": "相片",
     "date": ""
@@ -1057,7 +1225,13 @@ window.MAP_ITEMS = [
       "松樹、松果",
       "資料形式：相片"
     ],
-    "media": [],
+    "media": [
+      {
+        "type": "photo",
+        "src": "assets/catalogue/r69.jpg",
+        "alt": ""
+      }
+    ],
     "source": "水口研究資料目錄",
     "form": "相片",
     "date": ""
@@ -1074,7 +1248,13 @@ window.MAP_ITEMS = [
       "芒萁？",
       "資料形式：相片"
     ],
-    "media": [],
+    "media": [
+      {
+        "type": "photo",
+        "src": "assets/catalogue/r70.jpg",
+        "alt": ""
+      }
+    ],
     "source": "水口研究資料目錄",
     "form": "相片",
     "date": ""
@@ -1091,7 +1271,13 @@ window.MAP_ITEMS = [
       "斬柴刀",
       "資料形式：相片"
     ],
-    "media": [],
+    "media": [
+      {
+        "type": "photo",
+        "src": "assets/catalogue/r72.jpg",
+        "alt": ""
+      }
+    ],
     "source": "水口研究資料目錄",
     "form": "相片",
     "date": ""
@@ -1142,7 +1328,13 @@ window.MAP_ITEMS = [
       "露兜樹",
       "資料形式：相片"
     ],
-    "media": [],
+    "media": [
+      {
+        "type": "photo",
+        "src": "assets/catalogue/r75.jpg",
+        "alt": ""
+      }
+    ],
     "source": "水口研究資料目錄",
     "form": "相片",
     "date": ""
@@ -1159,7 +1351,13 @@ window.MAP_ITEMS = [
       "單葉蔓荊",
       "資料形式：相片"
     ],
-    "media": [],
+    "media": [
+      {
+        "type": "photo",
+        "src": "assets/catalogue/r76.jpg",
+        "alt": ""
+      }
+    ],
     "source": "水口研究資料目錄",
     "form": "相片",
     "date": ""

@@ -995,6 +995,15 @@ a {
   color: var(--text);
 }
 
+.guestbook-reply {
+  margin: 8px 0 0;
+  padding-left: 12px;
+  border-left: 2px solid var(--rule);
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--text);
+}
+
 .guestbook-form {
   display: grid;
   gap: 16px;

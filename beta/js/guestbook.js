@@ -27,8 +27,12 @@
     return (n < 10 ? "0" : "") + n;
   }
 
+  function withSection(url) {
+    return url + (url.indexOf("?") === -1 ? "?" : "&") + "section=general";
+  }
+
   function renderMessages(container, url) {
-    fetch(url, { method: "GET", headers: { Accept: "application/json" } })
+    fetch(withSection(url), { method: "GET", headers: { Accept: "application/json" } })
       .then(function (r) { return r.json(); })
       .then(function (list) {
         container.textContent = "";
@@ -49,6 +53,9 @@
           li.appendChild(msg);
           li.appendChild(document.createTextNode(" "));
           li.appendChild(time);
+          if (item.reply) {
+            li.appendChild(el("p", "guestbook-reply", "回覆：" + item.reply.toString()));
+          }
           ul.appendChild(li);
         });
         container.appendChild(ul);
@@ -102,7 +109,9 @@
         return;
       }
       status.textContent = "傳送中…";
-      fetch(url, { method: "POST", body: new FormData(form) })
+      var fd = new FormData(form);
+      fd.append("section", "general");
+      fetch(url, { method: "POST", body: fd })
         .then(function (r) { return r.json(); })
         .then(function (data) {
           if (data && data.success) {

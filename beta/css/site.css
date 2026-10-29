@@ -1389,6 +1389,7 @@ html.is-scattering.is-leaving body { transition-delay: 250ms; }
 .card-carousel-nav .card-count { margin: 0; }
 .card-body audio, .card-body video { display: block; width: 100%; margin-top: 14px; }
 .card-source { margin: 14px 0 0; font-size: 14px; color: var(--text); }
+.card-pending { margin: 12px 0 0; font-size: 13px; color: var(--text); }
 
 /* 使用指南 */
 .guide-toggle { display: none; }

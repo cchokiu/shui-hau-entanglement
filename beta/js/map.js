@@ -317,6 +317,8 @@
         body.appendChild(a);
       }
     });
+    var hasMedia = media.some(function (m) { return m && m.src; });
+    if (!hasMedia && it.form) body.appendChild(el("p", "card-pending", "相片／影音整理中"));
     if (it.source) body.appendChild(el("p", "card-source", "來源：" + it.source));
     if (it.author) body.appendChild(el("p", "card-source", "作者：" + it.author));
     card.appendChild(body);

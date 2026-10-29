@@ -6,10 +6,13 @@
   box-sizing: border-box;
 }
 
+html {
+  background: var(--bg);
+}
+
 html,
 body {
   margin: 0;
-  background: var(--bg);
   color: var(--text);
   font-family: var(--font-zh);
   font-size: var(--fs-body);
@@ -1352,7 +1355,7 @@ html.is-scattering.is-leaving body { transition-delay: 250ms; }
 .leaflet-tooltip-top:before { border-top-color: var(--white); }
 
 /* 圖例（右下角） */
-.map-legend { position: absolute; right: 12px; bottom: 12px; z-index: 500; max-width: min(260px, calc(100% - 24px)); padding: 10px 12px; background: color-mix(in srgb, var(--white) 94%, transparent); border: 1px solid var(--rule); }
+.map-legend { position: absolute; right: 12px; bottom: 12px; z-index: 500; max-width: min(260px, calc(100% - 24px)); padding: 12px 14px; }
 .legend-title { margin: 0 0 6px; font-size: 16px; font-weight: 700; line-height: 1.3; color: var(--text); }
 .legend-list { display: flex; flex-wrap: wrap; gap: 4px; margin: 0; padding: 0; list-style: none; }
 .legend-item { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 4px 8px; border: 1px solid transparent; background: transparent; color: var(--text); font-family: var(--font-zh); font-size: 15px; line-height: 1.2; cursor: pointer; transition: box-shadow 0.15s ease; }
@@ -1396,8 +1399,7 @@ html.is-scattering.is-leaving body { transition-delay: 250ms; }
 .guide-title { margin: 0 0 16px; font-size: var(--fs-title); font-weight: var(--fw-title); line-height: 1.3; color: var(--text); }
 .guide-list { margin: 0; padding-left: 1.2em; }
 .guide-list li { margin: 0 0 12px; font-size: var(--fs-body); line-height: var(--lh-body); color: var(--para); }
-.guide-cta { display: inline-block; cursor: pointer; margin-top: 8px; min-height: 48px; padding: 12px 20px; border: 1px solid var(--text); background: var(--text); color: var(--white); font-family: var(--font-zh); font-size: var(--fs-nav); line-height: 1.2; text-decoration: none; }
-.guide-cta:hover:not(:disabled) { background: var(--white); color: var(--text); }
+.guide-cta { display: inline-block; margin-top: 8px; min-height: 48px; padding: 12px 22px; font-family: var(--font-zh); font-size: var(--fs-nav); line-height: 1.2; text-decoration: none; }
 .guide-cta:disabled { opacity: 0.45; cursor: not-allowed; }
 .contribute-note { margin: 10px 0 0; font-size: 14px; color: var(--text); }
 .contribute-note[hidden], .guide-dyn[hidden], #guideMain[hidden] { display: none; }
@@ -1423,3 +1425,98 @@ html.is-scattering.is-leaving body { transition-delay: 250ms; }
 }
 @keyframes cardSlideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
 @media (prefers-reduced-motion: reduce) { .data-card { animation: none; } }
+
+/* ---------- 紙質皮膚 B1（W5）：底紙與「紙塊」元件 ----------
+   紋理檔（assets/paper/*.webp）未到之前，以 tokens.css 的 --paper-noise 噪點作後備；檔案缺失時 background-image 該層不顯示，不會出錯。 */
+
+/* 底紙：固定在內容之後的一層紋理，以乘法疊在 #f5f1e5 上，強度由 --paper-opacity 控制 */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-color: var(--bg);
+  background-image: var(--paper-base), var(--paper-noise);
+  background-size: 1000px 1000px, 220px 220px;
+  background-blend-mode: multiply;
+  opacity: var(--paper-opacity);
+}
+
+/* 紙塊：不規則多邊形的紙形放在 ::before（clip-path），按鈕本身不裁切，所以焦點框與 drop-shadow 都正常 */
+:where(.paper-chip) { position: relative; }
+.paper-chip {
+  --chip-c: var(--bg);
+  --chip-paper: var(--paper-base);
+  --chip-ink: var(--text);
+  --chip-clip: polygon(0 2px, 3px 0, calc(100% - 1px) 1px, 100% calc(100% - 3px), calc(100% - 2px) 100%, 1px calc(100% - 1px));
+  isolation: isolate;
+  border: 0;
+  background: transparent;
+  color: var(--chip-ink);
+  text-decoration: none;
+  filter: drop-shadow(0 1px 1.5px color-mix(in srgb, var(--ink-dark) 30%, transparent));
+  transition: transform 0.15s ease, filter 0.15s ease;
+}
+.paper-chip::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background-color: var(--chip-c);
+  background-image: var(--chip-paper), var(--paper-noise);
+  background-size: 900px 900px, 220px 220px;
+  background-blend-mode: multiply;
+  clip-path: var(--chip-clip);
+}
+.paper-chip:nth-child(4n + 2) { --chip-clip: polygon(2px 0, 100% 1px, calc(100% - 2px) 100%, 3px calc(100% - 1px), 0 calc(100% - 3px)); }
+.paper-chip:nth-child(4n + 3) { --chip-clip: polygon(1px 1px, calc(100% - 3px) 0, 100% 2px, calc(100% - 1px) calc(100% - 2px), 2px 100%, 0 50%); }
+.paper-chip:nth-child(4n + 4) { --chip-clip: polygon(3px 1px, 100% 0, calc(100% - 1px) calc(100% - 3px), calc(100% - 3px) 100%, 0 calc(100% - 1px), 1px 40%); }
+.paper-chip:focus-visible { outline: 2px solid var(--ink-dark); outline-offset: 3px; }
+
+/* 物種色：瀨鑊邊／黃牛、翅口（沙白）、水稻、水牛 */
+.paper-chip--cattle { --chip-c: var(--c-cattle); --chip-paper: var(--paper-cattle); --chip-ink: var(--ink-dark); }
+.paper-chip--clam { --chip-c: var(--c-clam); --chip-paper: var(--paper-clam); --chip-ink: var(--ink-deep); }
+.paper-chip--rice { --chip-c: var(--c-rice); --chip-paper: var(--paper-rice); --chip-ink: var(--ink-dark); }
+.paper-chip--buffalo { --chip-c: var(--c-buffalo-chip); --chip-paper: var(--paper-buffalo); --chip-ink: var(--ink-deep); }
+
+/* 選中／作用中：輕微旋轉、陰影、頂部半透明紙膠帶 */
+.paper-chip[aria-selected="true"],
+.paper-chip[aria-current="true"],
+.paper-chip.is-active,
+.paper-chip:is(button, a):hover:not(:disabled) {
+  transform: rotate(-1deg);
+  filter: drop-shadow(0 3px 3px color-mix(in srgb, var(--ink-dark) 38%, transparent));
+}
+.paper-chip[aria-selected="true"]::after,
+.paper-chip[aria-current="true"]::after,
+.paper-chip.is-active::after {
+  content: "";
+  position: absolute;
+  top: -7px;
+  left: 50%;
+  width: 46px;
+  height: 14px;
+  margin-left: -23px;
+  transform: rotate(-3deg);
+  pointer-events: none;
+  background-color: color-mix(in srgb, var(--c-cattle) 70%, transparent);
+  background-image: var(--paper-tape), var(--paper-noise);
+  background-size: 200px 200px, 220px 220px;
+  background-blend-mode: multiply;
+}
+.paper-chip:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* 圖例等「紙標籤」：紙色、較大的內距 */
+.paper-chip--label { padding: 10px 14px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .paper-chip { transition: none; }
+  .paper-chip[aria-selected="true"],
+  .paper-chip[aria-current="true"],
+  .paper-chip.is-active,
+  .paper-chip:is(button, a):hover:not(:disabled) { transform: none; }
+  .paper-chip[aria-selected="true"]::after,
+  .paper-chip[aria-current="true"]::after,
+  .paper-chip.is-active::after { transform: none; }
+}
